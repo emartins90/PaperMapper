@@ -4,7 +4,7 @@
 import { MdSettings, MdList, MdOutlineSource } from "react-icons/md";
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
-import TabSwitcher from "@/components/TabSwitcher";
+import TabSwitcher from "@/components/ui/TabSwitcher";
 
 export default function TopNav() {
   const [activeTab, setActiveTab] = useState<"gather" | "outline">("gather");

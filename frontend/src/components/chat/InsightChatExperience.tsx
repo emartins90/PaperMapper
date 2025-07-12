@@ -1,5 +1,5 @@
 import ChatExperienceBase from "./ChatExperienceBase";
-import { CardType } from "./useFileUploadHandler";
+import { CardType } from "../useFileUploadHandler";
 
 const insightPrompts = [
   {

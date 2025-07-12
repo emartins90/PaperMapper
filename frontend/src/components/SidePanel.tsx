@@ -1,15 +1,15 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import DrawerTabs from "./DrawerTabs";
-import ChatExperience from "./ChatExperience";
-import QuestionChatExperience from "./QuestionChatExperience";
-import InsightChatExperience from "./InsightChatExperience";
-import ThoughtChatExperience from "./ThoughtChatExperience";
+import DrawerTabs from "@/components/ui/DrawerTabs";
+import ChatExperience from "./chat/ChatExperience";
+import QuestionChatExperience from "./chat/QuestionChatExperience";
+import InsightChatExperience from "./chat/InsightChatExperience";
+import ThoughtChatExperience from "./chat/ThoughtChatExperience";
 import { Button } from "./ui/button";
 import LinkedCardsTab from "./LinkedCardsTab";
 import { MdClose } from "react-icons/md";
-import FileUploadSection from "./FileUploadSection";
+import FileUploadSection from "./file-management/FileUploadSection";
 import { uploadFilesForCardType } from "./useFileUploadHandler";
 
 interface SidePanelProps {

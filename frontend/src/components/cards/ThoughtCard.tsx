@@ -1,6 +1,6 @@
 import React from "react";
 import { Handle, Position } from "reactflow";
-import { FileListDisplay } from "./FileListDisplay";
+import { FileListDisplay } from "../file-management/FileListDisplay";
 
 type ThoughtCardProps = {
   data: {
@@ -17,13 +17,13 @@ const handleStyle = {
   width: 10,
   height: 10,
   background: '#fff',
-  border: '2px solid #2dd4bf', // teal-400
+  border: '2px solid var(--thought-400)',
   borderRadius: '50%',
 };
 
 export default function ThoughtCard({ data, showHandles = true, width = 'w-96' }: ThoughtCardProps) {
   return (
-    <div className={`rounded-xl border-2 border-teal-300 bg-white p-4 shadow-md ${width} relative`}>
+    <div className={`rounded-xl border-2 border-thought-300 bg-white p-4 shadow-md ${width} relative`}>
       {/* Source handles on all four sides */}
       {showHandles && (
         <>
@@ -34,9 +34,9 @@ export default function ThoughtCard({ data, showHandles = true, width = 'w-96' }
         </>
       )}
       <div className="flex items-center justify-between mb-2">
-        <div className="font-bold text-teal-700">Thought</div>
+        <div className="font-bold text-thought-700">Thought</div>
         <button onClick={data.onOpen} aria-label="Open card">
-          <span className="text-teal-400 text-xl">↗</span>
+          <span className="text-thought-400 text-xl">↗</span>
         </button>
       </div>
       <div className="text-black">{data.thought}</div>

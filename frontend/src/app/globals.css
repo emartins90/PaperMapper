@@ -60,12 +60,22 @@
   --color-question-400: var(--question-400);
   --color-question-500: var(--question-500);
 
+  --color-question-600: var(--question-600);
+  --color-question-700: var(--question-700);
+  --color-question-800: var(--question-800);
+  --color-question-900: var(--question-900);
+
   --color-source-50: var(--source-50);
   --color-source-100: var(--source-100);
   --color-source-200: var(--source-200);
   --color-source-300: var(--source-300);
   --color-source-400: var(--source-400);
   --color-source-500: var(--source-500);
+
+  --color-source-600: var(--source-600);
+  --color-source-700: var(--source-700);
+  --color-source-800: var(--source-800);
+  --color-source-900: var(--source-900);
 
   --color-insight-50: var(--insight-50);
   --color-insight-100: var(--insight-100);
@@ -74,12 +84,40 @@
   --color-insight-400: var(--insight-400);
   --color-insight-500: var(--insight-500);
 
+  --color-insight-600: var(--insight-600);
+  --color-insight-700: var(--insight-700);
+  --color-insight-800: var(--insight-800);
+  --color-insight-900: var(--insight-900);
+
   --color-thought-50: var(--thought-50);
   --color-thought-100: var(--thought-100);
   --color-thought-200: var(--thought-200);
   --color-thought-300: var(--thought-300);
   --color-thought-400: var(--thought-400);
   --color-thought-500: var(--thought-500);
+
+  --color-thought-600: var(--thought-600);
+  --color-thought-700: var(--thought-700);
+  --color-thought-800: var(--thought-800);
+  --color-thought-900: var(--thought-900);
+
+  --color-success-100: var(--success-100);
+  --color-success-200: var(--success-200);
+  --color-success-300: var(--success-300);
+  --color-success-400: var(--success-400);
+  --color-success-500: var(--success-500);
+
+  --color-warning-100: var(--warning-100);
+  --color-warning-200: var(--warning-200);
+  --color-warning-300: var(--warning-300);
+  --color-warning-400: var(--warning-400);
+  --color-warning-500: var(--warning-500);
+
+  --color-error-100: var(--error-100);
+  --color-error-200: var(--error-200);
+  --color-error-300: var(--error-300);
+  --color-error-400: var(--error-400);
+  --color-error-500: var(--error-500);
 
   --color-secondary: var(--secondary);
 
@@ -215,12 +253,22 @@
   --question-400: #fb923c;
   --question-500: #f97316;
 
+  --question-600: #ea580c;
+  --question-700: #c2410c;
+  --question-800: #9a3412;
+  --question-900: #7c2d12;
+
   --source-50: #eff6ff;
   --source-100: #dbeafe;
   --source-200: #bfdbfe;
   --source-300: #93c5fd;
   --source-400: #60a5fa;
   --source-500: #3b82f6;
+
+  --source-600: #2563eb;
+  --source-700: #1d4ed8;
+  --source-800: #1e40af;
+  --source-900: #1e3a8a;
 
   --insight-50: #faf5ff;
   --insight-100: #f3e8ff;
@@ -229,12 +277,40 @@
   --insight-400: #a78bfa;
   --insight-500: #8b5cf6;
 
+  --insight-600: #7c3aed;
+  --insight-700: #6d28d9;
+  --insight-800: #5b21b6;
+  --insight-900: #4c1d95;
+
   --thought-50: #f0fdfa;
   --thought-100: #ccfbf1;
   --thought-200: #99f6e4;
   --thought-300: #5eead4;
   --thought-400: #2dd4bf;
   --thought-500: #14b8a6;
+
+  --thought-600: #0d9488;
+  --thought-700: #0f766e;
+  --thought-800: #115e59;
+  --thought-900: #134e4a;
+
+  --success-100: #d1fae5;
+  --success-200: #6ee7b7;
+  --success-300: #10b981;
+  --success-400: #059669;
+  --success-500: #047857;
+
+  --warning-100: #fff4d6;
+  --warning-200: #ffe09a;
+  --warning-300: #ffd166;
+  --warning-400: #ffb627;
+  --warning-500: #b97a1a;
+
+  --error-100: #fef2f2;
+  --error-200: #fecaca;
+  --error-300: #f87171;
+  --error-400: #dc2626;
+  --error-500: #991b1b;
   }
 
 /* ---break--- 

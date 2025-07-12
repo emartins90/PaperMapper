@@ -1,4 +1,4 @@
-import { Button } from "./ui/button";
+import { Button } from "../ui/button";
 import React from "react";
 import { MdClose } from "react-icons/md";
 import { MdPictureAsPdf, MdDescription, MdAudiotrack, MdInsertDriveFile } from "react-icons/md";

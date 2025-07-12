@@ -1,7 +1,7 @@
 import React from "react";
 import Tag from "@/components/Tag";
 import { Handle, Position } from "reactflow";
-import { FileListDisplay } from "./FileListDisplay";
+import { FileListDisplay } from "../file-management/FileListDisplay";
 
 type QuestionCardProps = {
   data: {
@@ -22,7 +22,7 @@ const handleStyle = {
   width: 10,
   height: 10,
   background: '#fff',
-  border: '2px solid #fb923c', // orange-400
+  border: '2px solid var(--question-400)',
   borderRadius: '50%',
 };
 
@@ -70,11 +70,11 @@ export default function QuestionCard({ data, showHandles = true, width = 'w-96' 
     const normalizedPriority = priority.toLowerCase().trim();
     switch (normalizedPriority) {
       case 'high':
-        return { text: '!!!', color: 'text-red-500' };
+        return { text: '!!!', color: 'text-error-500' };
       case 'medium':
-        return { text: '!!', color: 'text-orange-500' };
+        return { text: '!!', color: 'text-warning-500' };
       case 'low':
-        return { text: '!', color: 'text-blue-500' };
+        return { text: '!', color: 'text-source-500' };
       default:
         return null; // Unknown priority, treat as no priority
     }
@@ -84,9 +84,9 @@ export default function QuestionCard({ data, showHandles = true, width = 'w-96' 
   const isNotRelevant = data.status?.toLowerCase().trim() === 'not relevant';
   
   // Determine styles based on relevance
-  const cardBorderClass = isNotRelevant ? 'border-gray-200' : 'border-orange-200';
-  const titleColorClass = isNotRelevant ? 'text-gray-700' : 'text-orange-700';
-  const arrowColorClass = isNotRelevant ? 'text-gray-400' : 'text-orange-400';
+  const cardBorderClass = isNotRelevant ? 'border-gray-200' : 'border-question-200';
+  const titleColorClass = isNotRelevant ? 'text-gray-700' : 'text-question-700';
+  const arrowColorClass = isNotRelevant ? 'text-gray-400' : 'text-question-400';
   const handleStyles = isNotRelevant ? grayHandleStyle : handleStyle;
 
   return (

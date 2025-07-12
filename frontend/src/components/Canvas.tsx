@@ -17,13 +17,13 @@ import ReactFlow, {
 import "reactflow/dist/style.css";
 import { toast } from "sonner";
 
-import QuestionCard from "../components/QuestionCard";
-import SourceMaterialCard from "../components/SourceMaterialCard";
-import InsightCard from "../components/InsightCard";
-import ThoughtCard from "../components/ThoughtCard";
+import QuestionCard from "../components/cards/QuestionCard";
+import SourceMaterialCard from "../components/cards/SourceMaterialCard";
+import InsightCard from "../components/cards/InsightCard";
+import ThoughtCard from "../components/cards/ThoughtCard";
 import BottomNav from "@/components/BottomNav";
 import SidePanel from "../components/SidePanel";
-import { FullscreenFileViewer } from "./FullscreenFileViewer";
+import { FullscreenFileViewer } from "./file-management/FullscreenFileViewer";
 import { uploadFilesForCardType, CardType } from "../components/useFileUploadHandler";
 
 // Ghost node component

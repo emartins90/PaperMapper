@@ -4,7 +4,7 @@ import React from "react";
 import { MdHelpOutline, MdLibraryBooks, MdLightbulbOutline, MdChatBubbleOutline } from "react-icons/md";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import Switch from "@/components/Switch";
+import { Switch } from "@/components/ui/switch";
 
 // Add prop type
 interface BottomNavProps {
@@ -30,7 +30,7 @@ export default function BottomNav({
         {/* Guided Experience Toggle */}
         <span className="flex items-center gap-2 pr-2">
           Guided Experience
-          <Switch checked={guided} onChange={onGuidedChange} aria-label="Toggle Guided Experience" />
+          <Switch checked={guided} onCheckedChange={onGuidedChange} aria-label="Toggle Guided Experience" />
         </span>
         {/* Divider */}
         <div className="h-8 w-px bg-gray-200 mx-3"  />

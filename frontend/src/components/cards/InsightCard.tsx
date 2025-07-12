@@ -1,7 +1,7 @@
 import React from "react";
 import Tag from "@/components/Tag";
 import { Handle, Position } from "reactflow";
-import { FileListDisplay } from "./FileListDisplay";
+import { FileListDisplay } from "../file-management/FileListDisplay";
 
 type InsightCardProps = {
   data: {
@@ -19,13 +19,13 @@ const handleStyle = {
   width: 10,
   height: 10,
   background: '#fff',
-  border: '2px solid #a78bfa', // purple-400
+  border: '2px solid var(--insight-400)',
   borderRadius: '50%',
 };
 
 export default function InsightCard({ data, showHandles = true, width = 'w-96' }: InsightCardProps) {
   return (
-    <div className={`rounded-xl border-2 border-purple-300 bg-white p-4 shadow-md ${width} relative`}>
+    <div className={`rounded-xl border-2 border-insight-300 bg-white p-4 shadow-md ${width} relative`}>
       {/* Source handles on all four sides */}
       {showHandles && (
         <>
@@ -36,9 +36,9 @@ export default function InsightCard({ data, showHandles = true, width = 'w-96' }
         </>
       )}
       <div className="flex items-center justify-between mb-2">
-        <div className="font-bold text-purple-700">Insight: Pattern Noticed</div>
+        <div className="font-bold text-insight-700">Insight: Pattern Noticed</div>
         <button onClick={data.onOpen} aria-label="Open card">
-          <span className="text-purple-400 text-xl">↗</span>
+          <span className="text-insight-400 text-xl">↗</span>
         </button>
       </div>
       <div className="text-black mb-4">{data.insight}</div>

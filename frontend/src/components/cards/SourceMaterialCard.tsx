@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import Tag from "@/components/Tag";
 import { Handle, Position } from "reactflow";
-import { FileListDisplay } from "./FileListDisplay";
+import { FileListDisplay } from "../file-management/FileListDisplay";
 
 type SourceMaterialCardProps = {
   data: {
@@ -24,7 +24,7 @@ const handleStyle = {
   width: 10,
   height: 10,
   background: '#fff',
-  border: '2px solid #60a5fa', // blue-400
+  border: '2px solid var(--source-400)',
   borderRadius: '50%',
 };
 
@@ -52,7 +52,7 @@ export default function SourceMaterialCard({ data, showHandles = true, width = '
   };
 
   return (
-    <div className={`rounded-xl border-2 border-blue-200 bg-white p-4 shadow-md ${width} relative`}>
+    <div className={`rounded-xl border-2 border-source-200 bg-white p-4 shadow-md ${width} relative`}>
       {/* Source handles on all four sides */}
       {showHandles && (
         <>
@@ -64,11 +64,11 @@ export default function SourceMaterialCard({ data, showHandles = true, width = '
       )}
       
       <div className="flex items-center justify-between mb-2">
-        <div className="font-bold text-blue-700">
+        <div className="font-bold text-source-700">
           Source Material{data.sourceFunction ? ` : ${data.sourceFunction}` : ''}
         </div>
         <button onClick={data.onOpen} aria-label="Open card">
-          <span className="text-blue-400 text-xl">↗</span>
+          <span className="text-source-400 text-xl">↗</span>
         </button>
       </div>
       
@@ -76,7 +76,7 @@ export default function SourceMaterialCard({ data, showHandles = true, width = '
       {tags.length > 0 && tags[0] !== '(skipped)' && (
         <div className="flex flex-wrap gap-2 mb-2">
           {tags.map((tag: string) => (
-            tag && tag !== '(skipped)' && <Tag key={tag} color="blue">{tag}</Tag>
+            tag && tag !== '(skipped)' && <Tag key={tag} color="source">{tag}</Tag>
           ))}
         </div>
       )}
