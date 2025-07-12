@@ -3,6 +3,8 @@ import React from "react";
 import { MdClose } from "react-icons/md";
 import { MdPictureAsPdf, MdDescription, MdAudiotrack, MdInsertDriveFile } from "react-icons/md";
 
+type FileEntry = { url: string; filename: string; type: string };
+
 type FileUploadSectionProps = {
   files: string[];
   isUploading: boolean;
@@ -10,6 +12,7 @@ type FileUploadSectionProps = {
   onFileDelete: (fileUrl: string) => void;
   fileInputRef: React.RefObject<HTMLInputElement | null>;
   accept?: string;
+  fileEntries?: FileEntry[];
 };
 
 export default function FileUploadSection({
@@ -18,8 +21,14 @@ export default function FileUploadSection({
   onFileUpload,
   onFileDelete,
   fileInputRef,
-  accept = "image/*,.pdf,.doc,.docx,audio/mp3,audio/wav,audio/m4a,audio/ogg"
+  accept = "image/*,.pdf,.doc,.docx,audio/mp3,audio/wav,audio/m4a,audio/ogg",
+  fileEntries = []
 }: FileUploadSectionProps) {
+  // Prefer fileEntries if present (for new cards), else fall back to files array
+  const displayFiles: FileEntry[] = fileEntries.length > 0
+    ? fileEntries
+    : files.map((url) => ({ url, filename: url.split("/").pop() || "file", type: "" }));
+
   // Helper to get icon and color by file type
   const getFileIcon = (filename: string) => {
     const ext = filename.split('.').pop()?.toLowerCase();
@@ -27,6 +36,22 @@ export default function FileUploadSection({
     if (["doc", "docx"].includes(ext || "")) return { icon: <MdDescription className="text-blue-700 w-5 h-5" />, color: "bg-blue-100" };
     if (["mp3", "wav", "m4a", "ogg"].includes(ext || "")) return { icon: <MdAudiotrack className="text-purple-500 w-5 h-5" />, color: "bg-purple-100" };
     return { icon: <MdInsertDriveFile className="text-gray-500 w-5 h-5" />, color: "bg-gray-100" };
+  };
+
+  // Helper to check if file is an image
+  const isImageFile = (entry: FileEntry) => {
+    if (entry.url.startsWith('blob:')) {
+      return entry.type.startsWith('image/');
+    }
+    return entry.filename.match(/\.(jpg|jpeg|png|gif|webp)$/i) !== null;
+  };
+
+  // Helper to get image source
+  const getImageSrc = (entry: FileEntry) => {
+    if (entry.url.startsWith('blob:')) {
+      return entry.url; // Use blob URL directly
+    }
+    return `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}${entry.url}`;
   };
 
   return (
@@ -51,21 +76,20 @@ export default function FileUploadSection({
           + Add Files
         </Button>
       </div>
-      {files && files.length > 0 && (
+      {displayFiles && displayFiles.length > 0 && (
         <div className="mt-2">
           {/* Images full width, no cropping */}
-          {files.filter(fileUrl => fileUrl.match(/\.(jpg|jpeg|png|gif|webp)$/i)).map((fileUrl, index) => {
-            const filename = fileUrl.split('/').pop() || 'file';
+          {displayFiles.filter(isImageFile).map((entry, index) => {
             return (
               <div key={index} className="relative mb-3">
                 <img
-                  src={`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}${fileUrl}`}
-                  alt={filename}
+                  src={getImageSrc(entry)}
+                  alt={entry.filename}
                   className="w-full h-auto rounded border"
                   style={{ objectFit: 'contain' }}
                 />
                 <button
-                  onClick={() => onFileDelete(fileUrl)}
+                  onClick={() => onFileDelete(entry.url)}
                   className="absolute top-1 right-1 bg-white border border-gray-300 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-200 shadow-md"
                   title="Delete file"
                 >
@@ -75,9 +99,8 @@ export default function FileUploadSection({
             );
           })}
           {/* Non-image files */}
-          {files.filter(fileUrl => !fileUrl.match(/\.(jpg|jpeg|png|gif|webp)$/i)).map((fileUrl, index) => {
-            const filename = fileUrl.split('/').pop() || 'file';
-            const { icon, color } = getFileIcon(filename);
+          {displayFiles.filter(entry => !isImageFile(entry)).map((entry, index) => {
+            const { icon, color } = getFileIcon(entry.filename);
             return (
               <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg mb-2">
                 <div className="flex items-center space-x-3">
@@ -85,11 +108,11 @@ export default function FileUploadSection({
                     {icon}
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-gray-900">{filename}</p>
+                    <p className="text-sm font-medium text-gray-900">{entry.filename}</p>
                   </div>
                 </div>
                 <button
-                  onClick={() => onFileDelete(fileUrl)}
+                  onClick={() => onFileDelete(entry.url)}
                   className="text-red-500 hover:text-red-700 p-1"
                   title="Remove file"
                 >

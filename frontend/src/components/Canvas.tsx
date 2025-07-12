@@ -17,13 +17,13 @@ import ReactFlow, {
 import "reactflow/dist/style.css";
 import { toast } from "sonner";
 
-import QuestionCard from "../components/cards/QuestionCard";
-import SourceMaterialCard from "../components/cards/SourceMaterialCard";
-import InsightCard from "../components/cards/InsightCard";
-import ThoughtCard from "../components/cards/ThoughtCard";
+import QuestionCard from "../components/canvas-cards/QuestionCard";
+import SourceMaterialCard from "../components/canvas-cards/SourceMaterialCard";
+import InsightCard from "../components/canvas-cards/InsightCard";
+import ThoughtCard from "../components/canvas-cards/ThoughtCard";
 import BottomNav from "@/components/BottomNav";
 import SidePanel from "../components/SidePanel";
-import { FullscreenFileViewer } from "./file-management/FullscreenFileViewer";
+import { FullscreenFileViewer } from "./canvas-add-files/FullscreenFileViewer";
 import { uploadFilesForCardType, CardType } from "../components/useFileUploadHandler";
 
 // Ghost node component
@@ -1323,6 +1323,24 @@ export default function CanvasInner({ projectId }: CanvasProps) {
         });
         const savedCard = await cardRes.json();
         
+        // Upload pending files if any
+        let finalFiles = Array.isArray(node.data.files) ? node.data.files : [];
+        if (node.data.pendingFiles && Array.isArray(node.data.pendingFiles)) {
+          try {
+            await uploadFilesForCardType(
+              "source",
+              savedSM.id,
+              node.data.pendingFiles,
+              [], // Start with empty array since we're uploading to a new record
+              (newFiles) => {
+                finalFiles = newFiles;
+              }
+            );
+          } catch (err) {
+            console.error("Failed to upload pending files:", err);
+          }
+        }
+        
         // Update node with saved data
         setNodes((nds) => 
           nds.map(n => 
@@ -1334,6 +1352,8 @@ export default function CanvasInner({ projectId }: CanvasProps) {
                     ...n.data, 
                     sourceMaterialId: savedSM.id,
                     citationId: savedCitation.id,
+                    files: finalFiles,
+                    pendingFiles: undefined, // Clear pending files
                   } 
                 }
               : n
@@ -1381,6 +1401,24 @@ export default function CanvasInner({ projectId }: CanvasProps) {
         });
         const savedCard = await cardRes.json();
         
+        // Upload pending files if any
+        let finalFiles = Array.isArray(node.data.files) ? node.data.files : [];
+        if (node.data.pendingFiles && Array.isArray(node.data.pendingFiles)) {
+          try {
+            await uploadFilesForCardType(
+              "question",
+              savedQuestion.id,
+              node.data.pendingFiles,
+              [], // Start with empty array since we're uploading to a new record
+              (newFiles) => {
+                finalFiles = newFiles;
+              }
+            );
+          } catch (err) {
+            console.error("Failed to upload pending files:", err);
+          }
+        }
+        
         // Update node with saved data
         setNodes((nds) => 
           nds.map(n => 
@@ -1391,6 +1429,8 @@ export default function CanvasInner({ projectId }: CanvasProps) {
                   data: { 
                     ...n.data, 
                     questionId: savedQuestion.id,
+                    files: finalFiles,
+                    pendingFiles: undefined, // Clear pending files
                   } 
                 }
               : n
@@ -1401,10 +1441,26 @@ export default function CanvasInner({ projectId }: CanvasProps) {
         setOpenCard({ id: savedCard.id.toString(), type: node.type });
         
       } else if (node.type === "insight") {
-        // Create card using existing insight data
+        // Create insight
+        const insightPayload = {
+          project_id: projectId,
+          insight_text: node.data.insight || "",
+          files: Array.isArray(node.data.files) ? node.data.files.join(',') : "",
+        };
+        const insightRes = await fetch(`${API_URL}/insights/`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: token ? `Bearer ${token}` : "",
+          },
+          body: JSON.stringify(insightPayload),
+        });
+        const savedInsight = await insightRes.json();
+        
+        // Create card
         const cardPayload = {
           type: node.type,
-          data_id: node.data.insightId,
+          data_id: savedInsight.id,
           position_x: node.position.x,
           position_y: node.position.y,
           project_id: projectId,
@@ -1419,13 +1475,37 @@ export default function CanvasInner({ projectId }: CanvasProps) {
         });
         const savedCard = await cardRes.json();
         
-        // Update node with saved card ID
+        // Upload pending files if any
+        let finalFiles = Array.isArray(node.data.files) ? node.data.files : [];
+        if (node.data.pendingFiles && Array.isArray(node.data.pendingFiles)) {
+          try {
+            await uploadFilesForCardType(
+              "insight",
+              savedInsight.id,
+              node.data.pendingFiles,
+              [], // Start with empty array since we're uploading to a new record
+              (newFiles) => {
+                finalFiles = newFiles;
+              }
+            );
+          } catch (err) {
+            console.error("Failed to upload pending files:", err);
+          }
+        }
+        
+        // Update node with saved data
         setNodes((nds) => 
           nds.map(n => 
             n.id === cardId 
               ? { 
                   ...n, 
                   id: savedCard.id.toString(),
+                  data: { 
+                    ...n.data, 
+                    insightId: savedInsight.id,
+                    files: finalFiles,
+                    pendingFiles: undefined, // Clear pending files
+                  } 
                 }
               : n
           )
@@ -1435,10 +1515,26 @@ export default function CanvasInner({ projectId }: CanvasProps) {
         setOpenCard({ id: savedCard.id.toString(), type: node.type });
         
       } else if (node.type === "thought") {
-        // Create card using existing thought data
+        // Create thought
+        const thoughtPayload = {
+          project_id: projectId,
+          thought_text: node.data.thought || "",
+          files: Array.isArray(node.data.files) ? node.data.files.join(',') : "",
+        };
+        const thoughtRes = await fetch(`${API_URL}/thoughts/`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: token ? `Bearer ${token}` : "",
+          },
+          body: JSON.stringify(thoughtPayload),
+        });
+        const savedThought = await thoughtRes.json();
+        
+        // Create card
         const cardPayload = {
           type: node.type,
-          data_id: node.data.thoughtId,
+          data_id: savedThought.id,
           position_x: node.position.x,
           position_y: node.position.y,
           project_id: projectId,
@@ -1453,13 +1549,37 @@ export default function CanvasInner({ projectId }: CanvasProps) {
         });
         const savedCard = await cardRes.json();
         
-        // Update node with saved card ID
+        // Upload pending files if any
+        let finalFiles = Array.isArray(node.data.files) ? node.data.files : [];
+        if (node.data.pendingFiles && Array.isArray(node.data.pendingFiles)) {
+          try {
+            await uploadFilesForCardType(
+              "thought",
+              savedThought.id,
+              node.data.pendingFiles,
+              [], // Start with empty array since we're uploading to a new record
+              (newFiles) => {
+                finalFiles = newFiles;
+              }
+            );
+          } catch (err) {
+            console.error("Failed to upload pending files:", err);
+          }
+        }
+        
+        // Update node with saved data
         setNodes((nds) => 
           nds.map(n => 
             n.id === cardId 
               ? { 
                   ...n, 
                   id: savedCard.id.toString(),
+                  data: { 
+                    ...n.data, 
+                    thoughtId: savedThought.id,
+                    files: finalFiles,
+                    pendingFiles: undefined, // Clear pending files
+                  } 
                 }
               : n
           )

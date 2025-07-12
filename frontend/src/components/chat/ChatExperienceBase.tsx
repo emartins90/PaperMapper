@@ -5,9 +5,9 @@ import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, Command
 import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { FileListDisplay } from "../file-management/FileListDisplay";
+import { FileListDisplay } from "../canvas-add-files/FileListDisplay";
 import { uploadFilesForCardType, CardType } from "../../components/useFileUploadHandler";
-import FileChip from "../file-management/FileChip";
+import FileChip from "../canvas-add-files/FileChip";
 
 interface ChatExperienceBaseProps {
   cardId: string;

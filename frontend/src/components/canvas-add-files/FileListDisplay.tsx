@@ -1,5 +1,5 @@
 import React from "react";
-import FileChip from "./FileChip";
+import FileChip from "../../components/canvas-add-files/FileChip";
 
 export type FileType = 'image' | 'pdf' | 'audio' | 'other';
 

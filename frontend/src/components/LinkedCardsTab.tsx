@@ -1,9 +1,9 @@
 import React from "react";
 import { Button } from "./ui/button";
-import SourceMaterialCard from "./cards/SourceMaterialCard";
-import QuestionCard from "./cards/QuestionCard";
-import InsightCard from "./cards/InsightCard";
-import ThoughtCard from "./cards/ThoughtCard";
+import SourceMaterialCard from "./canvas-cards/SourceMaterialCard";
+import QuestionCard from "./canvas-cards/QuestionCard";
+import InsightCard from "./canvas-cards/InsightCard";
+import ThoughtCard from "./canvas-cards/ThoughtCard";
 
 interface LinkedCardsTabProps {
   openCard: { id: string; type: string } | null;
