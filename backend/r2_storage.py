@@ -10,15 +10,16 @@ class R2Storage:
     """Handles file uploads to Cloudflare R2 storage"""
     
     def __init__(self):
+        from backend.config import settings
         # Initialize R2 client (S3-compatible)
         self.s3_client = boto3.client(
             's3',
-            endpoint_url=os.getenv('R2_ENDPOINT_URL', 'https://your-account-id.r2.cloudflarestorage.com'),
-            aws_access_key_id=os.getenv('R2_ACCESS_KEY_ID'),
-            aws_secret_access_key=os.getenv('R2_SECRET_ACCESS_KEY'),
+            endpoint_url=settings.R2_ENDPOINT_URL,
+            aws_access_key_id=settings.R2_ACCESS_KEY_ID,
+            aws_secret_access_key=settings.R2_SECRET_ACCESS_KEY,
             region_name='auto'  # R2 uses 'auto' as region
         )
-        self.bucket_name = os.getenv('R2_BUCKET_NAME', 'paper-mapper-files')
+        self.bucket_name = settings.R2_BUCKET_NAME
     
     async def upload_file(self, file: UploadFile, folder: str = "uploads") -> dict:
         """
@@ -43,8 +44,7 @@ class R2Storage:
                 self.bucket_name,
                 key,
                 ExtraArgs={
-                    'ContentType': file.content_type,
-                    'ACL': 'public-read'  # Make files publicly accessible
+                    'ContentType': file.content_type
                 }
             )
             

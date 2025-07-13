@@ -2,6 +2,10 @@ fastapi
 uvicorn[standard]
 sqlalchemy
 psycopg2-binary
+asyncpg
 alembic
 boto3
 python-multipart
+python-dotenv
+fastapi-users[sqlalchemy]
+fastapi-users-db-sqlalchemy

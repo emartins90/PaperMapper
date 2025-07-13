@@ -1,10 +1,20 @@
+import os
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 import datetime
+from backend.config import settings
+from sqlalchemy import create_engine
 
-DATABASE_URL = "postgresql+asyncpg://postgres:ReesesCups1810!@localhost:5432/papermapper"
+DATABASE_URL = settings.DATABASE_URL
 
-engine = create_async_engine(DATABASE_URL, echo=True)
-SessionLocal = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+if DATABASE_URL.startswith("postgresql+asyncpg"):
+    # Async for app
+    engine = create_async_engine(DATABASE_URL, echo=True)
+    SessionLocal = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+else:
+    # Sync for migrations
+    engine = create_engine(DATABASE_URL, echo=True)
+    SessionLocal = sessionmaker(bind=engine)
+
 Base = declarative_base()

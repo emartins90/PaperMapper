@@ -48,6 +48,7 @@ export default function AuthForm({ onAuth }: { onAuth: (token: string) => void }
       <h2 className="text-2xl font-bold mb-4 text-center">
         {mode === "login" ? "Login" : "Register"}
       </h2>
+      
       <form onSubmit={handleSubmit} className="space-y-4">
         <input
           type="email"

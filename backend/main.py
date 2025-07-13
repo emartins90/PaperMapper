@@ -8,6 +8,7 @@ from backend.models import User, Project, PasswordResetCode
 from backend.schemas import UserRead, UserCreate, UserUpdate, Project as ProjectSchema, ProjectCreate, CardUpdate
 from backend.user_db import get_user_db
 from fastapi_users import FastAPIUsers
+from fastapi_users_db_sqlalchemy import SQLAlchemyUserDatabase
 from fastapi_users.authentication import AuthenticationBackend
 from fastapi_users.authentication.strategy.jwt import JWTStrategy
 from fastapi_users.authentication.transport.bearer import BearerTransport
@@ -33,8 +34,7 @@ import random
 import datetime
 from fastapi_users.router import get_auth_router
 
-# Load environment variables from .env file
-load_dotenv()
+from backend.config import settings
 
 # Password reset request models
 class ForgotPasswordRequest(BaseModel):
@@ -44,7 +44,7 @@ class ResetPasswordRequest(BaseModel):
     token: str
     password: str
 
-SECRET = os.environ.get("JWT_SECRET", "SUPERSECRET")
+SECRET = settings.JWT_SECRET
 
 # Create sync engine for sync operations
 sync_engine = create_engine(DATABASE_URL.replace("+asyncpg", ""))
@@ -70,10 +70,16 @@ async def get_user_manager(user_db=Depends(get_user_db)):
     yield UserManager(user_db)
 
 def get_jwt_strategy() -> JWTStrategy:
-    return JWTStrategy(secret=SECRET, lifetime_seconds=3600)
+    return JWTStrategy(secret=SECRET, lifetime_seconds=30 * 24 * 3600)  # 30 days
 
-# Use cookie transport for authentication
-cookie_transport = CookieTransport(cookie_name="fastapiusersauth", cookie_max_age=3600)
+# Use cookie transport for authentication with secure settings
+cookie_transport = CookieTransport(
+    cookie_name="auth_token",  # Less predictable name
+    cookie_max_age=30 * 24 * 3600,  # 30 days - users stay logged in
+    cookie_secure=settings.ENV == "production",  # HTTPS only in production
+    cookie_httponly=True,  # Prevent XSS
+    cookie_samesite="lax"  # CSRF protection
+)
 auth_backend = AuthenticationBackend(
     name="cookie",
     transport=cookie_transport,
@@ -103,12 +109,13 @@ r2_storage = R2Storage()
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],  # Frontend URLs
+    allow_origins=settings.CORS_ORIGINS,  # Dynamic CORS origins
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
     expose_headers=["*"],
 )
+print("CORS origins in use:", settings.CORS_ORIGINS)
 
 # Dependency to get async DB session
 def get_db():
@@ -940,6 +947,16 @@ def delete_user_custom_option(option_id: int, db: Session = Depends(get_sync_db)
 # --- Password Reset Endpoints ---
 @app.post("/auth/forgot-password")
 async def forgot_password(request: ForgotPasswordRequest, db: Session = Depends(get_sync_db)):
+    # Basic rate limiting - check recent requests for this email
+    recent_requests = db.query(PasswordResetCode).filter(
+        PasswordResetCode.user_id == models.User.id,
+        models.User.email == request.email,
+        PasswordResetCode.expires_at > datetime.datetime.utcnow() - datetime.timedelta(minutes=5)
+    ).count()
+    
+    if recent_requests >= 3:
+        raise HTTPException(status_code=429, detail="Too many reset requests. Please wait 5 minutes.")
+    
     # Find user by email
     user = db.query(models.User).filter(models.User.email == request.email).first()
     if not user:
@@ -949,13 +966,26 @@ async def forgot_password(request: ForgotPasswordRequest, db: Session = Depends(
     code = f"{random.randint(100000, 999999)}"
     expires_at = datetime.datetime.utcnow() + datetime.timedelta(minutes=10)
     # Invalidate previous codes
-    db.query(PasswordResetCode).filter(PasswordResetCode.user_id == user.id, PasswordResetCode.used == False).update({PasswordResetCode.used: True})
+    db.query(PasswordResetCode).filter(
+        PasswordResetCode.user_id == user.id, 
+        PasswordResetCode.used == False
+    ).update({PasswordResetCode.used: True})
+    
     # Store code
     reset_code = PasswordResetCode(user_id=user.id, code=code, expires_at=expires_at, used=False)
     db.add(reset_code)
     db.commit()
-    # Log code (simulate email)
-    print(f"Password reset code for {user.email}: {code}")
+    
+    # TODO: Send email instead of logging
+    # For development, print to console for testing
+    if settings.ENV == "development":
+        print(f"Password reset code for {user.email}: {code}")
+    else:
+        # In production, this should send an actual email
+        # For now, just log that it was sent (without the code)
+        print(f"Password reset code sent to {user.email}")
+        # TODO: Implement email sending service here
+    
     return {"message": "Password reset code sent"}
 
 password_helper = PasswordHelper()

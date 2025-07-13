@@ -2,11 +2,12 @@ import sys
 import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
-from logging.config import fileConfig
+from dotenv import load_dotenv
+load_dotenv(os.path.join(os.path.dirname(__file__), '..', '.env.development'))
 
+from logging.config import fileConfig
 from sqlalchemy import engine_from_config
 from sqlalchemy import pool
-
 from alembic import context
 from backend.database import Base  # Use absolute import for Alembic
 from backend import models  # Import all models so Alembic can detect them
@@ -31,6 +32,9 @@ target_metadata = Base.metadata
 # my_important_option = config.get_main_option("my_important_option")
 # ... etc.
 
+def get_url():
+    return os.getenv("DATABASE_URL") or config.get_main_option("sqlalchemy.url")
+
 
 def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode.
@@ -44,7 +48,7 @@ def run_migrations_offline() -> None:
     script output.
 
     """
-    url = config.get_main_option("sqlalchemy.url")
+    url = get_url()
     context.configure(
         url=url,
         target_metadata=target_metadata,
@@ -63,10 +67,13 @@ def run_migrations_online() -> None:
     and associate a connection with the context.
 
     """
+    url = get_url()
+    print("Alembic loaded DATABASE_URL:", os.getenv("DATABASE_URL"))
     connectable = engine_from_config(
         config.get_section(config.config_ini_section, {}),
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
+        url=url,
     )
 
     with connectable.connect() as connection:
