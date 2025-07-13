@@ -13,6 +13,7 @@ type FileUploadSectionProps = {
   fileInputRef: React.RefObject<HTMLInputElement | null>;
   accept?: string;
   fileEntries?: FileEntry[];
+  cardType?: string; // Add cardType prop
 };
 
 export default function FileUploadSection({
@@ -22,7 +23,8 @@ export default function FileUploadSection({
   onFileDelete,
   fileInputRef,
   accept = "image/*,.pdf,.doc,.docx,audio/mp3,audio/wav,audio/m4a,audio/ogg",
-  fileEntries = []
+  fileEntries = [],
+  cardType = "questions" // Default to questions for backward compatibility
 }: FileUploadSectionProps) {
   // Prefer fileEntries if present (for new cards), else fall back to files array
   const displayFiles: FileEntry[] = fileEntries.length > 0
@@ -48,10 +50,23 @@ export default function FileUploadSection({
 
   // Helper to get image source
   const getImageSrc = (entry: FileEntry) => {
-    if (entry.url.startsWith('blob:')) {
-      return entry.url; // Use blob URL directly
+    // If it's a local upload
+    if (entry.url.startsWith('/uploads/')) {
+      return `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}${entry.url}`;
     }
-    return `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}${entry.url}`;
+    // If it's a public R2 URL, extract the filename and use the secure endpoint
+    if (entry.url.includes('.r2.dev') || entry.url.includes('.r2.cloudflarestorage.com')) {
+      const filename = entry.url.split('/').pop();
+      const folder = cardType === "source" ? "source-materials" : `${cardType}s`;
+      return `/secure-files/${folder}/${filename}`;
+    }
+    // If it's just a filename
+    if (!entry.url.startsWith('http') && !entry.url.startsWith('/')) {
+      const folder = cardType === "source" ? "source-materials" : `${cardType}s`;
+      return `/secure-files/${folder}/${entry.url}`;
+    }
+    // Otherwise, return as-is
+    return entry.url;
   };
 
   return (
@@ -73,7 +88,7 @@ export default function FileUploadSection({
           onClick={() => fileInputRef.current?.click()}
           disabled={isUploading}
         >
-          + Add Files
+          + Add Files & Images
         </Button>
       </div>
       {displayFiles && displayFiles.length > 0 && (

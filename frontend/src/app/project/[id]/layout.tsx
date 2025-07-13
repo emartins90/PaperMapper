@@ -27,7 +27,7 @@ export default function ProjectLayout({ children }: { children: React.ReactNode 
     if (!projectId) return;
     const token = localStorage.getItem("token");
     fetch(`${API_URL}/projects/${projectId}`, {
-      headers: { Authorization: token ? `Bearer ${token}` : "" },
+      credentials: "include", // Send cookies with request
     })
       .then(res => res.ok ? res.json() : Promise.reject("Failed to fetch project"))
       .then(data => setProjectName(data.name))

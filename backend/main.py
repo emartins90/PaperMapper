@@ -1,6 +1,5 @@
 from fastapi import FastAPI, Depends, HTTPException, status, UploadFile, File, Form, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional
 from backend.database import SessionLocal, engine, Base, DATABASE_URL
@@ -12,6 +11,7 @@ from fastapi_users import FastAPIUsers
 from fastapi_users.authentication import AuthenticationBackend
 from fastapi_users.authentication.strategy.jwt import JWTStrategy
 from fastapi_users.authentication.transport.bearer import BearerTransport
+from fastapi_users.authentication.transport.cookie import CookieTransport
 from fastapi_users.manager import BaseUserManager
 from fastapi_users.password import PasswordHelper
 from sqlalchemy.orm import Session
@@ -20,15 +20,21 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm.exc import StaleDataError
 from sqlalchemy import delete as sa_delete
 from pydantic import BaseModel
+from backend.r2_storage import R2Storage
+from dotenv import load_dotenv
+from fastapi.responses import StreamingResponse
 
 import uuid
 import os
 from sqlalchemy import select
 from pathlib import Path
-import shutil
 from backend import crud
 import random
 import datetime
+from fastapi_users.router import get_auth_router
+
+# Load environment variables from .env file
+load_dotenv()
 
 # Password reset request models
 class ForgotPasswordRequest(BaseModel):
@@ -66,12 +72,21 @@ async def get_user_manager(user_db=Depends(get_user_db)):
 def get_jwt_strategy() -> JWTStrategy:
     return JWTStrategy(secret=SECRET, lifetime_seconds=3600)
 
-bearer_transport = BearerTransport(tokenUrl="auth/jwt/login")
+# Use cookie transport for authentication
+cookie_transport = CookieTransport(cookie_name="fastapiusersauth", cookie_max_age=3600)
 auth_backend = AuthenticationBackend(
-    name="jwt",
-    transport=bearer_transport,
+    name="cookie",
+    transport=cookie_transport,
     get_strategy=get_jwt_strategy,
 )
+
+# Comment out BearerTransport and old backend
+# bearer_transport = BearerTransport(tokenUrl="auth/jwt/login")
+# auth_backend = AuthenticationBackend(
+#     name="jwt",
+#     transport=bearer_transport,
+#     get_strategy=get_jwt_strategy,
+# )
 
 fastapi_users = FastAPIUsers[User, int](
     get_user_manager,
@@ -82,20 +97,17 @@ get_current_user = fastapi_users.current_user(active=True)
 
 app = FastAPI()
 
-# Create uploads directory if it doesn't exist
-UPLOAD_DIR = Path("uploads")
-UPLOAD_DIR.mkdir(exist_ok=True)
-
-# Mount static files for serving uploaded files
-app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
+# Initialize R2 storage
+r2_storage = R2Storage()
 
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],  # Frontend URL
+    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],  # Frontend URLs
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
 
 # Dependency to get async DB session
@@ -196,20 +208,15 @@ async def delete_source_material(sm_id: int, db: AsyncSession = Depends(get_db()
     if not db_sm:
         raise HTTPException(status_code=404, detail="SourceMaterial not found")
     
-    # Clean up associated files
+    # Clean up associated files from R2
     if db_sm.files:
         file_urls = db_sm.files.split(',')
         for file_url in file_urls:
             file_url = file_url.strip()
             if file_url:
-                filename = file_url.split('/').pop()
-                if filename:
-                    file_path = UPLOAD_DIR / filename
-                    if file_path.exists():
-                        try:
-                            file_path.unlink()
-                        except Exception as e:
-                            print(f"Failed to delete file {filename}: {e}")
+                key = r2_storage.extract_key_from_url(file_url)
+                if key:
+                    await r2_storage.delete_file(key)
     
     await db.delete(db_sm)
     await db.commit()
@@ -228,15 +235,9 @@ async def upload_source_material_files(
     if db_sm is None:
         raise HTTPException(status_code=404, detail="SourceMaterial not found")
 
-    uploaded_urls = []
-    for file in files:
-        file_extension = Path(file.filename).suffix
-        unique_filename = f"{uuid.uuid4()}{file_extension}"
-        file_path = UPLOAD_DIR / unique_filename
-        with open(file_path, "wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
-        file_url = f"/uploads/{unique_filename}"
-        uploaded_urls.append(file_url)
+    # Upload files to R2
+    upload_results = await r2_storage.upload_multiple_files(files, folder="source-materials")
+    uploaded_urls = [result["file_url"] for result in upload_results]
 
     # Update the files field (append new files)
     existing_files = db_sm.files.split(",") if db_sm.files else []
@@ -313,15 +314,9 @@ async def upload_question_files(
     if db_question is None:
         raise HTTPException(status_code=404, detail="Question not found")
 
-    uploaded_urls = []
-    for file in files:
-        file_extension = Path(file.filename).suffix
-        unique_filename = f"{uuid.uuid4()}{file_extension}"
-        file_path = UPLOAD_DIR / unique_filename
-        with open(file_path, "wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
-        file_url = f"/uploads/{unique_filename}"
-        uploaded_urls.append(file_url)
+    # Upload files to R2
+    upload_results = await r2_storage.upload_multiple_files(files, folder="questions")
+    uploaded_urls = [result["file_url"] for result in upload_results]
 
     # Update the files field (append new files)
     existing_files = db_question.files.split(",") if db_question.files else []
@@ -343,14 +338,10 @@ async def delete_question_file(
     if db_question is None:
         raise HTTPException(status_code=404, detail="Question not found")
 
-    # Remove file from disk
-    filename = file_url.split("/")[-1]
-    file_path = UPLOAD_DIR / filename
-    if file_path.exists():
-        try:
-            file_path.unlink()
-        except Exception as e:
-            print(f"Failed to delete file {filename}: {e}")
+    # Remove file from R2
+    key = r2_storage.extract_key_from_url(file_url)
+    if key:
+        await r2_storage.delete_file(key)
 
     # Remove file from files field
     existing_files = db_question.files.split(",") if db_question.files else []
@@ -695,23 +686,27 @@ app.include_router(
     tags=["users"],
 )
 
+# Register the cookie login route
+app.include_router(
+    fastapi_users.get_auth_router(auth_backend),
+    prefix="/auth/cookie",
+    tags=["auth"],
+)
+# If you want to disable JWT login, comment out the JWT login route registration if present.
+
 # --- File Upload Endpoints ---
 @app.post("/upload/")
 async def upload_file(file: UploadFile = File(...)):
-    """Upload a file and return the file path"""
+    """Upload a file to R2 and return the file URL"""
     try:
-        # Create a unique filename to avoid conflicts
-        file_extension = Path(file.filename).suffix
-        unique_filename = f"{uuid.uuid4()}{file_extension}"
-        file_path = UPLOAD_DIR / unique_filename
+        # Upload file to R2
+        result = await r2_storage.upload_file(file, folder="general")
         
-        # Save the file
-        with open(file_path, "wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
-        
-        # Return the file URL
-        file_url = f"/uploads/{unique_filename}"
-        return {"filename": file.filename, "file_url": file_url, "file_path": str(file_path)}
+        return {
+            "filename": result["filename"], 
+            "file_url": result["file_url"], 
+            "key": result["key"]
+        }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"File upload failed: {str(e)}")
 
@@ -741,15 +736,9 @@ async def upload_insight_files(
     if db_insight is None:
         raise HTTPException(status_code=404, detail="Insight not found")
 
-    uploaded_urls = []
-    for file in files:
-        file_extension = Path(file.filename).suffix
-        unique_filename = f"{uuid.uuid4()}{file_extension}"
-        file_path = UPLOAD_DIR / unique_filename
-        with open(file_path, "wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
-        file_url = f"/uploads/{unique_filename}"
-        uploaded_urls.append(file_url)
+    # Upload files to R2
+    upload_results = await r2_storage.upload_multiple_files(files, folder="insights")
+    uploaded_urls = [result["file_url"] for result in upload_results]
 
     # Update the files field (append new files)
     existing_files = db_insight.files.split(",") if db_insight.files else []
@@ -771,14 +760,10 @@ async def delete_insight_file(
     if db_insight is None:
         raise HTTPException(status_code=404, detail="Insight not found")
 
-    # Remove file from disk
-    filename = file_url.split("/")[-1]
-    file_path = UPLOAD_DIR / filename
-    if file_path.exists():
-        try:
-            file_path.unlink()
-        except Exception as e:
-            print(f"Failed to delete file {filename}: {e}")
+    # Remove file from R2
+    key = r2_storage.extract_key_from_url(file_url)
+    if key:
+        await r2_storage.delete_file(key)
 
     # Remove file from files field
     existing_files = db_insight.files.split(",") if db_insight.files else []
@@ -802,15 +787,9 @@ async def upload_thought_files(
         print(f"[UPLOAD] Thought not found for id={thought_id}")
         raise HTTPException(status_code=404, detail="Thought not found")
 
-    uploaded_urls = []
-    for file in files:
-        file_extension = Path(file.filename).suffix
-        unique_filename = f"{uuid.uuid4()}{file_extension}"
-        file_path = UPLOAD_DIR / unique_filename
-        with open(file_path, "wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
-        file_url = f"/uploads/{unique_filename}"
-        uploaded_urls.append(file_url)
+    # Upload files to R2
+    upload_results = await r2_storage.upload_multiple_files(files, folder="thoughts")
+    uploaded_urls = [result["file_url"] for result in upload_results]
 
     # Update the files field (append new files)
     existing_files = db_thought.files.split(",") if db_thought.files else []
@@ -832,14 +811,10 @@ async def delete_thought_file(
     if db_thought is None:
         raise HTTPException(status_code=404, detail="Thought not found")
 
-    # Remove file from disk
-    filename = file_url.split("/")[-1]
-    file_path = UPLOAD_DIR / filename
-    if file_path.exists():
-        try:
-            file_path.unlink()
-        except Exception as e:
-            print(f"Failed to delete file {filename}: {e}")
+    # Remove file from R2
+    key = r2_storage.extract_key_from_url(file_url)
+    if key:
+        await r2_storage.delete_file(key)
 
     # Remove file from files field
     existing_files = db_thought.files.split(",") if db_thought.files else []
@@ -955,3 +930,14 @@ def get_project_tags(project_id: int, db: Session = Depends(get_sync_db), curren
         return {"tags": sorted(list(all_tags))}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching tags: {str(e)}")
+
+@app.get("/secure-files/{folder}/{filename}")
+async def get_secure_file(folder: str, filename: str, current_user=Depends(get_current_user)):
+    # TODO: Add file ownership/authorization checks here if needed
+    r2 = R2Storage()
+    key = f"{folder}/{filename}"
+    try:
+        file_obj = r2.s3_client.get_object(Bucket=r2.bucket_name, Key=key)
+        return StreamingResponse(file_obj['Body'], media_type=file_obj['ContentType'])
+    except Exception as e:
+        raise HTTPException(status_code=404, detail=f"File not found or access denied: {str(e)}")

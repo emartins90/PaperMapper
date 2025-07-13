@@ -38,20 +38,19 @@ export async function uploadFilesForCardType(
       throw new Error("Unknown card type");
   }
   formData.append(idField, String(Number(backendId)));
-  console.log("[uploadFilesForCardType] cardType:", cardType, "backendId:", backendId, "files:", files.map(f => ({ name: f.name, type: f.type })), "endpoint:", endpoint, "idField:", idField);
+
   try {
     const res = await fetch(`${API_URL}${endpoint}`, {
       method: "POST",
       body: formData,
     });
-    console.log("[uploadFilesForCardType] Response status:", res.status);
+
     if (!res.ok) {
       const errorText = await res.text();
       console.error("[uploadFilesForCardType] Error response:", errorText);
       throw new Error("Failed to upload files");
     }
     const data = await res.json();
-    console.log("[uploadFilesForCardType] Response data:", data);
     const newFiles = [...existingFiles, ...(data.file_urls || [])];
     onUpdateNodeData(newFiles);
     return newFiles;

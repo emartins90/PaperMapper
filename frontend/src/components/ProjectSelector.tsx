@@ -22,7 +22,7 @@ export default function ProjectSelector({ token }: { token: string }) {
       setError("");
       try {
         const res = await fetch(`${API_URL}/projects/`, {
-          headers: { Authorization: `Bearer ${token}` },
+          credentials: "include", // Send cookies with request
         });
         if (!res.ok) throw new Error("Failed to fetch projects");
         setProjects(await res.json());
@@ -44,8 +44,8 @@ export default function ProjectSelector({ token }: { token: string }) {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
         },
+        credentials: "include", // Send cookies with request
         body: JSON.stringify({ name: newName }),
       });
       if (!res.ok) throw new Error("Failed to create project");

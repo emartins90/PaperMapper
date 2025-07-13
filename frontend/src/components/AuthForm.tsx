@@ -25,16 +25,16 @@ export default function AuthForm({ onAuth }: { onAuth: (token: string) => void }
         setMode("login");
         setError("Registration successful! Please log in.");
       } else {
-        const res = await fetch(`${API_URL}/auth/jwt/login`, {
+        const res = await fetch(`${API_URL}/auth/cookie/login`, {
           method: "POST",
           headers: { "Content-Type": "application/x-www-form-urlencoded" },
           body: new URLSearchParams({ username: email, password }),
+          credentials: "include", // Ensure cookies are set
         });
         if (!res.ok) throw new Error("Login failed");
-        const data = await res.json();
-        localStorage.setItem("token", data.access_token);
         localStorage.setItem("email", email);
-        onAuth(data.access_token);
+        localStorage.setItem("token", "cookie-auth"); // Set a token for app compatibility
+        onAuth("cookie-auth");
       }
     } catch (err: any) {
       setError(err.message);

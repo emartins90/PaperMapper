@@ -2,21 +2,10 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import FileUploadSection from "../canvas-add-files/FileUploadSection";
+import UnsavedCardFileUpload from "../shared/UnsavedCardFileUpload";
 import { uploadFilesForCardType } from "../useFileUploadHandler";
+import { useCardSave } from "../shared/useCardSave";
 import LinkedCardsTab from "../LinkedCardsTab";
-
-interface QuestionCardContentProps {
-  cardData: any;
-  openCard: { id: string; type: string } | null;
-  onUpdateNodeData?: (cardId: string, newData: any) => void;
-  questionTab: string;
-  nodes: any[];
-  edges: any[];
-  onEdgesChange?: (changes: any[]) => void;
-  onClose?: () => void;
-  onAddCard?: (cardId: string) => void;
-  onDeleteCard?: (cardId: string) => void;
-}
 
 const QUESTION_CATEGORIES = [
   "Clarify a concept",
@@ -30,7 +19,6 @@ const QUESTION_CATEGORIES = [
   "Propose a solution",
   "Custom..."
 ];
-
 const QUESTION_STATUSES = [
   "unexplored",
   "needs sources",
@@ -38,7 +26,6 @@ const QUESTION_STATUSES = [
   "answered",
   "not relevant"
 ];
-
 const QUESTION_PRIORITIES = [
   "",
   "high",
@@ -46,28 +33,60 @@ const QUESTION_PRIORITIES = [
   "low"
 ];
 
+interface QuestionCardContentProps {
+  cardData: any;
+  openCard: { id: string; type: string } | null;
+  onUpdateNodeData?: (cardId: string, newData: any) => void;
+  onAddCard?: (cardId: string) => void;
+  onDeleteCard?: (cardId: string) => void;
+  questionTab: string;
+  nodes: any[];
+  edges: any[];
+  onEdgesChange?: (changes: any[]) => void;
+  onClose?: () => void;
+  onFormDataChange?: (data: any) => void;
+  showSaveButton?: boolean;
+}
+
 export default function QuestionCardContent({ 
   cardData, 
   openCard, 
   onUpdateNodeData, 
-  questionTab, 
-  nodes, 
-  edges, 
-  onEdgesChange, 
-  onClose, 
   onAddCard, 
-  onDeleteCard 
+  onDeleteCard,
+  questionTab,
+  nodes,
+  edges,
+  onEdgesChange,
+  onClose,
+  onFormDataChange,
+  showSaveButton
 }: QuestionCardContentProps) {
   const [question, setQuestion] = React.useState(cardData?.question || "");
   const [category, setCategory] = React.useState(cardData?.category || "");
   const [customCategory, setCustomCategory] = React.useState("");
   const [status, setStatus] = React.useState(cardData?.status || "unexplored");
   const [priority, setPriority] = React.useState(cardData?.priority || "");
-  const [isSaving, setIsSaving] = React.useState(false);
   const [files, setFiles] = React.useState<string[]>(cardData?.files || []);
   const [fileEntries, setFileEntries] = React.useState<Array<{ url: string; filename: string; type: string }>>(cardData?.fileEntries || []);
   const [isUploading, setIsUploading] = React.useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  // For unsaved cards, store files as File[] objects
+  const [pendingFiles, setPendingFiles] = React.useState<File[]>(cardData?.pendingFiles || []);
+
+  // Check if card is unsaved
+  const isUnsaved = !cardData?.questionId;
+
+  // Use the shared save hook
+  const { saveCard, isSaving } = useCardSave({
+    cardId: openCard?.id || "",
+    cardType: "question",
+    projectId: cardData?.projectId || 0,
+    onUpdateNodeData,
+    onAddCard,
+    onDeleteCard,
+  });
 
   React.useEffect(() => {
     setQuestion(cardData?.question || "");
@@ -77,7 +96,21 @@ export default function QuestionCardContent({
     setCustomCategory("");
     setFiles(cardData?.files || []);
     setFileEntries(cardData?.fileEntries || []);
+    setPendingFiles(cardData?.pendingFiles || []);
   }, [openCard?.id]);
+
+  // Update form data for parent component when fields change
+  React.useEffect(() => {
+    if (onFormDataChange) {
+      onFormDataChange({
+        questionText: question,
+        category: category === "Custom..." ? customCategory : category,
+        status: status,
+        priority: priority,
+        uploadedFiles: pendingFiles,
+      });
+    }
+  }, [question, category, customCategory, status, priority, pendingFiles, onFormDataChange]);
 
   const saveAllFields = async (fields?: Partial<{ question: string; category: string; status: string; priority: string }>) => {
     // Always update local node data first
@@ -95,7 +128,7 @@ export default function QuestionCardContent({
       return;
     }
     
-    setIsSaving(true);
+    // setIsSaving(true); // This is now handled by useCardSave
     try {
       const token = localStorage.getItem("token");
       const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -122,11 +155,10 @@ export default function QuestionCardContent({
       console.error("Error saving question changes:", error);
       alert("Failed to save changes: " + (error as Error).message);
     } finally {
-      setTimeout(() => setIsSaving(false), 500);
+      // setTimeout(() => setIsSaving(false), 500); // This is now handled by useCardSave
     }
   };
 
-  // File upload logic for questions
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || !openCard) return;
     setIsUploading(true);
@@ -146,23 +178,11 @@ export default function QuestionCardContent({
       } else {
         // For new cards, store files locally as File objects
         const newFiles = Array.from(e.target.files);
-        console.log('[FileUpload] newFiles:', newFiles);
-        // Create file entries with both blob URL and original filename
-        const newFileEntries = newFiles.map(file => ({
-          url: URL.createObjectURL(file),
-          filename: file.name,
-          type: file.type
-        }));
-        console.log('[FileUpload] newFileEntries:', newFileEntries);
-        const updatedFiles = [...files, ...newFileEntries.map(entry => entry.url)];
-        const updatedFileEntries = [...fileEntries, ...newFileEntries];
-        console.log('[onUpdateNodeData] files:', updatedFiles);
-        console.log('[onUpdateNodeData] fileEntries:', updatedFileEntries);
-        console.log('[onUpdateNodeData] pendingFiles:', newFiles);
+    
+        const updatedPendingFiles = [...pendingFiles, ...newFiles];
+        setPendingFiles(updatedPendingFiles);
         onUpdateNodeData?.(openCard.id, { 
-          files: updatedFiles,
-          pendingFiles: newFiles, // Store the actual File objects for later upload
-          fileEntries: updatedFileEntries // Store file metadata for display
+          pendingFiles: updatedPendingFiles
         });
       }
     } catch (err) {
@@ -189,6 +209,26 @@ export default function QuestionCardContent({
     }
   };
 
+  const handleSaveQuestion = async () => {
+    if (!openCard || !question.trim()) return;
+
+    try {
+      await saveCard({
+        cardId: openCard.id,
+        chatAnswers: {
+          questionText: question,
+          category: category === "Custom..." ? customCategory : category,
+          status: status,
+          priority: priority,
+        },
+        uploadedFiles: pendingFiles,
+      });
+    } catch (error) {
+      console.error("Failed to save question:", error);
+      alert("Failed to save question: " + (error as Error).message);
+    }
+  };
+
   return (
     <div className="flex-1 p-6 overflow-y-auto">
       {questionTab === "info" ? (
@@ -201,7 +241,11 @@ export default function QuestionCardContent({
               rows={3}
               value={question}
               onChange={e => setQuestion(e.target.value)}
-              onBlur={() => saveAllFields({ question })}
+              onBlur={() => {
+                if (!isUnsaved) {
+                  saveAllFields({ question });
+                }
+              }}
             />
           </div>
           <div>
@@ -213,10 +257,16 @@ export default function QuestionCardContent({
                 setCategory(e.target.value);
                 if (e.target.value !== "Custom...") {
                   setCustomCategory("");
-                  saveAllFields({ category: e.target.value });
+                  if (!isUnsaved) {
+                    saveAllFields({ category: e.target.value });
+                  }
                 }
               }}
-              onBlur={() => saveAllFields({ category })}
+              onBlur={() => {
+                if (!isUnsaved) {
+                  saveAllFields({ category });
+                }
+              }}
             >
               <option value="">Select category...</option>
               {QUESTION_CATEGORIES.map(opt => (
@@ -229,7 +279,11 @@ export default function QuestionCardContent({
                 placeholder="Enter custom category..."
                 value={customCategory}
                 onChange={e => setCustomCategory(e.target.value)}
-                onBlur={() => saveAllFields({ category: customCategory })}
+                onBlur={() => {
+                  if (!isUnsaved) {
+                    saveAllFields({ category: customCategory });
+                  }
+                }}
               />
             )}
           </div>
@@ -238,8 +292,17 @@ export default function QuestionCardContent({
             <select
               className="w-full p-2 border border-gray-300 rounded-md text-sm"
               value={status}
-              onChange={e => { setStatus(e.target.value); saveAllFields({ status: e.target.value }); }}
-              onBlur={() => saveAllFields({ status })}
+              onChange={e => { 
+                setStatus(e.target.value); 
+                if (!isUnsaved) {
+                  saveAllFields({ status: e.target.value }); 
+                }
+              }}
+              onBlur={() => {
+                if (!isUnsaved) {
+                  saveAllFields({ status });
+                }
+              }}
             >
               {QUESTION_STATUSES.map(opt => (
                 <option key={opt} value={opt}>{opt.charAt(0).toUpperCase() + opt.slice(1)}</option>
@@ -251,8 +314,17 @@ export default function QuestionCardContent({
             <select
               className="w-full p-2 border border-gray-300 rounded-md text-sm"
               value={priority}
-              onChange={e => { setPriority(e.target.value); saveAllFields({ priority: e.target.value }); }}
-              onBlur={() => saveAllFields({ priority })}
+              onChange={e => { 
+                setPriority(e.target.value); 
+                if (!isUnsaved) {
+                  saveAllFields({ priority: e.target.value }); 
+                }
+              }}
+              onBlur={() => {
+                if (!isUnsaved) {
+                  saveAllFields({ priority });
+                }
+              }}
             >
               <option value="">No Priority</option>
               {QUESTION_PRIORITIES.filter(opt => opt !== "").map(opt => (
@@ -260,15 +332,41 @@ export default function QuestionCardContent({
               ))}
             </select>
           </div>
-          {/* File upload and display section */}
-          <FileUploadSection
-            files={files}
-            isUploading={isUploading}
-            onFileUpload={handleFileUpload}
-            onFileDelete={handleFileDelete}
-            fileInputRef={fileInputRef}
-            fileEntries={fileEntries}
-          />
+          
+          {/* Use different file upload components based on save status */}
+          {isUnsaved ? (
+            <UnsavedCardFileUpload
+              files={pendingFiles}
+              onFilesChange={(newFiles) => {
+                setPendingFiles(newFiles);
+                onUpdateNodeData?.(openCard?.id || "", { pendingFiles: newFiles });
+              }}
+            />
+          ) : (
+            <FileUploadSection
+              files={files}
+              isUploading={isUploading}
+              onFileUpload={handleFileUpload}
+              onFileDelete={handleFileDelete}
+              fileInputRef={fileInputRef}
+              fileEntries={fileEntries}
+              cardType="question"
+            />
+          )}
+
+          {/* Save button for unsaved cards - only show if showSaveButton is true */}
+          {isUnsaved && showSaveButton && (
+            <div className="pt-4">
+              <button
+                onClick={handleSaveQuestion}
+                disabled={isSaving || !question.trim()}
+                className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isSaving ? "Saving..." : "Save Question"}
+              </button>
+            </div>
+          )}
+
           {isSaving && <div className="text-xs text-blue-500 mt-2">Saving...</div>}
         </div>
       ) : questionTab === "linked" ? (

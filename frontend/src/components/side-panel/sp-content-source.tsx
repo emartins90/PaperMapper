@@ -2,7 +2,9 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import FileUploadSection from "../canvas-add-files/FileUploadSection";
+import UnsavedCardFileUpload from "../shared/UnsavedCardFileUpload";
 import { uploadFilesForCardType } from "../useFileUploadHandler";
+import { useCardSave } from "../shared/useCardSave";
 import LinkedCardsTab from "../LinkedCardsTab";
 
 interface SourceCardContentProps {
@@ -17,6 +19,8 @@ interface SourceCardContentProps {
   onEdgesChange?: (changes: any[]) => void;
   onAddCard?: (cardId: string) => void;
   onDeleteCard?: (cardId: string) => void;
+  onFormDataChange?: (data: any) => void;
+  showSaveButton?: boolean;
 }
 
 export default function SourceCardContent({ 
@@ -30,13 +34,18 @@ export default function SourceCardContent({
   onClose, 
   onEdgesChange, 
   onAddCard, 
-  onDeleteCard 
+  onDeleteCard, 
+  onFormDataChange,
+  showSaveButton
 }: SourceCardContentProps) {
   const [notes, setNotes] = useState(cardData?.additionalNotes || "");
   const [isSaving, setIsSaving] = useState(false);
   const [files, setFiles] = useState<string[]>(cardData?.files || []);
   const [fileEntries, setFileEntries] = useState<Array<{ url: string; filename: string; type: string }>>(cardData?.fileEntries || []);
   const [isUploading, setIsUploading] = useState(false);
+  
+  // For unsaved cards, store files as File[] objects
+  const [pendingFiles, setPendingFiles] = useState<File[]>(cardData?.pendingFiles || []);
   
   // Add state for all editable fields
   const [sourceCitation, setSourceCitation] = useState(cardData?.source || "");
@@ -51,6 +60,19 @@ export default function SourceCardContent({
   const [filteredSuggestions, setFilteredSuggestions] = useState<string[]>([]);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Check if card is unsaved
+  const isUnsaved = !cardData?.sourceMaterialId;
+
+  // Use the shared save hook
+  const { saveCard, isSaving: isSavingCard } = useCardSave({
+    cardId: openCard?.id || "",
+    cardType: "source",
+    projectId: cardData?.projectId || 0,
+    onUpdateNodeData,
+    onAddCard,
+    onDeleteCard,
+  });
 
   // Get all existing tags from all cards
   const getAllExistingTags = () => {
@@ -95,7 +117,9 @@ export default function SourceCardContent({
     setTagInput("");
     setShowTagSuggestions(false);
     setFilteredSuggestions([]);
-    saveAllFieldsWithTags(newTags);
+    if (!isUnsaved) {
+      saveAllFieldsWithTags(newTags);
+    }
   };
 
   // Update all fields when component mounts or card changes
@@ -108,7 +132,24 @@ export default function SourceCardContent({
     setArgumentType(cardData?.thesisSupport || "");
     setSourceFunction(cardData?.sourceFunction || "");
     setCredibility(cardData?.credibility || "");
-  }, [openCard?.id]); // Only run when the card ID changes, not when cardData changes
+    setPendingFiles(cardData?.pendingFiles || []);
+  }, [openCard?.id]);
+
+  // Update form data for parent component when fields change
+  useEffect(() => {
+    if (onFormDataChange) {
+      onFormDataChange({
+        sourceContent: sourceContent,
+        summary: summary,
+        topicalTags: tags.join(", "),
+        argumentType: argumentType,
+        sourceFunction: sourceFunction,
+        sourceCredibility: credibility,
+        sourceCitation: sourceCitation,
+        uploadedFiles: pendingFiles,
+      });
+    }
+  }, [sourceContent, summary, tags, argumentType, sourceFunction, credibility, sourceCitation, pendingFiles, onFormDataChange]); // Only run when the card ID changes, not when cardData changes
 
   // Update files when cardData changes
   useEffect(() => {
@@ -461,7 +502,9 @@ export default function SourceCardContent({
       setShowTagSuggestions(false);
       setFilteredSuggestions([]);
       // Save immediately when tag is added with the new tags
-      saveAllFieldsWithTags(newTags);
+      if (!isUnsaved) {
+        saveAllFieldsWithTags(newTags);
+      }
     }
   };
 
@@ -470,7 +513,9 @@ export default function SourceCardContent({
     const newTags = tags.filter(tag => tag !== tagToDelete);
     setTags(newTags);
     // Save immediately when tag is deleted with the new tags
-    saveAllFieldsWithTags(newTags);
+    if (!isUnsaved) {
+      saveAllFieldsWithTags(newTags);
+    }
   };
 
   // Handle file upload
@@ -493,14 +538,11 @@ export default function SourceCardContent({
       } else {
         // For new cards, store files locally as File objects
         const newFiles = Array.from(e.target.files);
-        console.log('[FileUpload] newFiles:', newFiles);
-        const fileUrls = newFiles.map(file => URL.createObjectURL(file));
-        const updatedFiles = [...files, ...fileUrls];
-        setFiles(updatedFiles);
+    
+        const updatedPendingFiles = [...pendingFiles, ...newFiles];
+        setPendingFiles(updatedPendingFiles);
         onUpdateNodeData?.(openCard.id, { 
-          files: updatedFiles,
-          pendingFiles: newFiles, // Store the actual File objects for later upload
-          fileEntries: fileEntries // Store file metadata for display
+          pendingFiles: updatedPendingFiles
         });
       }
     } catch (err) {
@@ -568,15 +610,18 @@ export default function SourceCardContent({
     const newNotes = e.target.value;
     setNotes(newNotes);
     
-    // Debounce the save to avoid too many API calls
-    const timeoutId = setTimeout(() => {
-      saveNotes(newNotes);
-    }, 1000);
-    
-    return () => clearTimeout(timeoutId);
+    // Only save to backend if card is saved
+    if (!isUnsaved) {
+      // Debounce the save to avoid too many API calls
+      const timeoutId = setTimeout(() => {
+        saveNotes(newNotes);
+      }, 1000);
+      
+      return () => clearTimeout(timeoutId);
+    }
   };
 
-  // Handle field changes (just update state, no auto-save)
+  // Handle field changes (just update state, no auto-save for unsaved cards)
   const handleSourceCitationChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setSourceCitation(e.target.value);
   };
@@ -592,55 +637,98 @@ export default function SourceCardContent({
   const handleArgumentTypeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const newValue = e.target.value;
     setArgumentType(newValue);
-    // Save immediately when selection is made
-    saveAllFieldsWithArgumentType(newValue);
+    // Save immediately when selection is made (only for saved cards)
+    if (!isUnsaved) {
+      saveAllFieldsWithArgumentType(newValue);
+    }
   };
 
   const handleSourceFunctionChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const newValue = e.target.value;
     setSourceFunction(newValue);
-    // Save immediately when selection is made
-    saveAllFieldsWithSourceFunction(newValue);
+    // Save immediately when selection is made (only for saved cards)
+    if (!isUnsaved) {
+      saveAllFieldsWithSourceFunction(newValue);
+    }
   };
 
   const handleCredibilityChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const newValue = e.target.value;
     setCredibility(newValue);
-    // Save immediately when selection is made
-    saveAllFieldsWithCredibility(newValue);
+    // Save immediately when selection is made (only for saved cards)
+    if (!isUnsaved) {
+      saveAllFieldsWithCredibility(newValue);
+    }
   };
 
   const handleTagsChange = (newTags: string[]) => {
     setTags(newTags);
   };
 
-  // Handle field blur (save when user leaves the field)
+  // Handle field blur (save when user leaves the field, only for saved cards)
   const handleSourceCitationBlur = () => {
-    saveAllFields();
+    if (!isUnsaved) {
+      saveAllFields();
+    }
   };
 
   const handleSummaryBlur = () => {
-    saveAllFields();
+    if (!isUnsaved) {
+      saveAllFields();
+    }
   };
 
   const handleSourceContentBlur = () => {
-    saveAllFields();
+    if (!isUnsaved) {
+      saveAllFields();
+    }
   };
 
   const handleArgumentTypeBlur = () => {
-    saveAllFields();
+    if (!isUnsaved) {
+      saveAllFields();
+    }
   };
 
   const handleSourceFunctionBlur = () => {
-    saveAllFields();
+    if (!isUnsaved) {
+      saveAllFields();
+    }
   };
 
   const handleCredibilityBlur = () => {
-    saveAllFields();
+    if (!isUnsaved) {
+      saveAllFields();
+    }
   };
 
   const handleTagsBlur = () => {
-    saveAllFields();
+    if (!isUnsaved) {
+      saveAllFields();
+    }
+  };
+
+  const handleSaveSource = async () => {
+    if (!openCard || !sourceContent.trim()) return;
+
+    try {
+      await saveCard({
+        cardId: openCard.id,
+        chatAnswers: {
+          sourceContent: sourceContent,
+          summary: summary,
+          topicalTags: tags.join(", "),
+          argumentType: argumentType,
+          sourceFunction: sourceFunction,
+          sourceCredibility: credibility,
+          sourceCitation: sourceCitation,
+        },
+        uploadedFiles: pendingFiles,
+      });
+    } catch (error) {
+      console.error("Failed to save source:", error);
+      alert("Failed to save source: " + (error as Error).message);
+    }
   };
 
   if (!cardType || cardType !== "source") {
@@ -667,14 +755,28 @@ export default function SourceCardContent({
               onBlur={handleSourceContentBlur}
             />
           </div>
-          <FileUploadSection
-            files={files}
-            isUploading={isUploading}
-            onFileUpload={handleFileUpload}
-            onFileDelete={handleDeleteFile}
-            fileInputRef={fileInputRef}
-            fileEntries={fileEntries}
-          />
+          
+          {/* Use different file upload components based on save status */}
+          {isUnsaved ? (
+            <UnsavedCardFileUpload
+              files={pendingFiles}
+              onFilesChange={(newFiles) => {
+                setPendingFiles(newFiles);
+                onUpdateNodeData?.(openCard?.id || "", { pendingFiles: newFiles });
+              }}
+            />
+          ) : (
+            <FileUploadSection
+              files={files}
+              isUploading={isUploading}
+              onFileUpload={handleFileUpload}
+              onFileDelete={handleDeleteFile}
+              fileInputRef={fileInputRef}
+              fileEntries={fileEntries}
+              cardType="source"
+            />
+          )}
+          
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">My Notes</label>
             <textarea
@@ -685,6 +787,19 @@ export default function SourceCardContent({
               onChange={handleNotesChange}
             />
           </div>
+
+          {/* Save button for unsaved cards - only show if showSaveButton is true */}
+          {isUnsaved && showSaveButton && (
+            <div className="pt-4">
+              <button
+                onClick={handleSaveSource}
+                disabled={isSavingCard || !sourceContent.trim()}
+                className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isSavingCard ? "Saving..." : "Save Source"}
+              </button>
+            </div>
+          )}
         </div>
       ) : sourceTab === "info" ? (
         <div className="space-y-4">
@@ -805,6 +920,19 @@ export default function SourceCardContent({
               </select>
             </div>
           </div>
+
+          {/* Save button for unsaved cards */}
+          {isUnsaved && (
+            <div className="pt-4">
+              <button
+                onClick={handleSaveSource}
+                disabled={isSavingCard || !sourceContent.trim()}
+                className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isSavingCard ? "Saving..." : "Save Source"}
+              </button>
+            </div>
+          )}
         </div>
       ) : sourceTab === "linked" ? (
         <LinkedCardsTab openCard={openCard} nodes={nodes} edges={edges} onEdgesChange={onEdgesChange} onClose={onClose} />

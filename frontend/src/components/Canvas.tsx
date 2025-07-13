@@ -22,7 +22,7 @@ import SourceMaterialCard from "../components/canvas-cards/SourceMaterialCard";
 import InsightCard from "../components/canvas-cards/InsightCard";
 import ThoughtCard from "../components/canvas-cards/ThoughtCard";
 import BottomNav from "@/components/BottomNav";
-import SidePanel from "../components/SidePanel";
+import { SidePanelBase } from "../components/side-panel";
 import { FullscreenFileViewer } from "./canvas-add-files/FullscreenFileViewer";
 import { uploadFilesForCardType, CardType } from "../components/useFileUploadHandler";
 
@@ -93,6 +93,8 @@ export default function CanvasInner({ projectId }: CanvasProps) {
   // State for drawer tabs (per card type)
   const [sourceTab, setSourceTab] = useState("info");
   const [questionTab, setQuestionTab] = useState("info");
+  const [insightTab, setInsightTab] = useState("info");
+  const [thoughtTab, setThoughtTab] = useState("info");
 
   // Guided experience state (from BottomNav, but for now, local state for demo)
   const [guided, setGuided] = useState(true);
@@ -116,9 +118,7 @@ export default function CanvasInner({ projectId }: CanvasProps) {
       try {
         const token = localStorage.getItem("token");
         const res = await fetch(`${API_URL}/cards/?project_id=${projectId}`, {
-          headers: {
-            Authorization: token ? `Bearer ${token}` : "",
-          },
+          credentials: "include", // Send cookies with request
         });
         if (!res.ok) throw new Error("Failed to load cards");
         const cards = await res.json();
@@ -131,9 +131,7 @@ export default function CanvasInner({ projectId }: CanvasProps) {
           if (card.type === "source" && card.data_id) {
             try {
               const smRes = await fetch(`${API_URL}/source_materials/${card.data_id}`, {
-                headers: {
-                  Authorization: token ? `Bearer ${token}` : "",
-                },
+                credentials: "include", // Send cookies with request
               });
               if (smRes.ok) {
                 const sourceMaterial = await smRes.json();
@@ -159,9 +157,7 @@ export default function CanvasInner({ projectId }: CanvasProps) {
             // For question cards, load the question data
             try {
               const questionRes = await fetch(`${API_URL}/questions/${card.data_id}`, {
-                headers: {
-                  Authorization: token ? `Bearer ${token}` : "",
-                },
+                credentials: "include", // Send cookies with request
               });
               if (questionRes.ok) {
                 const question = await questionRes.json();
@@ -189,9 +185,7 @@ export default function CanvasInner({ projectId }: CanvasProps) {
             // For insight cards, load the insight data
             try {
               const insightRes = await fetch(`${API_URL}/insights/${card.data_id}`, {
-                headers: {
-                  Authorization: token ? `Bearer ${token}` : "",
-                },
+                credentials: "include", // Send cookies with request
               });
               if (insightRes.ok) {
                 const insight = await insightRes.json();
@@ -216,9 +210,7 @@ export default function CanvasInner({ projectId }: CanvasProps) {
             // For thought cards, load the thought data
             try {
               const thoughtRes = await fetch(`${API_URL}/thoughts/${card.data_id}`, {
-                headers: {
-                  Authorization: token ? `Bearer ${token}` : "",
-                },
+                credentials: "include", // Send cookies with request
               });
               if (thoughtRes.ok) {
                 const thought = await thoughtRes.json();
@@ -259,13 +251,11 @@ export default function CanvasInner({ projectId }: CanvasProps) {
         
         // Load card links
         const linksRes = await fetch(`${API_URL}/card_links/?project_id=${projectId}`, {
-          headers: {
-            Authorization: token ? `Bearer ${token}` : "",
-          },
+          credentials: "include", // Send cookies with request
         });
         if (linksRes.ok) {
           const links = await linksRes.json();
-          console.log('Loaded card links from backend:', links);
+      
           const loadedEdges = links.map((link: any) => ({
             id: link.id.toString(),
             source: link.source_card_id.toString(),
@@ -274,7 +264,7 @@ export default function CanvasInner({ projectId }: CanvasProps) {
             targetHandle: link.target_handle,
             type: 'default',
           }));
-          console.log('Converted to ReactFlow edges:', loadedEdges);
+      
           setEdges(loadedEdges);
         } else {
           console.error('Failed to load card links:', linksRes.status, linksRes.statusText);
@@ -323,6 +313,7 @@ export default function CanvasInner({ projectId }: CanvasProps) {
         ...node.data,
         onOpen: () => handleOpenCard(node.id, node.type || ''),
         onFileClick: handleFileClick,
+        cardType: node.type || 'source', // Add cardType to data for FileListDisplay
       },
     })),
     [nodes, handleOpenCard, handleFileClick]
@@ -670,7 +661,7 @@ export default function CanvasInner({ projectId }: CanvasProps) {
         if (change.type === 'remove' && change.id) {
           // Skip temporary edges (they haven't been saved to backend yet)
           if (change.id.startsWith('temp-')) {
-            console.log('Skipping deletion of temporary edge:', change.id);
+    
             continue;
           }
           
@@ -687,7 +678,7 @@ export default function CanvasInner({ projectId }: CanvasProps) {
               console.error("Failed to delete connection from backend:", change.id);
               // Optionally revert the local change if backend deletion failed
             } else {
-              console.log("Successfully deleted connection from backend:", change.id);
+      
             }
           } catch (err) {
             console.error("Failed to delete connection:", err);
@@ -766,7 +757,7 @@ export default function CanvasInner({ projectId }: CanvasProps) {
           setEdges((eds) => eds.filter(edge => edge.id !== newEdge.id));
         }
       } else {
-        console.log('Missing required params for connection:', { params, projectId });
+  
       }
     },
     [projectId],
@@ -790,21 +781,6 @@ export default function CanvasInner({ projectId }: CanvasProps) {
 
   // Save card to backend after chat
   const handleSaveCard = async ({ cardId, chatAnswers, uploadedFiles }: { cardId: string; chatAnswers: any; uploadedFiles: File[] }) => {
-    console.log("[handleSaveCard] called with:", { cardId, chatAnswers, uploadedFiles });
-    console.log("[handleSaveCard] uploadedFiles parameter details:", { 
-      isArray: Array.isArray(uploadedFiles), 
-      length: uploadedFiles?.length, 
-      type: typeof uploadedFiles,
-      constructor: uploadedFiles?.constructor?.name 
-    });
-    if (uploadedFiles && uploadedFiles.length > 0) {
-      console.log("[handleSaveCard] uploadedFiles elements:", uploadedFiles.map(f => ({ 
-        name: f?.name, 
-        size: f?.size, 
-        type: f?.type,
-        isFile: f instanceof File 
-      })));
-    }
     
     const node = nodes.find(n => n.id === cardId);
     if (!node || !projectId) return;
@@ -814,8 +790,6 @@ export default function CanvasInner({ projectId }: CanvasProps) {
     let updatedNodeData: any = {};
     let cardType: CardType = node.type as CardType;
     let files: string[] = [];
-    console.log(`[handleSaveCard] node:`, node);
-    console.log(`[handleSaveCard] cardType:`, cardType);
 
     try {
       const token = localStorage.getItem("token");
@@ -826,7 +800,6 @@ export default function CanvasInner({ projectId }: CanvasProps) {
         // Check if source already exists (has sourceMaterialId) or needs to be created
         if (node.data.sourceMaterialId) {
           // Update existing source material
-          console.log("[SOURCE] Updating existing source material with ID:", node.data.sourceMaterialId);
           const sourceMaterialPayload = {
             content: chatAnswers.sourceContent,
             summary: chatAnswers.summary,
@@ -845,10 +818,8 @@ export default function CanvasInner({ projectId }: CanvasProps) {
           });
           if (!smRes.ok) throw new Error("Failed to update source material");
           backendId = node.data.sourceMaterialId;
-          console.log("[SOURCE] Updated existing source material, backendId:", backendId);
         } else {
           // Create new source material
-          console.log("[SOURCE] Creating new source material");
           // Create citation
           const citationPayload = {
             text: chatAnswers.sourceContent || "Source content",
@@ -890,7 +861,6 @@ export default function CanvasInner({ projectId }: CanvasProps) {
           if (!smRes.ok) throw new Error("Failed to save source material");
           const savedSM = await smRes.json();
           backendId = savedSM.id;
-          console.log("[SOURCE] Created new source material, backendId:", backendId);
         }
         
         updatedNodeData = {
@@ -918,7 +888,6 @@ export default function CanvasInner({ projectId }: CanvasProps) {
         // Check if question already exists (has questionId) or needs to be created
         if (node.data.questionId) {
           // Update existing question
-          console.log("[QUESTION] Updating existing question with ID:", node.data.questionId);
           const questionPayload = {
             question_text: chatAnswers.questionText && chatAnswers.questionText.trim() !== '' && chatAnswers.questionText !== 'Skipped' ? chatAnswers.questionText : null,
             category: chatAnswers.questionFunction && chatAnswers.questionFunction.trim() !== '' && chatAnswers.questionFunction !== 'Skipped' ? chatAnswers.questionFunction : null,
@@ -934,10 +903,8 @@ export default function CanvasInner({ projectId }: CanvasProps) {
           });
           if (!questionRes.ok) throw new Error("Failed to update question");
           backendId = node.data.questionId;
-          console.log("[QUESTION] Updated existing question, backendId:", backendId);
         } else {
           // Create new question
-          console.log("[QUESTION] Creating new question");
           const questionPayload = {
             project_id: projectId,
             question_text: chatAnswers.questionText && chatAnswers.questionText.trim() !== '' && chatAnswers.questionText !== 'Skipped' ? chatAnswers.questionText : null,
@@ -957,7 +924,6 @@ export default function CanvasInner({ projectId }: CanvasProps) {
           if (!questionRes.ok) throw new Error("Failed to save question");
           const savedQuestion = await questionRes.json();
           backendId = savedQuestion.id;
-          console.log("[QUESTION] Created new question, backendId:", backendId);
         }
         
         updatedNodeData = {
@@ -979,7 +945,6 @@ export default function CanvasInner({ projectId }: CanvasProps) {
         // Check if insight already exists (has insightId) or needs to be created
         if (node.data.insightId) {
           // Update existing insight
-          console.log("[INSIGHT] Updating existing insight with ID:", node.data.insightId);
           const insightPayload = {
             insight_text: chatAnswers.insightText || "",
             sources_linked: node.data.sourcesLinked || "0 Sources Linked",
@@ -994,17 +959,14 @@ export default function CanvasInner({ projectId }: CanvasProps) {
           });
           if (!insightRes.ok) throw new Error("Failed to update insight");
           backendId = node.data.insightId;
-          console.log("[INSIGHT] Updated existing insight, backendId:", backendId);
         } else {
           // Create new insight
-          console.log("[INSIGHT] Creating new insight");
           const insightPayload = {
             project_id: projectId,
             insight_text: chatAnswers.insightText || "",
             sources_linked: node.data.sourcesLinked || "0 Sources Linked",
             files: "",
           };
-          console.log("[INSIGHT] insightPayload:", insightPayload);
           const insightRes = await fetch(`${API_URL}/insights/`, {
             method: "POST",
             headers: {
@@ -1016,7 +978,6 @@ export default function CanvasInner({ projectId }: CanvasProps) {
           if (!insightRes.ok) throw new Error("Failed to save insight");
           const savedInsight = await insightRes.json();
           backendId = savedInsight.id;
-          console.log("[INSIGHT] Created new insight, backendId:", backendId, "savedInsight:", savedInsight);
         }
         
         updatedNodeData = {
@@ -1035,7 +996,6 @@ export default function CanvasInner({ projectId }: CanvasProps) {
         // Check if thought already exists (has thoughtId) or needs to be created
         if (node.data.thoughtId) {
           // Update existing thought
-          console.log("[THOUGHT] Updating existing thought with ID:", node.data.thoughtId);
           const thoughtPayload = {
             thought_text: chatAnswers.thoughtText || "",
           };
@@ -1049,16 +1009,13 @@ export default function CanvasInner({ projectId }: CanvasProps) {
           });
           if (!thoughtRes.ok) throw new Error("Failed to update thought");
           backendId = node.data.thoughtId;
-          console.log("[THOUGHT] Updated existing thought, backendId:", backendId);
         } else {
           // Create new thought
-          console.log("[THOUGHT] Creating new thought");
           const thoughtPayload = {
             project_id: projectId,
             thought_text: chatAnswers.thoughtText || "",
             files: "",
           };
-          console.log("[THOUGHT] thoughtPayload:", thoughtPayload);
           const thoughtRes = await fetch(`${API_URL}/thoughts/`, {
             method: "POST",
             headers: {
@@ -1070,7 +1027,6 @@ export default function CanvasInner({ projectId }: CanvasProps) {
           if (!thoughtRes.ok) throw new Error("Failed to save thought");
           const savedThought = await thoughtRes.json();
           backendId = savedThought.id;
-          console.log("[THOUGHT] Created new thought, backendId:", backendId, "savedThought:", savedThought);
         }
         
         updatedNodeData = {
@@ -1088,12 +1044,9 @@ export default function CanvasInner({ projectId }: CanvasProps) {
       }
 
       // 2. Upload files using the unified handler if any (AFTER backendId is available)
-      console.log("[handleSaveCard] After backendId assignment, backendId:", backendId);
-      console.log("[handleSaveCard] uploadedFiles before upload:", uploadedFiles, "backendId:", backendId, "cardType:", cardType);
       
       // For all card types, upload files to the backend record (newly created or existing)
       if (uploadedFiles && uploadedFiles.length > 0 && backendId) {
-        console.log(`[handleSaveCard] [UPLOAD] Uploading files for ${cardType} to backend record ${backendId}:`, uploadedFiles.map(f => ({ name: f.name, type: f.type })));
         await uploadFilesForCardType(
           cardType,
           backendId,
@@ -1101,39 +1054,26 @@ export default function CanvasInner({ projectId }: CanvasProps) {
           [], // always start with empty for new cards
           (newFiles: string[]) => {
             files = newFiles;
-            console.log(`[handleSaveCard] [UPLOAD] Files uploaded for ${cardType}, backendId: ${backendId}, returned file URLs:`, newFiles);
           }
         );
         updatedNodeData.files = files;
-        console.log("[handleSaveCard] [UPLOAD] Updated node data with files:", files);
       } else {
         // For other card types, check if files are in chatAnswers.files as a fallback
         let filesToUpload = uploadedFiles;
         let filesFromChatAnswers = false;
         if ((!uploadedFiles || uploadedFiles.length === 0) && chatAnswers.files && chatAnswers.files.length > 0) {
-          console.log("[handleSaveCard] uploadedFiles is empty, but found files in chatAnswers.files:", chatAnswers.files);
-          console.log("chatAnswers.files type check:", {
-            isArray: Array.isArray(chatAnswers.files),
-            length: chatAnswers.files.length,
-            firstElement: chatAnswers.files[0],
-            isFile: chatAnswers.files[0] instanceof File,
-            constructor: chatAnswers.files[0]?.constructor?.name
-          });
           
           // Check if chatAnswers.files contains URLs (strings) or File objects
           if (typeof chatAnswers.files[0] === 'string') {
-            console.log("[handleSaveCard] chatAnswers.files contains URLs, using them directly");
             files = chatAnswers.files;
             updatedNodeData.files = files;
             filesFromChatAnswers = true;
-          } else if (chatAnswers.files[0] instanceof File) {
-            console.log("[handleSaveCard] chatAnswers.files contains File objects, uploading them");
+                      } else if (chatAnswers.files[0] instanceof File) {
             filesToUpload = chatAnswers.files;
           }
         }
         
         if (filesToUpload.length > 0 && backendId && !filesFromChatAnswers) {
-          console.log(`[handleSaveCard] [UPLOAD] Uploading files for cardType: ${cardType}, backendId: ${backendId}, filesToUpload:`, filesToUpload.map(f => ({ name: f.name, type: f.type })));
           await uploadFilesForCardType(
             cardType,
             backendId,
@@ -1141,22 +1081,16 @@ export default function CanvasInner({ projectId }: CanvasProps) {
             [], // always start with empty for new cards
             (newFiles: string[]) => {
               files = newFiles;
-              console.log(`[handleSaveCard] [UPLOAD] Files uploaded for cardType: ${cardType}, backendId: ${backendId}, returned file URLs:`, newFiles);
             }
           );
           updatedNodeData.files = files;
-          console.log("[handleSaveCard] [UPLOAD] Updated node data with files:", files);
         } else if (!filesFromChatAnswers) {
           files = [];
           updatedNodeData.files = files;
-          console.log("[handleSaveCard] [UPLOAD] No files to upload or no backendId");
-        } else {
-          console.log("[handleSaveCard] [UPLOAD] Using files from chatAnswers.files:", files);
         }
       }
 
       // 3. Create the card
-      console.log("[handleSaveCard] About to create card with cardPayload:", cardPayload);
       const res = await fetch(`${API_URL}/cards/`, {
         method: "POST",
         headers: {
@@ -1167,7 +1101,6 @@ export default function CanvasInner({ projectId }: CanvasProps) {
       });
       if (!res.ok) throw new Error("Failed to save card");
       const savedCard = await res.json();
-      console.log("[handleSaveCard] Card created, savedCard:", savedCard);
       setNodes((nds) => {
         const filtered = nds.filter(n => n.id !== cardId && n.id !== savedCard.id);
         const updatedNode = {
@@ -1175,12 +1108,13 @@ export default function CanvasInner({ projectId }: CanvasProps) {
           id: savedCard.id.toString(),
           data: updatedNodeData,
         };
-        console.log("[handleSaveCard] setNodes - filtered:", filtered, "updatedNode:", updatedNode);
         return [...filtered, updatedNode];
       });
       setOpenCard({ id: savedCard.id.toString(), type: node.type || "source" });
-      if (cardType === "source") setSourceTab("content");
-      if (cardType === "question") setQuestionTab("info");
+              if (cardType === "source") setSourceTab("content");
+        if (cardType === "question") setQuestionTab("info");
+        if (cardType === "insight") setInsightTab("info");
+        if (cardType === "thought") setThoughtTab("info");
       setChatActiveCardId(null);
     } catch (err) {
       alert("Failed to save card: " + (err as Error).message);
@@ -1631,24 +1565,65 @@ export default function CanvasInner({ projectId }: CanvasProps) {
 
   // Update node data when side panel saves changes
   const handleUpdateNodeData = (cardId: string, newData: any) => {
-    setNodes((nds) => 
-      nds.map((node) => 
-        node.id === cardId 
-          ? { 
-              ...node, 
+    
+    setNodes((nds) => {
+      const node = nds.find(n => n.id === cardId);
+      if (!node) {
+        return nds;
+      }
+      
+      // If newData contains a cardId, update the node ID to match the database card ID
+      const shouldUpdateNodeId = newData.cardId && newData.cardId.toString() !== cardId;
+      
+      if (shouldUpdateNodeId) {
+        // Remove the old node and add the new one with the updated ID
+        const filteredNodes = nds.filter(n => n.id !== cardId);
+        const updatedNode = {
+          ...node,
+          id: newData.cardId.toString(),
+          data: { 
+            ...node.data, 
+            ...newData,
+            // Preserve critical ID fields that might not be in newData
+            sourceMaterialId: node.data.sourceMaterialId || newData.sourceMaterialId,
+            projectId: node.data.projectId,
+            citationId: node.data.citationId || newData.citationId,
+            questionId: node.data.questionId || newData.questionId,
+            insightId: node.data.insightId || newData.insightId,
+            thoughtId: node.data.thoughtId || newData.thoughtId,
+                  } 
+      };
+      
+      const result = [...filteredNodes, updatedNode];
+        return result;
+      } else {
+        // Just update the data without changing the ID
+        return nds.map((n) => {
+          if (n.id === cardId) {
+            return {
+              ...n,
               data: { 
-                ...node.data, 
+                ...n.data, 
                 ...newData,
                 // Preserve critical ID fields that might not be in newData
-                sourceMaterialId: node.data.sourceMaterialId,
-                projectId: node.data.projectId,
-                citationId: node.data.citationId,
-                questionId: node.data.questionId,
+                sourceMaterialId: n.data.sourceMaterialId || newData.sourceMaterialId,
+                projectId: n.data.projectId,
+                citationId: n.data.citationId || newData.citationId,
+                questionId: n.data.questionId || newData.questionId,
+                insightId: n.data.insightId || newData.insightId,
+                thoughtId: n.data.thoughtId || newData.thoughtId,
               } 
-            }
-          : node
-      )
-    );
+            };
+          }
+          return n;
+        });
+      }
+    });
+    
+    // If we updated the node ID, also update the openCard reference
+    if (newData.cardId && openCard && openCard.id === cardId) {
+      setOpenCard({ id: newData.cardId.toString(), type: openCard.type });
+    }
   };
 
   // Listen for events to open cards from linked cards tab
@@ -1679,7 +1654,13 @@ export default function CanvasInner({ projectId }: CanvasProps) {
       }}
     >
       {/* Fullscreen File Viewer Overlay */}
-      <FullscreenFileViewer open={viewerOpen} fileUrl={viewerFile} fileType={viewerType} onClose={() => setViewerOpen(false)} />
+      <FullscreenFileViewer 
+        open={viewerOpen} 
+        fileUrl={viewerFile} 
+        fileType={viewerType} 
+        onClose={() => setViewerOpen(false)}
+        cardType={viewerFile && nodes.find(n => n.data.files?.includes(viewerFile))?.type || "questions"}
+      />
       <ReactFlow
         nodes={nodesWithOpen}
         edges={edges}
@@ -1708,7 +1689,7 @@ export default function CanvasInner({ projectId }: CanvasProps) {
         <Controls />
       </ReactFlow>
       {/* Side Panel */}
-      <SidePanel
+      <SidePanelBase
         openCard={openCard}
         nodes={nodes}
         edges={edges}
@@ -1719,11 +1700,16 @@ export default function CanvasInner({ projectId }: CanvasProps) {
         onSourceTabChange={setSourceTab}
         questionTab={questionTab}
         onQuestionTabChange={setQuestionTab}
+        insightTab={insightTab}
+        onInsightTabChange={setInsightTab}
+        thoughtTab={thoughtTab}
+        onThoughtTabChange={setThoughtTab}
         onSaveCard={handleSaveCard}
         onUpdateNodeData={handleUpdateNodeData}
         onEdgesChange={onEdgesChange}
         onAddCard={handleAddCard}
         onDeleteCard={handleDeleteCard}
+        projectId={projectId}
       />
       <BottomNav 
         onAddSourceMaterial={startPlacingSource}

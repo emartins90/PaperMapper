@@ -13,7 +13,7 @@ export default function Home() {
     const t = localStorage.getItem("token");
     setToken(t);
     setIsLoading(false);
-    if (t) {
+    if (t && t === "cookie-auth") {
       router.replace("/projects");
     }
   }, [router]);

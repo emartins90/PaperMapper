@@ -1,0 +1,250 @@
+import { useState } from "react";
+import { uploadFilesForCardType, CardType } from "../useFileUploadHandler";
+
+interface UseCardSaveProps {
+  cardId: string;
+  cardType: CardType;
+  projectId: number;
+  nodePosition?: { x: number; y: number };
+  onUpdateNodeData?: (cardId: string, newData: any) => void;
+  onAddCard?: (cardId: string) => void;
+  onDeleteCard?: (cardId: string) => void;
+}
+
+interface SaveCardData {
+  cardId: string;
+  chatAnswers: any;
+  uploadedFiles: File[];
+}
+
+export const useCardSave = ({
+  cardId,
+  cardType,
+  projectId,
+  nodePosition,
+  onUpdateNodeData,
+  onAddCard,
+  onDeleteCard,
+}: UseCardSaveProps) => {
+  const [isSaving, setIsSaving] = useState(false);
+
+  const saveCard = async (data: SaveCardData) => {
+    const { cardId, chatAnswers, uploadedFiles } = data;
+    setIsSaving(true);
+
+    try {
+      const token = localStorage.getItem("token");
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
+      // Determine the endpoint and payload based on card type
+      let endpoint: string;
+      let payload: any;
+
+      switch (cardType) {
+        case "source":
+          endpoint = "/source_materials/";
+          payload = {
+            project_id: projectId,
+            citation_id: null, // Will be created by backend
+            content: chatAnswers.sourceContent || "",
+            summary: chatAnswers.summary || "",
+            tags: chatAnswers.topicalTags || "",
+            argument_type: chatAnswers.argumentType || "",
+            function: chatAnswers.sourceFunction || "",
+            files: "",
+            notes: "",
+          };
+          break;
+
+        case "question":
+          endpoint = "/questions/";
+          payload = {
+            project_id: projectId,
+            question_text: chatAnswers.questionText || "",
+            category: chatAnswers.questionFunction || chatAnswers.category || "",
+            status: chatAnswers.status || "unexplored",
+            priority: chatAnswers.questionPriority || chatAnswers.priority || "",
+          };
+          
+          break;
+
+        case "insight":
+          endpoint = "/insights/";
+          payload = {
+            project_id: projectId,
+            insight_text: chatAnswers.insightText || "",
+          };
+          break;
+
+        case "thought":
+          endpoint = "/thoughts/";
+          payload = {
+            project_id: projectId,
+            thought_text: chatAnswers.thoughtText || "",
+          };
+          break;
+
+        default:
+          throw new Error(`Unsupported card type: ${cardType}`);
+      }
+
+      // Create the card in the backend
+      const response = await fetch(`${API_URL}${endpoint}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: token ? `Bearer ${token}` : "",
+        },
+        body: JSON.stringify(payload),
+      });
+
+
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Failed to create card: ${response.status} ${errorText}`);
+      }
+
+      const createdCard = await response.json();
+
+      // Upload files if any
+      if (uploadedFiles.length > 0) {
+        
+        // Get the backend ID from the created card
+        let backendId: number;
+        switch (cardType) {
+          case "source":
+            backendId = parseInt(createdCard.id);
+            break;
+          case "question":
+            backendId = parseInt(createdCard.id);
+            break;
+          case "insight":
+            backendId = parseInt(createdCard.id);
+            break;
+          case "thought":
+            backendId = parseInt(createdCard.id);
+            break;
+          default:
+            throw new Error(`Unsupported card type: ${cardType}`);
+        }
+
+        // Validate that we got a valid backend ID
+        if (isNaN(backendId) || !backendId) {
+          throw new Error(`Invalid backend ID received for ${cardType} card: ${createdCard}`);
+        }
+
+
+
+        // Upload files using the existing uploadFilesForCardType function
+        await uploadFilesForCardType(
+          cardType,
+          backendId,
+          uploadedFiles,
+          [], // No existing files for new cards
+          (newFiles: string[]) => {
+            // Update node data with the new files
+            if (onUpdateNodeData) {
+              onUpdateNodeData(cardId, { files: newFiles });
+            }
+          }
+        );
+      }
+
+      // Update node data with backend IDs and other data
+      const nodeDataUpdate: any = {};
+      
+      switch (cardType) {
+        case "source":
+          nodeDataUpdate.sourceMaterialId = createdCard.id;
+          nodeDataUpdate.citationId = createdCard.citation_id || null;
+          nodeDataUpdate.source = chatAnswers.sourceCitation || "";
+          nodeDataUpdate.summary = chatAnswers.summary || "";
+          nodeDataUpdate.text = chatAnswers.sourceContent || "";
+          nodeDataUpdate.tags = chatAnswers.topicalTags ? chatAnswers.topicalTags.split(", ") : [];
+          nodeDataUpdate.thesisSupport = chatAnswers.argumentType || "";
+          nodeDataUpdate.sourceFunction = chatAnswers.sourceFunction || "";
+          nodeDataUpdate.credibility = chatAnswers.sourceCredibility || "";
+          nodeDataUpdate.additionalNotes = "";
+          break;
+
+        case "question":
+          nodeDataUpdate.questionId = createdCard.id;
+          nodeDataUpdate.question = chatAnswers.questionText || "";
+          nodeDataUpdate.category = chatAnswers.questionFunction || chatAnswers.category || "";
+          nodeDataUpdate.status = chatAnswers.status || "unexplored";
+          nodeDataUpdate.priority = chatAnswers.questionPriority || chatAnswers.priority || "";
+          break;
+
+        case "insight":
+          nodeDataUpdate.insightId = createdCard.id;
+          nodeDataUpdate.insight = chatAnswers.insightText || "";
+          break;
+
+        case "thought":
+          nodeDataUpdate.thoughtId = createdCard.id;
+          nodeDataUpdate.thought = chatAnswers.thoughtText || "";
+          break;
+      }
+
+      // Create the card record in the database
+      const cardPayload = {
+        type: cardType,
+        data_id: createdCard.id,
+        position_x: nodePosition?.x || 0,
+        position_y: nodePosition?.y || 0,
+        project_id: projectId,
+      };
+
+
+      
+      const cardResponse = await fetch(`${API_URL}/cards/`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: token ? `Bearer ${token}` : "",
+        },
+        body: JSON.stringify(cardPayload),
+      });
+
+      if (!cardResponse.ok) {
+        const errorText = await cardResponse.text();
+        throw new Error(`Failed to create card record: ${cardResponse.status} ${errorText}`);
+      }
+
+      const savedCard = await cardResponse.json();
+
+      // Update the node data with the card ID
+      nodeDataUpdate.cardId = savedCard.id;
+
+      // Update the node data
+      if (onUpdateNodeData) {
+        onUpdateNodeData(cardId, nodeDataUpdate);
+      }
+
+      // Call onAddCard to finalize the card creation
+      if (onAddCard) {
+        onAddCard(cardId);
+      }
+
+      return { ...createdCard, cardId: savedCard.id };
+
+    } catch (error) {
+      console.error(`[useCardSave] Error saving ${cardType} card:`, error);
+      
+      // If save fails, delete the unsaved card
+      if (onDeleteCard) {
+        onDeleteCard(cardId);
+      }
+      
+      throw error;
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  return {
+    saveCard,
+    isSaving,
+  };
+}; 

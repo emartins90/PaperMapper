@@ -119,7 +119,7 @@ export default function QuestionCard({ data, showHandles = true, width = 'w-96' 
       
       {/* Render uploaded files (images as thumbnails, others as file names) */}
       {data.files && data.files.length > 0 && (
-        <FileListDisplay files={data.files} onFileClick={data.onFileClick} showFilesLabel={true} />
+        <FileListDisplay files={data.files} onFileClick={data.onFileClick} showFilesLabel={true} cardType="question" />
       )}
       
       <div className="flex flex-wrap gap-2 mt-4">

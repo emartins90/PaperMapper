@@ -2,7 +2,9 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import FileUploadSection from "../canvas-add-files/FileUploadSection";
+import UnsavedCardFileUpload from "../shared/UnsavedCardFileUpload";
 import { uploadFilesForCardType } from "../useFileUploadHandler";
+import { useCardSave } from "../shared/useCardSave";
 import LinkedCardsTab from "../LinkedCardsTab";
 
 interface InsightCardContentProps {
@@ -16,6 +18,8 @@ interface InsightCardContentProps {
   edges: any[];
   onEdgesChange?: (changes: any[]) => void;
   onClose?: () => void;
+  onFormDataChange?: (data: any) => void;
+  showSaveButton?: boolean;
 }
 
 export default function InsightCardContent({ 
@@ -28,7 +32,9 @@ export default function InsightCardContent({
   nodes,
   edges,
   onEdgesChange,
-  onClose
+  onClose,
+  onFormDataChange,
+  showSaveButton
 }: InsightCardContentProps) {
   const [insight, setInsight] = React.useState(cardData?.insight || "");
   const [files, setFiles] = React.useState<string[]>(cardData?.files || []);
@@ -36,11 +42,38 @@ export default function InsightCardContent({
   const [isUploading, setIsUploading] = React.useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
+  // For unsaved cards, store files as File[] objects
+  const [pendingFiles, setPendingFiles] = React.useState<File[]>(cardData?.pendingFiles || []);
+
+  // Check if card is unsaved
+  const isUnsaved = !cardData?.insightId;
+
+  // Use the shared save hook
+  const { saveCard, isSaving } = useCardSave({
+    cardId: openCard?.id || "",
+    cardType: "insight",
+    projectId: cardData?.projectId || 0,
+    onUpdateNodeData,
+    onAddCard,
+    onDeleteCard,
+  });
+
   React.useEffect(() => {
     setInsight(cardData?.insight || "");
     setFiles(cardData?.files || []);
     setFileEntries(cardData?.fileEntries || []);
+    setPendingFiles(cardData?.pendingFiles || []);
   }, [openCard?.id]);
+
+  // Update form data for parent component when fields change
+  React.useEffect(() => {
+    if (onFormDataChange) {
+      onFormDataChange({
+        insightText: insight,
+        uploadedFiles: pendingFiles,
+      });
+    }
+  }, [insight, pendingFiles, onFormDataChange]);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || !openCard) return;
@@ -61,23 +94,11 @@ export default function InsightCardContent({
       } else {
         // For new cards, store files locally as File objects
         const newFiles = Array.from(e.target.files);
-        console.log('[FileUpload] newFiles:', newFiles);
-        // Create file entries with both blob URL and original filename
-        const newFileEntries = newFiles.map(file => ({
-          url: URL.createObjectURL(file),
-          filename: file.name,
-          type: file.type
-        }));
-        console.log('[FileUpload] newFileEntries:', newFileEntries);
-        const updatedFiles = [...files, ...newFileEntries.map(entry => entry.url)];
-        const updatedFileEntries = [...fileEntries, ...newFileEntries];
-        console.log('[onUpdateNodeData] files:', updatedFiles);
-        console.log('[onUpdateNodeData] fileEntries:', updatedFileEntries);
-        console.log('[onUpdateNodeData] pendingFiles:', newFiles);
+    
+        const updatedPendingFiles = [...pendingFiles, ...newFiles];
+        setPendingFiles(updatedPendingFiles);
         onUpdateNodeData?.(openCard.id, { 
-          files: updatedFiles,
-          pendingFiles: newFiles, // Store the actual File objects for later upload
-          fileEntries: updatedFileEntries // Store file metadata for display
+          pendingFiles: updatedPendingFiles
         });
       }
     } catch (err) {
@@ -104,6 +125,23 @@ export default function InsightCardContent({
     }
   };
 
+  const handleSaveInsight = async () => {
+    if (!openCard || !insight.trim()) return;
+
+    try {
+      await saveCard({
+        cardId: openCard.id,
+        chatAnswers: {
+          insightText: insight,
+        },
+        uploadedFiles: pendingFiles,
+      });
+    } catch (error) {
+      console.error("Failed to save insight:", error);
+      alert("Failed to save insight: " + (error as Error).message);
+    }
+  };
+
   return (
     <div className="flex-1 p-6 overflow-y-auto">
       {insightTab === "info" ? (
@@ -116,10 +154,24 @@ export default function InsightCardContent({
               rows={3}
               value={insight}
               onChange={e => setInsight(e.target.value)}
-              onBlur={() => openCard && onUpdateNodeData?.(openCard.id, { insight })}
+              onBlur={() => {
+                if (openCard && !isUnsaved) {
+                  onUpdateNodeData?.(openCard.id, { insight });
+                }
+              }}
             />
           </div>
-          <div>
+          
+          {/* Use different file upload components based on save status */}
+          {isUnsaved ? (
+            <UnsavedCardFileUpload
+              files={pendingFiles}
+              onFilesChange={(newFiles) => {
+                setPendingFiles(newFiles);
+                onUpdateNodeData?.(openCard?.id || "", { pendingFiles: newFiles });
+              }}
+            />
+          ) : (
             <FileUploadSection
               files={files}
               isUploading={isUploading}
@@ -127,8 +179,22 @@ export default function InsightCardContent({
               onFileDelete={handleFileDelete}
               fileInputRef={fileInputRef}
               fileEntries={fileEntries}
+              cardType="insight"
             />
-          </div>
+          )}
+
+          {/* Save button for unsaved cards - only show if showSaveButton is true */}
+          {isUnsaved && showSaveButton && (
+            <div className="pt-4">
+              <button
+                onClick={handleSaveInsight}
+                disabled={isSaving || !insight.trim()}
+                className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isSaving ? "Saving..." : "Save Insight"}
+              </button>
+            </div>
+          )}
         </div>
       ) : insightTab === "linked" ? (
         <LinkedCardsTab openCard={openCard} nodes={nodes} edges={edges} onEdgesChange={onEdgesChange} onClose={onClose} />

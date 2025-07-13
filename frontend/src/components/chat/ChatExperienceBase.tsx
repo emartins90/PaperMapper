@@ -8,16 +8,17 @@ import { toast } from "sonner";
 import { FileListDisplay } from "../canvas-add-files/FileListDisplay";
 import { uploadFilesForCardType, CardType } from "../../components/useFileUploadHandler";
 import FileChip from "../canvas-add-files/FileChip";
+import { useCardSave } from "../shared/useCardSave";
 
 interface ChatExperienceBaseProps {
   cardId: string;
   projectId: number;
   nodes: any[];
-  onSaveCard?: (data: { cardId: string; chatAnswers: any; uploadedFiles: File[] }) => void;
   prompts: any[];
   promptTitles: { [key: string]: string };
   chatType: CardType;
   onUpdateNodeData?: (nodeId: string, data: any) => void;
+  onClose?: () => void;
 }
 
 type ComboboxOption = { value: string; label: string };
@@ -35,11 +36,11 @@ const ChatExperienceBase: React.FC<ChatExperienceBaseProps> = ({
   cardId,
   projectId,
   nodes,
-  onSaveCard,
   prompts,
   promptTitles,
   chatType,
   onUpdateNodeData,
+  onClose,
 }) => {
   const [chatStep, setChatStep] = useState(0);
   const [chatAnswers, setChatAnswers] = useState<{ [key: string]: string }>({});
@@ -62,8 +63,24 @@ const ChatExperienceBase: React.FC<ChatExperienceBaseProps> = ({
   const [existingTags, setExistingTags] = useState<string[]>([]);
   const [chatInputs, setChatInputs] = useState<{ [key: string]: string }>({});
   const [filesByPrompt, setFilesByPrompt] = useState<{ [promptId: string]: File[] }>({});
+  const [cardSaved, setCardSaved] = useState(false);
   const currentPrompt = prompts[chatStep];
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Get the node position for the current card
+  const currentNode = nodes.find(n => n.id === cardId);
+  const nodePosition = currentNode?.position;
+
+  // Use the shared save hook
+  const { saveCard, isSaving } = useCardSave({
+    cardId,
+    cardType: chatType,
+    projectId,
+    nodePosition,
+    onUpdateNodeData,
+    onAddCard: undefined, // Don't call onSaveCard since we're using the shared save hook
+    onDeleteCard: undefined, // Chat experience doesn't need delete functionality
+  });
 
   // Auto-scroll to bottom when chat history updates
   useEffect(() => {
@@ -73,7 +90,7 @@ const ChatExperienceBase: React.FC<ChatExperienceBaseProps> = ({
   }, [chatHistory]);
 
   useEffect(() => {
-    console.log("cardId changed, resetting state. New cardId:", cardId);
+
     setChatStep(0);
     setChatAnswers({});
     setChatInput("");
@@ -86,6 +103,7 @@ const ChatExperienceBase: React.FC<ChatExperienceBaseProps> = ({
     setChatInputs({});
     setChatHistory([{ role: "system", text: prompts[0].prompt }]);
     setFilesByPrompt({}); // Reset filesByPrompt on cardId change
+    setCardSaved(false); // Reset saved state
   }, [cardId]);
 
   // Fetch custom options from backend
@@ -98,7 +116,7 @@ const ChatExperienceBase: React.FC<ChatExperienceBaseProps> = ({
       }
       setLoadingOptions(prev => ({ ...prev, [optionType]: true }));
       const response = await fetch(`${API_URL}/users/me/custom-options?option_type=${optionType}`, {
-        headers: { Authorization: `Bearer ${token}` },
+        credentials: "include", // Send cookies with request
       });
       if (response.ok) {
         const data = await response.json();
@@ -134,7 +152,7 @@ const ChatExperienceBase: React.FC<ChatExperienceBaseProps> = ({
         return;
       }
       const response = await fetch(`${API_URL}/projects/${projectId}/tags`, {
-        headers: { Authorization: `Bearer ${token}` },
+        credentials: "include", // Send cookies with request
       });
       if (response.ok) {
         const data = await response.json();
@@ -210,20 +228,16 @@ const ChatExperienceBase: React.FC<ChatExperienceBaseProps> = ({
   // File upload handler
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
-    console.log("handleFileUpload called with files:", files.map(f => ({ name: f.name, size: f.size, type: f.type })));
     setUploadedFiles(prev => {
       const newFiles = [...prev, ...files];
-      console.log("Updated uploadedFiles state:", newFiles.map(f => ({ name: f.name, size: f.size, type: f.type })));
       uploadedFilesRef.current = newFiles; // Keep ref in sync
       return newFiles;
     });
   };
   // Delete uploaded file
   const handleDeleteImage = (imageIndex: number) => {
-    console.log("handleDeleteImage called with index:", imageIndex);
     setUploadedFiles(prev => {
       const newFiles = prev.filter((_, index) => index !== imageIndex);
-      console.log("After deletion, uploadedFiles state:", newFiles.map(f => ({ name: f.name, size: f.size, type: f.type })));
       uploadedFilesRef.current = newFiles; // Keep ref in sync
       return newFiles;
     });
@@ -274,8 +288,8 @@ const ChatExperienceBase: React.FC<ChatExperienceBaseProps> = ({
     setFilteredTagSuggestions(filtered);
   };
 
-  // Handle final submission for source material
-  const handleSourceFinalSubmit = () => {
+  // Handle final submission for source material using shared save hook
+  const handleSourceFinalSubmit = async () => {
     // Include tags in the final submission
     const finalAnswers = { ...chatAnswers };
     if (currentTags.length > 0) {
@@ -283,7 +297,70 @@ const ChatExperienceBase: React.FC<ChatExperienceBaseProps> = ({
     }
     // Aggregate all files from filesByPrompt
     const allFiles: File[] = Object.values(filesByPrompt).flat();
-    if (onSaveCard) onSaveCard({ cardId, chatAnswers: finalAnswers, uploadedFiles: allFiles });
+    
+    try {
+      await saveCard({
+        cardId,
+        chatAnswers: finalAnswers,
+        uploadedFiles: allFiles,
+      });
+    } catch (error) {
+      console.error("Failed to save source:", error);
+      toast.error("Failed to save source: " + (error as Error).message);
+    }
+  };
+
+  // Handle save for other card types using shared save hook
+  const handleSaveCard = async () => {
+    if (chatStep === 0 && !(chatInputs[currentPrompt.id]?.trim())) {
+
+      toast.error("Please enter your content before continuing!");
+      return;
+    }
+    
+    // Update chatAnswers with current input for all card types
+    const updatedChatAnswers = { ...chatAnswers };
+    
+    // For question cards, we need to save the current input if we're on the last step
+    if (chatType === 'question' && chatStep === prompts.length - 1) {
+      updatedChatAnswers[currentPrompt.id] = chatInputs[currentPrompt.id] || "";
+    }
+    
+    // For insight and thought cards, update chatAnswers with current input
+    if (chatType === 'insight' || chatType === 'thought') {
+      updatedChatAnswers[currentPrompt.id] = chatInputs[currentPrompt.id] || "";
+    }
+    
+    // Use uploadedFilesRef.current for insight and thought cards (files uploaded in chat)
+    // Use filesByPrompt for other card types (files uploaded per prompt)
+    let filesToUpload: File[] = [];
+    if (chatType === 'insight' || chatType === 'thought') {
+      filesToUpload = uploadedFilesRef.current;
+    } else {
+      const allFiles = Object.values(filesByPrompt).flat();
+      filesToUpload = allFiles.filter(f => f instanceof File);
+    }
+    
+
+    
+
+    
+    try {
+      await saveCard({
+        cardId,
+        chatAnswers: updatedChatAnswers,
+        uploadedFiles: filesToUpload,
+      });
+      
+      // Mark card as saved and close the panel
+      setCardSaved(true);
+      if (onClose) {
+        onClose();
+      }
+    } catch (error) {
+      console.error("Failed to save card:", error);
+      toast.error("Failed to save card: " + (error as Error).message);
+    }
   };
 
   // Mapping from chatType to the main text prompt id
@@ -422,14 +499,14 @@ const ChatExperienceBase: React.FC<ChatExperienceBaseProps> = ({
                                         ) {
                                           setSavingOption((prev) => ({ ...prev, [currentPrompt.id]: true }));
                                           try {
-                                            const res = await fetch(`${API_URL}/users/me/custom-options`, {
-                                              method: "POST",
-                                              headers: {
-                                                "Content-Type": "application/json",
-                                                Authorization: getToken() ? `Bearer ${getToken()}` : "",
-                                              },
-                                              body: JSON.stringify({ option_type: currentPrompt.id, value: inputValue[currentPrompt.id] }),
-                                            });
+                                                        const res = await fetch(`${API_URL}/users/me/custom-options`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              credentials: "include", // Send cookies with request
+              body: JSON.stringify({ option_type: currentPrompt.id, value: inputValue[currentPrompt.id] }),
+            });
                                             if (res.ok) {
                                               setUserOptions((prev) => ({
                                                 ...prev,
@@ -486,7 +563,7 @@ const ChatExperienceBase: React.FC<ChatExperienceBaseProps> = ({
                         onClick={() => fileInputRef.current?.click()}
                         className="text-sm"
                       >
-                        + Add Files or Images
+                        + Add Files & Images
                       </Button>
                       {uploadedFiles.length > 0 && (
                         <span className="text-xs text-gray-500">{uploadedFiles.length} file{uploadedFiles.length > 1 ? 's' : ''} selected</span>
@@ -684,118 +761,44 @@ const ChatExperienceBase: React.FC<ChatExperienceBaseProps> = ({
         <form
           onSubmit={e => {
             e.preventDefault();
-            console.log("Form submitted, chatType:", chatType, "chatStep:", chatStep, "prompts.length:", prompts.length);
-            console.log("onSaveCard exists:", !!onSaveCard);
-            console.log("chatInputs:", chatInputs);
-            console.log("currentPrompt.id:", currentPrompt.id);
+            
+            // Prevent multiple saves
+            if (cardSaved) {
+              return;
+            }
             
             if ((chatType === 'question' && chatStep === prompts.length - 1) || chatType === 'insight' || chatType === 'thought') {
-              console.log("Should call onSaveCard");
-              if (chatStep === 0 && !(chatInputs[currentPrompt.id]?.trim())) {
-                console.log("Input is empty, showing error");
-                toast.error("Please enter your content before continuing!");
-                return;
-              }
-              
-              // For insight and thought cards, update chatAnswers with current input
-              const updatedChatAnswers = { ...chatAnswers };
-              if (chatType === 'insight' || chatType === 'thought') {
-                updatedChatAnswers[currentPrompt.id] = chatInputs[currentPrompt.id] || "";
-              }
-              
-              // Use uploadedFilesRef.current for insight and thought cards (files uploaded in chat)
-              // Use filesByPrompt for other card types (files uploaded per prompt)
-              let filesToUpload: File[] = [];
-              if (chatType === 'insight' || chatType === 'thought') {
-                filesToUpload = uploadedFilesRef.current;
-              } else {
-                const allFiles = Object.values(filesByPrompt).flat();
-                filesToUpload = allFiles.filter(f => f instanceof File);
-              }
-              console.log("Calling onSaveCard with:", { cardId, chatAnswers: updatedChatAnswers, uploadedFiles: filesToUpload });
-              console.log("uploadedFiles details:", { length: uploadedFiles.length, files: uploadedFiles.map(f => ({ name: f.name, size: f.size, type: f.type })) });
-              console.log("uploadedFiles array is valid:", Array.isArray(uploadedFiles));
-              console.log("uploadedFiles elements are File objects:", uploadedFiles.every(f => f instanceof File));
-              console.log("uploadedFilesRef.current details:", { length: uploadedFilesRef.current.length, files: uploadedFilesRef.current.map(f => ({ name: f.name, size: f.size, type: f.type })) });
-              if (onSaveCard) {
-                // For insight and thought cards, always pass files to onSaveCard to be uploaded after backend record is created
-                // This prevents the issue where files get uploaded to the initial empty record instead of the final one
-                if (chatType === 'insight' || chatType === 'thought') {
-                  console.log("Insight/thought card - passing files to onSaveCard for upload after backend record creation");
-                  onSaveCard({ cardId, chatAnswers: updatedChatAnswers, uploadedFiles: filesToUpload });
-                } else {
-                  // For other card types, check if it's an existing card with content
-                  const node = nodes.find((n: any) => n.id === cardId);
-                  let backendId;
-                  switch (chatType as CardType) {
-                    case "source": backendId = node?.data?.sourceMaterialId; break;
-                    case "question": backendId = node?.data?.questionId; break;
-                    case "insight": backendId = node?.data?.insightId; break;
-                    case "thought": backendId = node?.data?.thoughtId; break;
-                    default: backendId = undefined;
-                  }
-                  
-                  // Check if this is an existing card with content (not just an empty record)
-                  const hasContent = node?.data?.insight || node?.data?.thought || node?.data?.question || node?.data?.source;
-                  
-                  if (backendId && uploadedFilesRef.current.length > 0 && hasContent) {
-                    // For existing cards with content, upload files immediately
-                    console.log("Existing card with content - uploading files immediately");
-                    uploadFilesForCardType(
-                      chatType as CardType,
-                      backendId,
-                      uploadedFilesRef.current,
-                      node?.data?.files || [],
-                      (newFiles: string[]) => {
-                        // Update node data in parent
-                        if (typeof onUpdateNodeData === 'function') {
-                          onUpdateNodeData(cardId, { files: newFiles });
-                        }
-                        // Call onSaveCard with new files
-                        onSaveCard({ cardId, chatAnswers: { ...updatedChatAnswers, files: newFiles }, uploadedFiles: [] });
-                      }
-                    ).catch((err) => {
-                      toast.error("Failed to upload files: " + err.message);
-                      onSaveCard({ cardId, chatAnswers: updatedChatAnswers, uploadedFiles: [] });
-                    });
-                  } else {
-                    // For new cards or cards without content, call onSaveCard directly
-                    console.log("New card or card without content - passing files to onSaveCard");
-                    onSaveCard({ cardId, chatAnswers: updatedChatAnswers, uploadedFiles: filesToUpload });
-                  }
-                }
-              }
+              handleSaveCard();
               return; // Prevent form submission from continuing
             } else if (chatType === 'source' && chatStep === prompts.length - 1) {
               setChatStep(chatStep + 1);
             } else {
-              console.log("Calling handleChatSubmit");
               handleChatSubmit(e);
             }
           }}
-          className="sticky bottom-0 left-0 right-0 bg-white pt-2 z-10 border-t flex justify-center gap-2 p-4"
+          className="sticky bottom-0 left-0 right-0 bg-white pt-2 z-10 border-t flex gap-3 p-4"
         >
           {chatStep > 0 && (
-            <Button type="button" variant="secondary" onClick={handleBack}>
+            <Button type="button" variant="secondary" onClick={handleBack} className="flex-1">
               Back
             </Button>
           )}
           <Button
             type="submit"
-            disabled={chatStep === 0 && chatType === 'question' && !(chatInputs[currentPrompt.id]?.trim())}
-            className={chatStep === 0 && chatType === 'question' && !(chatInputs[currentPrompt.id]?.trim()) ? "opacity-50 cursor-not-allowed" : ""}
+            disabled={chatStep === 0 && chatType === 'question' && !(chatInputs[currentPrompt.id]?.trim()) || isSaving || cardSaved}
+            className={`flex-1 ${chatStep === 0 && chatType === 'question' && !(chatInputs[currentPrompt.id]?.trim()) || cardSaved ? "opacity-50 cursor-not-allowed" : ""}`}
           >
-            {(chatType === 'question' && chatStep === prompts.length - 1) || chatType === 'insight' || chatType === 'thought' ? "Done" : "Continue"}
+            {isSaving ? "Saving..." : cardSaved ? "Saved!" : ((chatType === 'question' && chatStep === prompts.length - 1) || chatType === 'insight' || chatType === 'thought' ? "Done" : "Continue")}
           </Button>
         </form>
       )}
       {chatType === 'source' && chatStep >= prompts.length && (
-        <div className="sticky bottom-0 left-0 right-0 bg-white pt-2 z-10 border-t flex justify-center gap-2 p-4">
-          <Button type="button" variant="secondary" onClick={() => setChatStep(chatStep - 1)}>
+        <div className="sticky bottom-0 left-0 right-0 bg-white pt-2 z-10 border-t flex gap-3 p-4">
+          <Button type="button" variant="secondary" onClick={() => setChatStep(chatStep - 1)} className="flex-1">
             Back
           </Button>
-          <Button type="button" onClick={handleSourceFinalSubmit}>
-            Done
+          <Button type="button" onClick={handleSourceFinalSubmit} disabled={isSaving} className="flex-1">
+            {isSaving ? "Saving..." : "Done"}
           </Button>
         </div>
       )}

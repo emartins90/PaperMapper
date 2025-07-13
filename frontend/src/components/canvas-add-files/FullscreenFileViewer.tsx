@@ -8,12 +8,40 @@ interface FullscreenFileViewerProps {
   fileUrl: string | null;
   fileType: 'image' | 'pdf' | 'other' | 'audio';
   onClose: () => void;
+  cardType?: string; // Add cardType prop
 }
 
 const getFileName = (fileUrl: string | null) => fileUrl ? fileUrl.split("/").pop() || "file" : "";
 
-export const FullscreenFileViewer: React.FC<FullscreenFileViewerProps> = ({ open, fileUrl, fileType, onClose }) => {
+export const FullscreenFileViewer: React.FC<FullscreenFileViewerProps> = ({ 
+  open, 
+  fileUrl, 
+  fileType, 
+  onClose,
+  cardType = "questions" // Default to questions for backward compatibility
+}) => {
   if (!open || !fileUrl) return null;
+
+  // Helper to convert old R2 URLs to secure endpoint
+  const getFullUrl = (url: string) => {
+    // If it's a local upload
+    if (url.startsWith('/uploads/')) {
+      return `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}${url}`;
+    }
+    // If it's a public R2 URL, extract the filename and use the secure endpoint
+    if (url.includes('.r2.dev') || url.includes('.r2.cloudflarestorage.com')) {
+      const filename = url.split('/').pop();
+      const folder = cardType === "source" ? "source-materials" : `${cardType}s`;
+      return `/secure-files/${folder}/${filename}`;
+    }
+    // If it's just a filename
+    if (!url.startsWith('http') && !url.startsWith('/')) {
+      const folder = cardType === "source" ? "source-materials" : `${cardType}s`;
+      return `/secure-files/${folder}/${url}`;
+    }
+    // Otherwise, return as-is
+    return url;
+  };
 
   const handleOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (e.target === e.currentTarget) {
@@ -39,7 +67,7 @@ export const FullscreenFileViewer: React.FC<FullscreenFileViewerProps> = ({ open
       {/* Content */}
       {fileType === 'image' && (
         <img
-          src={fileUrl}
+          src={getFullUrl(fileUrl)}
           alt={getFileName(fileUrl)}
           className="max-w-[90vw] max-h-[calc(90vh-72px)] object-contain rounded-lg shadow-2xl"
           style={{ display: 'block', marginTop: 72, marginBottom: 24 }}
@@ -47,7 +75,7 @@ export const FullscreenFileViewer: React.FC<FullscreenFileViewerProps> = ({ open
       )}
       {fileType === 'pdf' && (
         <iframe
-          src={fileUrl}
+          src={getFullUrl(fileUrl)}
           title="PDF Viewer"
           className="max-w-[90vw] w-[min(90vw,800px)] h-[calc(90vh-72px)] rounded-lg shadow-2xl bg-white"
           style={{ minHeight: '400px', display: 'block', marginTop: 72, marginBottom: 24 }}

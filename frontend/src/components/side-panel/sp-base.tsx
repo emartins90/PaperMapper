@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import DrawerTabs from "@/components/ui/DrawerTabs";
 import ChatExperience from "../chat/ChatExperience";
 import QuestionChatExperience from "../chat/QuestionChatExperience";
@@ -10,6 +10,7 @@ import SourceCardContent from "./sp-content-source";
 import QuestionCardContent from "./sp-content-question";
 import InsightCardContent from "./sp-content-insight";
 import ThoughtCardContent from "./sp-content-thought";
+import { useCardSave } from "../shared/useCardSave";
 
 interface SidePanelBaseProps {
   openCard: { id: string; type: string } | null;
@@ -31,6 +32,7 @@ interface SidePanelBaseProps {
   onEdgesChange?: (changes: any[]) => void;
   onAddCard?: (cardId: string) => void; // For saving unsaved cards
   onDeleteCard?: (cardId: string) => void; // For deleting unsaved cards
+  projectId?: number; // Add projectId prop
 }
 
 export default function SidePanelBase({
@@ -53,10 +55,29 @@ export default function SidePanelBase({
   onEdgesChange,
   onAddCard,
   onDeleteCard,
+  projectId,
 }: SidePanelBaseProps) {
+  // Move hooks before any early returns - always call them with consistent parameters
+  const [formData, setFormData] = useState<any>({});
+  
+  // Get the node position for the current card
+  const currentNode = openCard ? nodes.find(n => n.id === openCard.id) : null;
+  const nodePosition = currentNode?.position;
+
+  // Always call useCardSave with consistent parameters to maintain hook order
+  const { saveCard, isSaving } = useCardSave({
+    cardId: openCard?.id || "",
+    cardType: openCard ? (nodes.find(n => n.id === openCard.id)?.type || "source") : "source",
+    projectId: projectId || 0,
+    nodePosition,
+    onUpdateNodeData,
+    onAddCard: undefined, // Don't call onAddCard since we're using the shared save hook
+    onDeleteCard,
+  });
+
   if (!openCard) return null;
 
-  const cardType = nodes.find(n => n.id === openCard.id)?.type;
+  const cardType = openCard.type;
   const cardData = openCard ? nodes.find(n => n.id === openCard.id)?.data : undefined;
   const isInChatMode = guided && openCard.id === chatActiveCardId && (cardType === "source" || cardType === "question" || cardType === "insight" || cardType === "thought");
   
@@ -74,11 +95,17 @@ export default function SidePanelBase({
       (cardType === "insight" && !cardData.insightId) ||
       (cardType === "thought" && !cardData.thoughtId);
     
-    return isUUID || hasMissingDataIds;
+    // If we have valid data IDs, the card is saved regardless of the ID format
+    if (!hasMissingDataIds) {
+      return false;
+    }
+    
+    // If we have a UUID ID and missing data IDs, the card is unsaved
+    return isUUID && hasMissingDataIds;
   };
   
   const cardIsUnsaved = isUnsaved();
-  
+
   // Handle close button - delete unsaved cards, just close saved ones
   const handleClose = () => {
     if (cardIsUnsaved && onDeleteCard) {
@@ -87,19 +114,53 @@ export default function SidePanelBase({
     onClose();
   };
 
+  // Handle save button click
+  const handleSaveClick = async () => {
+    if (!openCard || !cardType) return;
+
+    try {
+      await saveCard({
+        cardId: openCard.id,
+        chatAnswers: formData,
+        uploadedFiles: formData.uploadedFiles || [],
+      });
+    } catch (error) {
+      console.error("Failed to save card:", error);
+      alert("Failed to save card: " + (error as Error).message);
+    }
+  };
+
+  // Check if the card has required content to enable save
+  const canSave = () => {
+    if (!cardType) return false;
+    
+    switch (cardType) {
+      case "source":
+        return formData.sourceContent?.trim();
+      case "question":
+        return formData.questionText?.trim();
+      case "insight":
+        return formData.insightText?.trim();
+      case "thought":
+        return formData.thoughtText?.trim();
+      default:
+        return false;
+    }
+  };
+
   // Render the appropriate content based on card type and mode
   const renderContent = () => {
     if (isInChatMode) {
       // Chat mode - show chat experience
       switch (cardType) {
         case "source":
-          return <ChatExperience cardId={openCard.id} projectId={cardData?.projectId} nodes={nodes} onSaveCard={onSaveCard} />;
+          return <ChatExperience cardId={openCard.id} projectId={projectId || 0} nodes={nodes} onClose={onClose} onUpdateNodeData={onUpdateNodeData} />;
         case "question":
-          return <QuestionChatExperience cardId={openCard.id} projectId={cardData?.projectId} nodes={nodes} onSaveCard={onSaveCard} />;
+          return <QuestionChatExperience cardId={openCard.id} projectId={projectId || 0} nodes={nodes} onClose={onClose} onUpdateNodeData={onUpdateNodeData} />;
         case "insight":
-          return <InsightChatExperience cardId={openCard.id} projectId={cardData?.projectId} nodes={nodes} onSaveCard={onSaveCard} />;
+          return <InsightChatExperience cardId={openCard.id} projectId={projectId || 0} nodes={nodes} onClose={onClose} onUpdateNodeData={onUpdateNodeData} />;
         case "thought":
-          return <ThoughtChatExperience cardId={openCard.id} projectId={cardData?.projectId} nodes={nodes} onSaveCard={onSaveCard} />;
+          return <ThoughtChatExperience cardId={openCard.id} projectId={projectId || 0} nodes={nodes} onClose={onClose} onUpdateNodeData={onUpdateNodeData} />;
         default:
           return null;
       }
@@ -168,6 +229,8 @@ export default function SidePanelBase({
               onEdgesChange={onEdgesChange}
               onAddCard={onAddCard}
               onDeleteCard={onDeleteCard}
+              onFormDataChange={setFormData}
+              showSaveButton={false} // Hide individual save button since we have sticky one
             />
           )}
           {cardType === 'question' && (
@@ -182,6 +245,8 @@ export default function SidePanelBase({
               onClose={onClose}
               onAddCard={onAddCard}
               onDeleteCard={onDeleteCard}
+              onFormDataChange={setFormData}
+              showSaveButton={false} // Hide individual save button since we have sticky one
             />
           )}
           {cardType === 'insight' && (
@@ -196,6 +261,8 @@ export default function SidePanelBase({
               edges={edges}
               onEdgesChange={onEdgesChange}
               onClose={onClose}
+              onFormDataChange={setFormData}
+              showSaveButton={false} // Hide individual save button since we have sticky one
             />
           )}
           {cardType === 'thought' && (
@@ -210,6 +277,8 @@ export default function SidePanelBase({
               edges={edges}
               onEdgesChange={onEdgesChange}
               onClose={onClose}
+              onFormDataChange={setFormData}
+              showSaveButton={false} // Hide individual save button since we have sticky one
             />
           )}
         </>
@@ -236,14 +305,15 @@ export default function SidePanelBase({
           {renderContent()}
         </div>
         
-        {/* Sticky Add Card button for unsaved cards */}
-        {cardIsUnsaved && !isInChatMode && onAddCard && (
+        {/* Sticky Save Button for unsaved cards - only show when not in chat mode */}
+        {cardIsUnsaved && !isInChatMode && (
           <div className="border-t bg-white p-4">
             <button
-              onClick={() => onAddCard(openCard.id)}
-              className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-blue-700 transition-colors"
+              onClick={handleSaveClick}
+              disabled={isSaving || !canSave()}
+              className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Add Card
+              {isSaving ? "Saving..." : `Save ${cardType?.replace(/^(.)/, (c: string) => c.toUpperCase())}`}
             </button>
           </div>
         )}

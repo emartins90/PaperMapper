@@ -8,6 +8,7 @@ interface FileListDisplayProps {
   onFileClick?: (fileUrl: string, fileType: FileType) => void;
   maxImages?: number;
   showFilesLabel?: boolean;
+  cardType?: string; // Add cardType prop
 }
 
 function getFileType(fileUrl: string): FileType {
@@ -21,7 +22,13 @@ function getFileName(fileUrl: string) {
   return fileUrl.split('/').pop() || 'file';
 }
 
-export const FileListDisplay: React.FC<FileListDisplayProps> = ({ files, onFileClick, maxImages = 4, showFilesLabel = true }) => {
+export const FileListDisplay: React.FC<FileListDisplayProps> = ({ 
+  files, 
+  onFileClick, 
+  maxImages = 4, 
+  showFilesLabel = true,
+  cardType = "questions" // Default to questions for backward compatibility
+}) => {
   if (!files || files.length === 0) return null;
 
   // Images
@@ -34,9 +41,25 @@ export const FileListDisplay: React.FC<FileListDisplayProps> = ({ files, onFileC
   const otherFiles = files.filter(f => getFileType(f) === 'other');
 
   // Helper for full URL
-  const fullUrl = (fileUrl: string) => fileUrl.startsWith('/uploads/')
-    ? `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}${fileUrl}`
-    : fileUrl;
+  const fullUrl = (fileUrl: string) => {
+    // If it's a local upload
+    if (fileUrl.startsWith('/uploads/')) {
+      return `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}${fileUrl}`;
+    }
+    // If it's a public R2 URL, extract the filename and use the secure endpoint
+    if (fileUrl.includes('.r2.dev') || fileUrl.includes('.r2.cloudflarestorage.com')) {
+      const filename = fileUrl.split('/').pop();
+      const folder = cardType === "source" ? "source-materials" : `${cardType}s`;
+      return `/secure-files/${folder}/${filename}`;
+    }
+    // If it's just a filename
+    if (!fileUrl.startsWith('http') && !fileUrl.startsWith('/')) {
+      const folder = cardType === "source" ? "source-materials" : `${cardType}s`;
+      return `/secure-files/${folder}/${fileUrl}`;
+    }
+    // Otherwise, return as-is
+    return fileUrl;
+  };
 
   // Image grid logic
   const imageCount = imageFiles.length;

@@ -13,7 +13,7 @@ export default function ProjectsPage() {
     setToken(t);
     setIsLoading(false);
     
-    if (!t) {
+    if (!t || t !== "cookie-auth") {
       router.replace("/");
     }
   }, [router]);

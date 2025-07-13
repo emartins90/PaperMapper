@@ -57,9 +57,9 @@ export default function AccountSettings({ open, onOpenChange }: AccountSettingsP
         // Fetch from backend if not in localStorage
         const token = localStorage.getItem("token");
         if (token) {
-          fetch(`${API_URL}/users/me`, {
-            headers: { Authorization: `Bearer ${token}` },
-          })
+                  fetch(`${API_URL}/users/me`, {
+          credentials: "include", // Send cookies with request
+        })
             .then((res) => res.ok ? res.json() : Promise.reject("Failed to fetch user"))
             .then((data) => {
               setEmail(data.email);
@@ -73,7 +73,7 @@ export default function AccountSettings({ open, onOpenChange }: AccountSettingsP
       setLoadingOptions(true);
       const token = localStorage.getItem("token");
       fetch(`${API_URL}/users/me/custom-options`, {
-        headers: { Authorization: token ? `Bearer ${token}` : "" },
+        credentials: "include", // Send cookies with request
       })
         .then((res) => res.ok ? res.json() : Promise.reject("Failed to fetch custom options"))
         .then((data) => setCustomOptions(data))

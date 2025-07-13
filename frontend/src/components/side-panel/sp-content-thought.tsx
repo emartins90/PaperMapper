@@ -2,7 +2,9 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import FileUploadSection from "../canvas-add-files/FileUploadSection";
+import UnsavedCardFileUpload from "../shared/UnsavedCardFileUpload";
 import { uploadFilesForCardType } from "../useFileUploadHandler";
+import { useCardSave } from "../shared/useCardSave";
 import LinkedCardsTab from "../LinkedCardsTab";
 
 interface ThoughtCardContentProps {
@@ -16,6 +18,8 @@ interface ThoughtCardContentProps {
   edges: any[];
   onEdgesChange?: (changes: any[]) => void;
   onClose?: () => void;
+  onFormDataChange?: (data: any) => void;
+  showSaveButton?: boolean;
 }
 
 export default function ThoughtCardContent({ 
@@ -28,7 +32,9 @@ export default function ThoughtCardContent({
   nodes,
   edges,
   onEdgesChange,
-  onClose
+  onClose,
+  onFormDataChange,
+  showSaveButton
 }: ThoughtCardContentProps) {
   const [thought, setThought] = React.useState(cardData?.thought || "");
   const [files, setFiles] = React.useState<string[]>(cardData?.files || []);
@@ -36,11 +42,38 @@ export default function ThoughtCardContent({
   const [isUploading, setIsUploading] = React.useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
+  // For unsaved cards, store files as File[] objects
+  const [pendingFiles, setPendingFiles] = React.useState<File[]>(cardData?.pendingFiles || []);
+
+  // Check if card is unsaved
+  const isUnsaved = !cardData?.thoughtId;
+
+  // Use the shared save hook
+  const { saveCard, isSaving } = useCardSave({
+    cardId: openCard?.id || "",
+    cardType: "thought",
+    projectId: cardData?.projectId || 0,
+    onUpdateNodeData,
+    onAddCard,
+    onDeleteCard,
+  });
+
   React.useEffect(() => {
     setThought(cardData?.thought || "");
     setFiles(cardData?.files || []);
     setFileEntries(cardData?.fileEntries || []);
+    setPendingFiles(cardData?.pendingFiles || []);
   }, [openCard?.id]);
+
+  // Update form data for parent component when fields change
+  React.useEffect(() => {
+    if (onFormDataChange) {
+      onFormDataChange({
+        thoughtText: thought,
+        uploadedFiles: pendingFiles,
+      });
+    }
+  }, [thought, pendingFiles, onFormDataChange]);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || !openCard) return;
@@ -61,23 +94,11 @@ export default function ThoughtCardContent({
       } else {
         // For new cards, store files locally as File objects
         const newFiles = Array.from(e.target.files);
-        console.log('[FileUpload] newFiles:', newFiles);
-        // Create file entries with both blob URL and original filename
-        const newFileEntries = newFiles.map(file => ({
-          url: URL.createObjectURL(file),
-          filename: file.name,
-          type: file.type
-        }));
-        console.log('[FileUpload] newFileEntries:', newFileEntries);
-        const updatedFiles = [...files, ...newFileEntries.map(entry => entry.url)];
-        const updatedFileEntries = [...fileEntries, ...newFileEntries];
-        console.log('[onUpdateNodeData] files:', updatedFiles);
-        console.log('[onUpdateNodeData] fileEntries:', updatedFileEntries);
-        console.log('[onUpdateNodeData] pendingFiles:', newFiles);
+    
+        const updatedPendingFiles = [...pendingFiles, ...newFiles];
+        setPendingFiles(updatedPendingFiles);
         onUpdateNodeData?.(openCard.id, { 
-          files: updatedFiles,
-          pendingFiles: newFiles, // Store the actual File objects for later upload
-          fileEntries: updatedFileEntries // Store file metadata for display
+          pendingFiles: updatedPendingFiles
         });
       }
     } catch (err) {
@@ -104,6 +125,23 @@ export default function ThoughtCardContent({
     }
   };
 
+  const handleSaveThought = async () => {
+    if (!openCard || !thought.trim()) return;
+
+    try {
+      await saveCard({
+        cardId: openCard.id,
+        chatAnswers: {
+          thoughtText: thought,
+        },
+        uploadedFiles: pendingFiles,
+      });
+    } catch (error) {
+      console.error("Failed to save thought:", error);
+      alert("Failed to save thought: " + (error as Error).message);
+    }
+  };
+
   return (
     <div className="flex-1 p-6 overflow-y-auto">
       {thoughtTab === "info" ? (
@@ -116,10 +154,24 @@ export default function ThoughtCardContent({
               rows={3}
               value={thought}
               onChange={e => setThought(e.target.value)}
-              onBlur={() => openCard && onUpdateNodeData?.(openCard.id, { thought })}
+              onBlur={() => {
+                if (openCard && !isUnsaved) {
+                  onUpdateNodeData?.(openCard.id, { thought });
+                }
+              }}
             />
           </div>
-          <div>
+          
+          {/* Use different file upload components based on save status */}
+          {isUnsaved ? (
+            <UnsavedCardFileUpload
+              files={pendingFiles}
+              onFilesChange={(newFiles) => {
+                setPendingFiles(newFiles);
+                onUpdateNodeData?.(openCard?.id || "", { pendingFiles: newFiles });
+              }}
+            />
+          ) : (
             <FileUploadSection
               files={files}
               isUploading={isUploading}
@@ -127,8 +179,22 @@ export default function ThoughtCardContent({
               onFileDelete={handleFileDelete}
               fileInputRef={fileInputRef}
               fileEntries={fileEntries}
+              cardType="thought"
             />
-          </div>
+          )}
+
+          {/* Save button for unsaved cards - only show if showSaveButton is true */}
+          {isUnsaved && showSaveButton && (
+            <div className="pt-4">
+              <button
+                onClick={handleSaveThought}
+                disabled={isSaving || !thought.trim()}
+                className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isSaving ? "Saving..." : "Save Thought"}
+              </button>
+            </div>
+          )}
         </div>
       ) : thoughtTab === "linked" ? (
         <LinkedCardsTab openCard={openCard} nodes={nodes} edges={edges} onEdgesChange={onEdgesChange} onClose={onClose} />

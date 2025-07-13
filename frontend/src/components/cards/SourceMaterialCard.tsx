@@ -92,7 +92,7 @@ export default function SourceMaterialCard({ data, showHandles = true, width = '
 
       {/* Render uploaded files (images as thumbnails, others as file names) */}
       {Array.isArray((data as any).files) && (data as any).files.length > 0 && (
-        <FileListDisplay files={data.files ?? []} onFileClick={onFileClick} showFilesLabel={true} />
+        <FileListDisplay files={data.files ?? []} onFileClick={onFileClick} showFilesLabel={true} cardType="source" />
       )}
 
       {/* Only show argument type chip if one is selected and not '(skipped)' */}
