@@ -297,6 +297,20 @@ async def delete_question(question_id: int, db: AsyncSession = Depends(get_db())
     if question is None:
         raise HTTPException(status_code=404, detail="Question not found")
     
+    # Clean up associated files from R2
+    if question.files:
+        print(f"[DELETE] Cleaning up files for question {question_id}: {question.files}")
+        file_urls = question.files.split(',')
+        for file_url in file_urls:
+            file_url = file_url.strip()
+            if file_url:
+                key = r2_storage.extract_key_from_url(file_url)
+                if key:
+                    print(f"[DELETE] Deleting file from R2: {key}")
+                    await r2_storage.delete_file(key)
+                else:
+                    print(f"[DELETE] Could not extract key from URL: {file_url}")
+    
     await db.delete(question)
     await db.commit()
     return {"message": "Question deleted"}
@@ -401,6 +415,20 @@ async def delete_insight(insight_id: int, db: AsyncSession = Depends(get_db())):
     if insight is None:
         raise HTTPException(status_code=404, detail="Insight not found")
     
+    # Clean up associated files from R2
+    if insight.files:
+        print(f"[DELETE] Cleaning up files for insight {insight_id}: {insight.files}")
+        file_urls = insight.files.split(',')
+        for file_url in file_urls:
+            file_url = file_url.strip()
+            if file_url:
+                key = r2_storage.extract_key_from_url(file_url)
+                if key:
+                    print(f"[DELETE] Deleting file from R2: {key}")
+                    await r2_storage.delete_file(key)
+                else:
+                    print(f"[DELETE] Could not extract key from URL: {file_url}")
+    
     await db.delete(insight)
     await db.commit()
     return {"message": "Insight deleted"}
@@ -454,6 +482,20 @@ async def delete_thought(thought_id: int, db: AsyncSession = Depends(get_db())):
     thought = result.scalar_one_or_none()
     if thought is None:
         raise HTTPException(status_code=404, detail="Thought not found")
+    
+    # Clean up associated files from R2
+    if thought.files:
+        print(f"[DELETE] Cleaning up files for thought {thought_id}: {thought.files}")
+        file_urls = thought.files.split(',')
+        for file_url in file_urls:
+            file_url = file_url.strip()
+            if file_url:
+                key = r2_storage.extract_key_from_url(file_url)
+                if key:
+                    print(f"[DELETE] Deleting file from R2: {key}")
+                    await r2_storage.delete_file(key)
+                else:
+                    print(f"[DELETE] Could not extract key from URL: {file_url}")
     
     await db.delete(thought)
     await db.commit()
@@ -512,25 +554,61 @@ async def delete_card(card_id: int, db: AsyncSession = Depends(get_db())):
         # Delete the underlying data based on card type
         if db_card.data_id:
             if db_card.type == "source":
-                # Delete source material (this will cascade to citation)
+                # Delete source material (this will cascade to citation and clean up files)
                 sm_result = await db.execute(select(models.SourceMaterial).where(models.SourceMaterial.id == db_card.data_id))
                 db_sm = sm_result.scalar_one_or_none()
                 if db_sm:
+                    # Clean up associated files from R2
+                    if db_sm.files:
+                        file_urls = db_sm.files.split(',')
+                        for file_url in file_urls:
+                            file_url = file_url.strip()
+                            if file_url:
+                                key = r2_storage.extract_key_from_url(file_url)
+                                if key:
+                                    await r2_storage.delete_file(key)
                     await db.delete(db_sm)
             elif db_card.type == "question":
                 question_result = await db.execute(select(models.Question).where(models.Question.id == db_card.data_id))
                 db_question = question_result.scalar_one_or_none()
                 if db_question:
+                    # Clean up associated files from R2
+                    if db_question.files:
+                        file_urls = db_question.files.split(',')
+                        for file_url in file_urls:
+                            file_url = file_url.strip()
+                            if file_url:
+                                key = r2_storage.extract_key_from_url(file_url)
+                                if key:
+                                    await r2_storage.delete_file(key)
                     await db.delete(db_question)
             elif db_card.type == "insight":
                 insight_result = await db.execute(select(models.Insight).where(models.Insight.id == db_card.data_id))
                 db_insight = insight_result.scalar_one_or_none()
                 if db_insight:
+                    # Clean up associated files from R2
+                    if db_insight.files:
+                        file_urls = db_insight.files.split(',')
+                        for file_url in file_urls:
+                            file_url = file_url.strip()
+                            if file_url:
+                                key = r2_storage.extract_key_from_url(file_url)
+                                if key:
+                                    await r2_storage.delete_file(key)
                     await db.delete(db_insight)
             elif db_card.type == "thought":
                 thought_result = await db.execute(select(models.Thought).where(models.Thought.id == db_card.data_id))
                 db_thought = thought_result.scalar_one_or_none()
                 if db_thought:
+                    # Clean up associated files from R2
+                    if db_thought.files:
+                        file_urls = db_thought.files.split(',')
+                        for file_url in file_urls:
+                            file_url = file_url.strip()
+                            if file_url:
+                                key = r2_storage.extract_key_from_url(file_url)
+                                if key:
+                                    await r2_storage.delete_file(key)
                     await db.delete(db_thought)
 
         # Manually delete related CardLink rows

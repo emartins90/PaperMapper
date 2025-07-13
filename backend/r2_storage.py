@@ -89,13 +89,18 @@ class R2Storage:
             bool: True if deletion was successful
         """
         try:
+            print(f"[R2] Deleting file: {key}")
             self.s3_client.delete_object(
                 Bucket=self.bucket_name,
                 Key=key
             )
+            print(f"[R2] Successfully deleted file: {key}")
             return True
         except ClientError as e:
-            print(f"Failed to delete file {key}: {e}")
+            print(f"[R2] Failed to delete file {key}: {e}")
+            return False
+        except Exception as e:
+            print(f"[R2] Unexpected error deleting file {key}: {e}")
             return False
     
     def extract_key_from_url(self, url: str) -> Optional[str]:
@@ -103,16 +108,16 @@ class R2Storage:
         Extract R2 object key from a URL
         
         Args:
-            url: R2 URL
+            url: R2 URL (format: https://pub-{bucket-name}.r2.dev/{key})
             
         Returns:
             str: object key or None if not a valid R2 URL
         """
         try:
-            # R2 URLs look like: https://bucket-name.r2.cloudflarestorage.com/folder/filename.jpg
-            if "r2.cloudflarestorage.com" in url:
+            # R2 public URLs look like: https://pub-{bucket-name}.r2.dev/{key}
+            if "r2.dev" in url:
                 # Extract the part after the domain
-                parts = url.split(f"{self.bucket_name}.r2.cloudflarestorage.com/")
+                parts = url.split(f"pub-{self.bucket_name}.r2.dev/")
                 if len(parts) > 1:
                     return parts[1]
             return None
