@@ -64,8 +64,8 @@ export default function SourceMaterialCard({ data, showHandles = true, width = '
       )}
       
       <div className="flex items-center justify-between mb-2">
-        <div className="font-bold text-source-700">
-          Source Material{data.sourceFunction ? ` : ${data.sourceFunction}` : ''}
+        <div className="text-source-700 truncate-block">
+          <span className="font-bold">Source Material</span>{data.sourceFunction ? <span className="font-normal"> : {data.sourceFunction}</span> : ''}
         </div>
         <button onClick={data.onOpen} aria-label="Open card">
           <span className="text-source-400 text-xl">↗</span>
@@ -76,7 +76,7 @@ export default function SourceMaterialCard({ data, showHandles = true, width = '
       {tags.length > 0 && tags[0] !== '(skipped)' && (
         <div className="flex flex-wrap gap-2 mb-2">
           {tags.map((tag: string) => (
-            tag && tag !== '(skipped)' && <Tag key={tag} color="source">{tag}</Tag>
+            tag && tag !== '(skipped)' && <Tag key={tag} color="primary">{tag}</Tag>
           ))}
         </div>
       )}

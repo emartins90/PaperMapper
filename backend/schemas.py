@@ -138,6 +138,7 @@ class InsightBase(BaseModel):
     insight_text: str
     sources_linked: Optional[str] = None  # e.g., "3 Sources Linked"
     files: Optional[str] = None  # Comma-separated string
+    insight_type: Optional[str] = None
 
 class InsightCreate(InsightBase):
     pass
@@ -147,6 +148,7 @@ class InsightUpdate(BaseModel):
     insight_text: Optional[str] = None
     sources_linked: Optional[str] = None
     files: Optional[str] = None
+    insight_type: Optional[str] = None
 
 class Insight(InsightBase):
     id: int
@@ -170,3 +172,23 @@ class Thought(ThoughtBase):
     id: int
     class Config:
         orm_mode = True
+
+class ClaimBase(BaseModel):
+    project_id: int
+    claim_text: str
+    claim_type: Optional[str] = None  # Hypothesis, Thesis, Conclusion, Proposal
+    files: Optional[str] = None  # Comma-separated string
+
+class ClaimCreate(ClaimBase):
+    pass
+
+class Claim(ClaimBase):
+    id: int
+    class Config:
+        orm_mode = True
+
+class ClaimUpdate(BaseModel):
+    project_id: Optional[int] = None
+    claim_text: Optional[str] = None
+    claim_type: Optional[str] = None
+    files: Optional[str] = None

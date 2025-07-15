@@ -1,6 +1,6 @@
 import { useCallback } from "react";
 
-export type CardType = 'source' | 'question' | 'insight' | 'thought';
+export type CardType = 'source' | 'question' | 'insight' | 'thought' | 'claim';
 
 export async function uploadFilesForCardType(
   cardType: CardType,
@@ -34,6 +34,10 @@ export async function uploadFilesForCardType(
       endpoint = "/thoughts/upload_file/";
       idField = "thought_id";
       break;
+    case "claim":
+      endpoint = "/claims/upload_file/";
+      idField = "claim_id";
+      break;
     default:
       throw new Error("Unknown card type");
   }
@@ -43,6 +47,7 @@ export async function uploadFilesForCardType(
     const res = await fetch(`${API_URL}${endpoint}`, {
       method: "POST",
       body: formData,
+      credentials: "include", // Include authentication cookies
     });
 
     if (!res.ok) {

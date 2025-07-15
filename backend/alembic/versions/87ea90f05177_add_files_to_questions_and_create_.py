@@ -27,6 +27,7 @@ def upgrade() -> None:
     sa.Column('insight_text', sa.String(), nullable=False),
     sa.Column('sources_linked', sa.String(), nullable=True),
     sa.Column('files', sa.String(), nullable=True),
+    sa.Column('insight_type', sa.String(), nullable=True),
     sa.ForeignKeyConstraint(['project_id'], ['projects.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
@@ -41,6 +42,7 @@ def upgrade() -> None:
     )
     op.create_index(op.f('ix_thoughts_id'), 'thoughts', ['id'], unique=False)
     op.add_column('questions', sa.Column('files', sa.String(), nullable=True))
+    op.add_column('insights', sa.Column('insight_type', sa.String(), nullable=True))
     # ### end Alembic commands ###
 
 
@@ -52,4 +54,5 @@ def downgrade() -> None:
     op.drop_table('thoughts')
     op.drop_index(op.f('ix_insights_id'), table_name='insights')
     op.drop_table('insights')
+    op.drop_column('insights', 'insight_type')
     # ### end Alembic commands ###

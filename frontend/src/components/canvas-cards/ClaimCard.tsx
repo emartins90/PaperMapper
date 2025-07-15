@@ -1,10 +1,14 @@
 import React from "react";
+import Tag from "@/components/Tag";
 import { Handle, Position } from "reactflow";
 import { FileListDisplay } from "../canvas-add-files/FileListDisplay";
 
-type ThoughtCardProps = {
+type ClaimType = "Hypothesis" | "Thesis" | "Conclusion" | "Proposal";
+
+type ClaimCardProps = {
   data: {
-    thought: string;
+    claim: string;
+    claimType: ClaimType;
     onOpen?: () => void;
     files?: string[];
     onFileClick?: (fileUrl: string, fileType: 'image' | 'pdf' | 'other' | 'audio') => void;
@@ -17,13 +21,13 @@ const handleStyle = {
   width: 10,
   height: 10,
   background: '#fff',
-  border: '2px solid var(--thought-400)',
+  border: '2px solid var(--claim-400)',
   borderRadius: '50%',
 };
 
-export default function ThoughtCard({ data, showHandles = true, width = 'w-96' }: ThoughtCardProps) {
+export default function ClaimCard({ data, showHandles = true, width = 'w-96' }: ClaimCardProps) {
   return (
-    <div className={`rounded-xl border-2 border-thought-300 bg-white p-4 shadow-md ${width} relative`}>
+    <div className={`rounded-xl border-2 border-claim-300 bg-white p-4 shadow-md ${width} relative`}>
       {/* Source handles on all four sides */}
       {showHandles && (
         <>
@@ -34,16 +38,17 @@ export default function ThoughtCard({ data, showHandles = true, width = 'w-96' }
         </>
       )}
       <div className="flex items-center justify-between mb-2">
-        <div className="font-bold text-thought-700">Thought</div>
+        <div className="text-claim-700 flex items-center gap-2">
+          <span className="font-bold">{data.claimType ? data.claimType : "Claim"}</span>
+        </div>
         <button onClick={data.onOpen} aria-label="Open card">
-          <span className="text-thought-400 text-xl">↗</span>
+          <span className="text-claim-400 text-xl">↗</span>
         </button>
       </div>
-      <div className="text-black">{data.thought}</div>
-      
+      <div className="text-black mb-4">{data.claim}</div>
       {/* Render uploaded files (images as thumbnails, others as file names) */}
       {data.files && data.files.length > 0 && (
-        <FileListDisplay files={data.files} onFileClick={data.onFileClick} showFilesLabel={true} cardType="thought" />
+        <FileListDisplay files={data.files} onFileClick={data.onFileClick} showFilesLabel={true} cardType="claim" />
       )}
     </div>
   );

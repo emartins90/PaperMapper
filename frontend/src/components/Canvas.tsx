@@ -13,6 +13,7 @@ import ReactFlow, {
   Connection,
   ConnectionMode,
   useReactFlow,
+  ReactFlowProvider,
 } from "reactflow";
 import "reactflow/dist/style.css";
 import { toast } from "sonner";
@@ -21,14 +22,17 @@ import QuestionCard from "../components/canvas-cards/QuestionCard";
 import SourceMaterialCard from "../components/canvas-cards/SourceMaterialCard";
 import InsightCard from "../components/canvas-cards/InsightCard";
 import ThoughtCard from "../components/canvas-cards/ThoughtCard";
+import ClaimCard from "../components/canvas-cards/ClaimCard";
 import BottomNav from "@/components/BottomNav";
 import { SidePanelBase } from "../components/side-panel";
 import { FullscreenFileViewer } from "./canvas-add-files/FullscreenFileViewer";
 import { uploadFilesForCardType, CardType } from "../components/useFileUploadHandler";
+import { useGuidedExperience } from "./useGuidedExperience";
+
 
 // Ghost node component
-const GhostNode = ({ data }: { data: { type: "source" | "question" | "insight" | "thought" } }) => {
-  const getGhostClasses = (nodeType: "source" | "question" | "insight" | "thought") => {
+const GhostNode = ({ data }: { data: { type: "source" | "question" | "insight" | "thought" | "claim" } }) => {
+  const getGhostClasses = (nodeType: "source" | "question" | "insight" | "thought" | "claim") => {
     const baseClasses = "w-48 h-25 opacity-70 rounded-xl flex items-center justify-center text-xs font-bold pointer-events-none bg-white/80";
     
     const typeClasses = {
@@ -36,17 +40,19 @@ const GhostNode = ({ data }: { data: { type: "source" | "question" | "insight" |
       question: "border-2 border-dashed border-orange-400 text-orange-400", // Orange
       insight: "border-2 border-dashed border-purple-400 text-purple-400", // Purple
       thought: "border-2 border-dashed border-teal-400 text-teal-400", // Teal
+      claim: "border-2 border-dashed border-pink-400 text-pink-400", // Pink
     };
 
     return `${baseClasses} ${typeClasses[nodeType]}`;
   };
 
-  const getGhostText = (nodeType: "source" | "question" | "insight" | "thought") => {
+  const getGhostText = (nodeType: "source" | "question" | "insight" | "thought" | "claim") => {
     const texts = {
       source: "Source Material",
       question: "Question",
       insight: "Insight",
       thought: "Thought",
+      claim: "Claim",
     };
     return texts[nodeType];
   };
@@ -74,6 +80,7 @@ const nodeTypes = {
   source: SourceMaterialCard,
   insight: InsightCard,
   thought: ThoughtCard,
+  claim: ClaimCard,
   ghost: GhostNode,
 };
 
@@ -82,10 +89,10 @@ export default function CanvasInner({ projectId }: CanvasProps) {
   const [edges, setEdges] = useState<Edge[]>([]);
   const edgesRef = useRef(edges);
   useEffect(() => { edgesRef.current = edges; }, [edges]);
-  const { screenToFlowPosition } = useReactFlow();
+  const { screenToFlowPosition, setViewport, getViewport, fitView } = useReactFlow();
 
   // State for placing mode
-  const [placingNodeType, setPlacingNodeType] = useState<null | "source" | "question" | "insight" | "thought">(null);
+  const [placingNodeType, setPlacingNodeType] = useState<null | "source" | "question" | "insight" | "thought" | "claim">(null);
   const [ghostNodeId] = useState(() => `ghost-${crypto.randomUUID()}`);
 
   // State for open card
@@ -95,9 +102,10 @@ export default function CanvasInner({ projectId }: CanvasProps) {
   const [questionTab, setQuestionTab] = useState("info");
   const [insightTab, setInsightTab] = useState("info");
   const [thoughtTab, setThoughtTab] = useState("info");
+  const [claimTab, setClaimTab] = useState("info");
 
-  // Guided experience state (from BottomNav, but for now, local state for demo)
-  const [guided, setGuided] = useState(true);
+  // Guided experience state with persistence
+  const { guided, setGuided, loading: guidedLoading, error: guidedError } = useGuidedExperience();
 
   // Track which card (if any) is in chat mode
   const [chatActiveCardId, setChatActiveCardId] = useState<string | null>(null);
@@ -192,6 +200,7 @@ export default function CanvasInner({ projectId }: CanvasProps) {
                 cardData = {
                   insight: insight.insight_text || "",
                   sourcesLinked: insight.sources_linked || "0 Sources Linked",
+                  insightType: insight.insight_type || "",
                   insightId: insight.id,
                   projectId: insight.project_id,
                   files: insight.files ? insight.files.split(',').filter((url: string) => url.trim()) : [],
@@ -226,6 +235,30 @@ export default function CanvasInner({ projectId }: CanvasProps) {
               // Fallback to default data
               cardData = {
                 thought: "What are your thoughts on this?",
+                files: [],
+              };
+            }
+          } else if (card.type === "claim" && card.data_id) {
+            // For claim cards, load the claim data
+            try {
+              const claimRes = await fetch(`${API_URL}/claims/${card.data_id}`, {
+                credentials: "include", // Send cookies with request
+              });
+              if (claimRes.ok) {
+                const claim = await claimRes.json();
+                cardData = {
+                  claim: claim.claim_text || "",
+                  claimType: claim.claim_type || undefined,
+                  claimId: claim.id,
+                  projectId: claim.project_id,
+                  files: claim.files ? claim.files.split(',').filter((url: string) => url.trim()) : [],
+                };
+              }
+            } catch (err) {
+              console.error("Failed to load claim:", err);
+              // Fallback to default data
+              cardData = {
+                claim: "What is your claim?",
                 files: [],
               };
             }
@@ -283,6 +316,8 @@ export default function CanvasInner({ projectId }: CanvasProps) {
       setSourceTab("content");
     } else if (openCard && nodes.find(n => n.id === openCard.id)?.type === "question") {
       setQuestionTab("info");
+    } else if (openCard && nodes.find(n => n.id === openCard.id)?.type === "claim") {
+      setClaimTab("info");
     }
   }, [openCard?.id]); // Only run when the card ID changes, not when nodes change
 
@@ -304,6 +339,25 @@ export default function CanvasInner({ projectId }: CanvasProps) {
     setViewerType(fileType);
     setViewerOpen(true);
   };
+
+  // Handler for centering on a card and opening its side panel
+  const handleCardClick = useCallback((cardId: string, cardType: string) => {
+    // Find the card in the nodes array
+    const card = nodes.find(node => node.id === cardId);
+    if (!card) return;
+
+    // Use ReactFlow's fitView to center the specific node
+    fitView({
+      nodes: [card],
+      duration: 800,
+      padding: 0.1,
+      minZoom: 0.3,
+      maxZoom: 1,
+    });
+
+    // Open the side panel for the card
+    setOpenCard({ id: cardId, type: cardType });
+  }, [nodes, fitView]);
 
   // Helper to inject onOpen and onFileClick into node data
   const nodesWithOpen = useMemo(() =>
@@ -459,6 +513,29 @@ export default function CanvasInner({ projectId }: CanvasProps) {
       }
       setPlacingNodeType(null);
       return;
+    } else if (placingNodeType === "claim") {
+      // For claim cards, don't create backend record immediately - wait for user to save content
+      setNodes((nds) => {
+        const nodesWithoutGhost = nds.filter(n => n.id !== ghostNodeId);
+        const newNode = {
+          id: cardId,
+          type: placingNodeType,
+          position: clickPosition,
+          data: {
+            claim: "",
+            files: [],
+            claimId: null, // Will be set when user saves content
+            projectId,
+          },
+        };
+        return [...nodesWithoutGhost, newNode];
+      });
+      setOpenCard({ id: cardId, type: placingNodeType });
+      if (guided) {
+        setChatActiveCardId(cardId);
+      }
+      setPlacingNodeType(null);
+      return;
     }
     
     // Create empty node data based on type
@@ -493,6 +570,10 @@ export default function CanvasInner({ projectId }: CanvasProps) {
       },
       thought: {
         thought: "",
+        files: [],
+      },
+      claim: {
+        claim: "",
         files: [],
       },
     };
@@ -573,6 +654,20 @@ export default function CanvasInner({ projectId }: CanvasProps) {
         type: "ghost",
         position: { x: 0, y: 0 }, // Will be updated immediately by mouse move
         data: { type: "thought" },
+      },
+    ]);
+  }, [ghostNodeId]);
+
+  const startPlacingClaim = useCallback(() => {
+    setPlacingNodeType("claim");
+    // Add ghost node (position will be updated immediately by mouse move)
+    setNodes((nds) => [
+      ...nds,
+      {
+        id: ghostNodeId,
+        type: "ghost",
+        position: { x: 0, y: 0 }, // Will be updated immediately by mouse move
+        data: { type: "claim" },
       },
     ]);
   }, [ghostNodeId]);
@@ -948,6 +1043,7 @@ export default function CanvasInner({ projectId }: CanvasProps) {
           const insightPayload = {
             insight_text: chatAnswers.insightText || "",
             sources_linked: node.data.sourcesLinked || "0 Sources Linked",
+            insight_type: chatAnswers.insightType || "",
           };
           const insightRes = await fetch(`${API_URL}/insights/${node.data.insightId}`, {
             method: "PUT",
@@ -965,6 +1061,7 @@ export default function CanvasInner({ projectId }: CanvasProps) {
             project_id: projectId,
             insight_text: chatAnswers.insightText || "",
             sources_linked: node.data.sourcesLinked || "0 Sources Linked",
+            insight_type: chatAnswers.insightType || "",
             files: "",
           };
           const insightRes = await fetch(`${API_URL}/insights/`, {
@@ -984,6 +1081,7 @@ export default function CanvasInner({ projectId }: CanvasProps) {
           ...node.data,
           insightId: backendId,
           insight: chatAnswers.insightText || "",
+          insightType: chatAnswers.insightType || "",
         };
         cardPayload = {
           type: node.type,
@@ -1033,6 +1131,55 @@ export default function CanvasInner({ projectId }: CanvasProps) {
           ...node.data,
           thoughtId: backendId,
           thought: chatAnswers.thoughtText || "",
+        };
+        cardPayload = {
+          type: node.type,
+          data_id: backendId,
+          position_x: node.position.x,
+          position_y: node.position.y,
+          project_id: projectId,
+        };
+      } else if (cardType === "claim") {
+        // Check if claim already exists (has claimId) or needs to be created
+        if (node.data.claimId) {
+          // Update existing claim
+          const claimPayload = {
+            claim_text: chatAnswers.claimText || "",
+          };
+          const claimRes = await fetch(`${API_URL}/claims/${node.data.claimId}`, {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: token ? `Bearer ${token}` : "",
+            },
+            body: JSON.stringify(claimPayload),
+          });
+          if (!claimRes.ok) throw new Error("Failed to update claim");
+          backendId = node.data.claimId;
+        } else {
+          // Create new claim
+          const claimPayload = {
+            project_id: projectId,
+            claim_text: chatAnswers.claimText || "",
+            files: "",
+          };
+          const claimRes = await fetch(`${API_URL}/claims/`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: token ? `Bearer ${token}` : "",
+            },
+            body: JSON.stringify(claimPayload),
+          });
+          if (!claimRes.ok) throw new Error("Failed to save claim");
+          const savedClaim = await claimRes.json();
+          backendId = savedClaim.id;
+        }
+        
+        updatedNodeData = {
+          ...node.data,
+          claimId: backendId,
+          claim: chatAnswers.claimText || "",
         };
         cardPayload = {
           type: node.type,
@@ -1115,6 +1262,7 @@ export default function CanvasInner({ projectId }: CanvasProps) {
         if (cardType === "question") setQuestionTab("info");
         if (cardType === "insight") setInsightTab("info");
         if (cardType === "thought") setThoughtTab("info");
+        if (cardType === "claim") setClaimTab("info");
       setChatActiveCardId(null);
     } catch (err) {
       alert("Failed to save card: " + (err as Error).message);
@@ -1170,6 +1318,14 @@ export default function CanvasInner({ projectId }: CanvasProps) {
         } else if (node.type === "thought" && node.data.thoughtId) {
           // Delete thought
           await fetch(`${API_URL}/thoughts/${node.data.thoughtId}`, {
+            method: "DELETE",
+            headers: {
+              Authorization: token ? `Bearer ${token}` : "",
+            },
+          });
+        } else if (node.type === "claim" && node.data.claimId) {
+          // Delete claim
+          await fetch(`${API_URL}/claims/${node.data.claimId}`, {
             method: "DELETE",
             headers: {
               Authorization: token ? `Bearer ${token}` : "",
@@ -1379,6 +1535,7 @@ export default function CanvasInner({ projectId }: CanvasProps) {
         const insightPayload = {
           project_id: projectId,
           insight_text: node.data.insight || "",
+          insight_type: node.data.insightType || "",
           files: Array.isArray(node.data.files) ? node.data.files.join(',') : "",
         };
         const insightRes = await fetch(`${API_URL}/insights/`, {
@@ -1437,6 +1594,7 @@ export default function CanvasInner({ projectId }: CanvasProps) {
                   data: { 
                     ...n.data, 
                     insightId: savedInsight.id,
+                    insightType: node.data.insightType || "",
                     files: finalFiles,
                     pendingFiles: undefined, // Clear pending files
                   } 
@@ -1521,6 +1679,79 @@ export default function CanvasInner({ projectId }: CanvasProps) {
         
         // Update open card ID
         setOpenCard({ id: savedCard.id.toString(), type: node.type });
+      } else if (node.type === "claim") {
+        // Create claim
+        const claimPayload = {
+          project_id: projectId,
+          claim_text: node.data.claim || "",
+          files: Array.isArray(node.data.files) ? node.data.files.join(',') : "",
+        };
+        const claimRes = await fetch(`${API_URL}/claims/`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: token ? `Bearer ${token}` : "",
+          },
+          body: JSON.stringify(claimPayload),
+        });
+        const savedClaim = await claimRes.json();
+        
+        // Create card
+        const cardPayload = {
+          type: node.type,
+          data_id: savedClaim.id,
+          position_x: node.position.x,
+          position_y: node.position.y,
+          project_id: projectId,
+        };
+        const cardRes = await fetch(`${API_URL}/cards/`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: token ? `Bearer ${token}` : "",
+          },
+          body: JSON.stringify(cardPayload),
+        });
+        const savedCard = await cardRes.json();
+        
+        // Upload pending files if any
+        let finalFiles = Array.isArray(node.data.files) ? node.data.files : [];
+        if (node.data.pendingFiles && Array.isArray(node.data.pendingFiles)) {
+          try {
+            await uploadFilesForCardType(
+              "claim",
+              savedClaim.id,
+              node.data.pendingFiles,
+              [], // Start with empty array since we're uploading to a new record
+              (newFiles) => {
+                finalFiles = newFiles;
+              }
+            );
+          } catch (err) {
+            console.error("Failed to upload pending files:", err);
+          }
+        }
+        
+        // Update node with saved data
+        setNodes((nds) => 
+          nds.map(n => 
+            n.id === cardId 
+              ? { 
+                  ...n, 
+                  id: savedCard.id.toString(),
+                  data: { 
+                    ...n.data, 
+                    claimId: savedClaim.id,
+                    files: finalFiles,
+                    pendingFiles: undefined, // Clear pending files
+                  } 
+                }
+              : n
+          )
+        );
+        
+        // Update open card ID
+        setOpenCard({ id: savedCard.id.toString(), type: node.type });
       }
       
     } catch (err) {
@@ -1542,7 +1773,8 @@ export default function CanvasInner({ projectId }: CanvasProps) {
       (node.type === "source" && (!node.data.sourceMaterialId || !node.data.citationId)) ||
       (node.type === "question" && !node.data.questionId) ||
       (node.type === "insight" && !node.data.insightId) ||
-      (node.type === "thought" && !node.data.thoughtId);
+      (node.type === "thought" && !node.data.thoughtId) ||
+      (node.type === "claim" && !node.data.claimId);
     
     return isUUID || hasMissingDataIds;
   }, [nodes]);
@@ -1591,6 +1823,7 @@ export default function CanvasInner({ projectId }: CanvasProps) {
             questionId: node.data.questionId || newData.questionId,
             insightId: node.data.insightId || newData.insightId,
             thoughtId: node.data.thoughtId || newData.thoughtId,
+            claimId: node.data.claimId || newData.claimId,
                   } 
       };
       
@@ -1612,6 +1845,7 @@ export default function CanvasInner({ projectId }: CanvasProps) {
                 questionId: n.data.questionId || newData.questionId,
                 insightId: n.data.insightId || newData.insightId,
                 thoughtId: n.data.thoughtId || newData.thoughtId,
+                claimId: n.data.claimId || newData.claimId,
               } 
             };
           }
@@ -1640,6 +1874,29 @@ export default function CanvasInner({ projectId }: CanvasProps) {
     };
   }, []);
 
+  // Listen for card list clicks from ProjectNav
+  useEffect(() => {
+    const handleCardListClick = (event: CustomEvent) => {
+      console.log("Canvas received cardListClick:", event.detail);
+      const { cardId, cardType } = event.detail;
+      handleCardClick(cardId, cardType);
+    };
+
+    window.addEventListener('cardListClick', handleCardListClick as EventListener);
+    
+    return () => {
+      window.removeEventListener('cardListClick', handleCardListClick as EventListener);
+    };
+  }, [handleCardClick]);
+
+  // Dispatch nodes updates to ProjectNav
+  useEffect(() => {
+    const event = new CustomEvent('nodesUpdate', {
+      detail: { nodes }
+    });
+    window.dispatchEvent(event);
+  }, [nodes]);
+
   return (
     <div 
       style={{ 
@@ -1661,6 +1918,8 @@ export default function CanvasInner({ projectId }: CanvasProps) {
         onClose={() => setViewerOpen(false)}
         cardType={viewerFile && nodes.find(n => n.data.files?.includes(viewerFile))?.type || "questions"}
       />
+      
+
       <ReactFlow
         nodes={nodesWithOpen}
         edges={edges}
@@ -1704,6 +1963,8 @@ export default function CanvasInner({ projectId }: CanvasProps) {
         onInsightTabChange={setInsightTab}
         thoughtTab={thoughtTab}
         onThoughtTabChange={setThoughtTab}
+        claimTab={claimTab}
+        onClaimTabChange={setClaimTab}
         onSaveCard={handleSaveCard}
         onUpdateNodeData={handleUpdateNodeData}
         onEdgesChange={onEdgesChange}
@@ -1712,12 +1973,15 @@ export default function CanvasInner({ projectId }: CanvasProps) {
         projectId={projectId}
       />
       <BottomNav 
+        onAddClaim={startPlacingClaim}
         onAddSourceMaterial={startPlacingSource}
         onAddQuestion={startPlacingQuestion}
         onAddInsight={startPlacingInsight}
         onAddThought={startPlacingThought}
         guided={guided}
         onGuidedChange={setGuided}
+        guidedLoading={guidedLoading}
+        guidedError={guidedError}
       />
     </div>
   );

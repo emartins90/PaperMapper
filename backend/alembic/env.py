@@ -33,7 +33,12 @@ target_metadata = Base.metadata
 # ... etc.
 
 def get_url():
-    return os.getenv("DATABASE_URL") or config.get_main_option("sqlalchemy.url")
+    # For Alembic, prefer ALEMBIC_DATABASE_URL (sync) over DATABASE_URL (async)
+    url = os.getenv("ALEMBIC_DATABASE_URL") or os.getenv("DATABASE_URL") or config.get_main_option("sqlalchemy.url")
+    if url and "+asyncpg" in url:
+        # Convert async URL to sync URL for Alembic
+        url = url.replace("+asyncpg", "")
+    return url
 
 
 def run_migrations_offline() -> None:

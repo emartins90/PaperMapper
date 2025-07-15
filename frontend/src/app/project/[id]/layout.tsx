@@ -1,5 +1,5 @@
 "use client";
-import TopNav from "@/components/ProjectNav";
+import ProjectNav from "@/components/ProjectNav";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import Link from "next/link";
@@ -39,10 +39,20 @@ export default function ProjectLayout({ children }: { children: React.ReactNode 
     ? projectName.slice(0, maxLength) + "…"
     : projectName;
 
+  // Handler for card clicks from the ProjectNav
+  const handleCardClick = (cardId: string, cardType: string) => {
+    console.log("Layout handleCardClick:", cardId, cardType);
+    // Dispatch a custom event that the Canvas can listen to
+    const event = new CustomEvent('cardListClick', {
+      detail: { cardId, cardType }
+    });
+    window.dispatchEvent(event);
+  };
+
   return (
     <>
       {/* Top bar with breadcrumb and account button */}
-      <div className="absolute top-5 left-0 z-30 w-full flex items-center justify-between px-8 h-16">
+      <div className="absolute top-5 left-0 z-20 w-full flex items-center justify-between px-8 h-16">
         {/* Breadcrumb */}
         <div className="bg-white rounded-xl shadow px-3 py-1 flex items-center">
           <Breadcrumb>
@@ -64,7 +74,10 @@ export default function ProjectLayout({ children }: { children: React.ReactNode 
         {/* Account button and menu */}
         <MenuDropdown />
       </div>
-      <TopNav />
+      
+      {/* Project Navigation with Card List */}
+      <ProjectNav nodes={[]} onCardClick={handleCardClick} />
+      
       {children}
     </>
   );

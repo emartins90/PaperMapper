@@ -1,6 +1,6 @@
 import React from "react";
 import ReactDOM from "react-dom";
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useState } from "react";
 import WaveSurfer from "wavesurfer.js";
 
 interface FullscreenFileViewerProps {
@@ -20,7 +20,9 @@ export const FullscreenFileViewer: React.FC<FullscreenFileViewerProps> = ({
   onClose,
   cardType = "questions" // Default to questions for backward compatibility
 }) => {
-  if (!open || !fileUrl) return null;
+  const [blobUrl, setBlobUrl] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Helper to convert old R2 URLs to secure endpoint
   const getFullUrl = (url: string) => {
@@ -43,11 +45,56 @@ export const FullscreenFileViewer: React.FC<FullscreenFileViewerProps> = ({
     return url;
   };
 
+  // Fetch file with authentication
+  const fetchFile = async (url: string) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const fullUrl = getFullUrl(url);
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      
+      const response = await fetch(`${apiUrl}${fullUrl}`, {
+        credentials: "include", // Include authentication cookies
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to load file: ${response.status} ${response.statusText}`);
+      }
+      
+      const blob = await response.blob();
+      const newBlobUrl = URL.createObjectURL(blob);
+      setBlobUrl(newBlobUrl);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load file');
+      console.error('Error loading file:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Clean up blob URL when component unmounts or file changes
+  useEffect(() => {
+    return () => {
+      if (blobUrl) {
+        URL.revokeObjectURL(blobUrl);
+      }
+    };
+  }, [blobUrl]);
+
+  // Fetch file when component opens
+  useEffect(() => {
+    if (open && fileUrl && (fileType === 'image' || fileType === 'pdf')) {
+      fetchFile(fileUrl);
+    }
+  }, [open, fileUrl, fileType]);
+
   const handleOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (e.target === e.currentTarget) {
       onClose();
     }
   };
+
+  if (!open || !fileUrl) return null;
 
   const overlay = (
     <div className="fixed inset-0 w-full h-full z-[9999] bg-black/80 flex items-center justify-center" onClick={handleOverlayClick}>
@@ -64,18 +111,41 @@ export const FullscreenFileViewer: React.FC<FullscreenFileViewerProps> = ({
       >
         &times;
       </button>
+      
+      {/* Loading state */}
+      {loading && (
+        <div className="bg-white/90 rounded-lg shadow-2xl p-8 flex flex-col items-center justify-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
+          <span className="text-gray-700">Loading file...</span>
+        </div>
+      )}
+      
+      {/* Error state */}
+      {error && (
+        <div className="bg-white/90 rounded-lg shadow-2xl p-8 flex flex-col items-center justify-center">
+          <span className="mb-4 text-lg font-semibold text-red-600">Error loading file</span>
+          <span className="mb-4 text-gray-700">{error}</span>
+          <button
+            onClick={() => fetchFile(fileUrl)}
+            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+          >
+            Retry
+          </button>
+        </div>
+      )}
+      
       {/* Content */}
-      {fileType === 'image' && (
+      {!loading && !error && fileType === 'image' && blobUrl && (
         <img
-          src={getFullUrl(fileUrl)}
+          src={blobUrl}
           alt={getFileName(fileUrl)}
           className="max-w-[90vw] max-h-[calc(90vh-72px)] object-contain rounded-lg shadow-2xl"
           style={{ display: 'block', marginTop: 72, marginBottom: 24 }}
         />
       )}
-      {fileType === 'pdf' && (
+      {!loading && !error && fileType === 'pdf' && blobUrl && (
         <iframe
-          src={getFullUrl(fileUrl)}
+          src={blobUrl}
           title="PDF Viewer"
           className="max-w-[90vw] w-[min(90vw,800px)] h-[calc(90vh-72px)] rounded-lg shadow-2xl bg-white"
           style={{ minHeight: '400px', display: 'block', marginTop: 72, marginBottom: 24 }}

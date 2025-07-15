@@ -189,7 +189,7 @@ export default function ThoughtCardContent({
               <button
                 onClick={handleSaveThought}
                 disabled={isSaving || !thought.trim()}
-                className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full bg-primary text-primary-foreground py-2 px-4 rounded-lg font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isSaving ? "Saving..." : "Save Thought"}
               </button>

@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { MdHelpOutline, MdLibraryBooks, MdLightbulbOutline, MdChatBubbleOutline } from "react-icons/md";
+import { MdHelpOutline, MdLibraryBooks, MdLightbulbOutline, MdChatBubbleOutline, MdOutlineRecordVoiceOver } from "react-icons/md";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Switch } from "@/components/ui/switch";
@@ -12,8 +12,11 @@ interface BottomNavProps {
   onAddQuestion?: () => void;
   onAddInsight?: () => void;
   onAddThought?: () => void;
+  onAddClaim?: () => void;
   guided: boolean;
   onGuidedChange: (guided: boolean) => void;
+  guidedLoading?: boolean;
+  guidedError?: string | null;
 }
 
 export default function BottomNav({ 
@@ -21,21 +24,47 @@ export default function BottomNav({
   onAddQuestion, 
   onAddInsight, 
   onAddThought, 
+  onAddClaim, 
   guided, 
-  onGuidedChange 
+  onGuidedChange,
+  guidedLoading = false,
+  guidedError = null
 }: BottomNavProps) {
   return (
     <TooltipProvider>
       <nav className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-white rounded-xl shadow-md flex items-center px-6 py-2 border border-gray-100">
         {/* Guided Experience Toggle */}
         <span className="flex items-center gap-2 pr-2">
-          Guided Experience
-          <Switch checked={guided} onCheckedChange={onGuidedChange} aria-label="Toggle Guided Experience" />
+          <span className="text-sm font-medium">Guided Experience</span>
+          <Switch 
+            checked={guided} 
+            onCheckedChange={onGuidedChange} 
+            disabled={guidedLoading}
+            aria-label="Toggle Guided Experience" 
+          />
+          {guidedLoading && (
+            <span className="text-xs text-gray-500">Loading...</span>
+          )}
+          {guidedError && (
+            <span className="text-xs text-red-500" title={guidedError}>Error</span>
+          )}
         </span>
         {/* Divider */}
         <div className="h-8 w-px bg-gray-200 mx-3"  />
         {/* Icon Buttons */}
         <div className="flex items-center gap-3">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="light" className="bg-claim-100 hover:bg-claim-300" size="icon" aria-label="Add Claim Card" onClick={() => {
+                onAddClaim?.();
+              }}>
+                <MdOutlineRecordVoiceOver size={40} />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Add Claim Card</p>
+            </TooltipContent>
+          </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>
               <Button variant="light" className="bg-question-100 hover:bg-question-300" size="icon" aria-label="Add Question Card" onClick={() => {

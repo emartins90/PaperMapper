@@ -234,7 +234,8 @@ async def delete_source_material(sm_id: int, db: AsyncSession = Depends(get_db()
 async def upload_source_material_files(
     source_material_id: int = Form(...),
     files: List[UploadFile] = File(...),
-    db: AsyncSession = Depends(get_db())
+    db: AsyncSession = Depends(get_db()),
+    current_user: models.User = Depends(get_current_user)
 ):
     # Find the source material
     result = await db.execute(select(models.SourceMaterial).where(models.SourceMaterial.id == source_material_id))
@@ -327,7 +328,8 @@ async def delete_question(question_id: int, db: AsyncSession = Depends(get_db())
 async def upload_question_files(
     question_id: int = Form(...),
     files: List[UploadFile] = File(...),
-    db: AsyncSession = Depends(get_db())
+    db: AsyncSession = Depends(get_db()),
+    current_user: models.User = Depends(get_current_user)
 ):
     # Find the question
     result = await db.execute(select(models.Question).where(models.Question.id == question_id))
@@ -508,6 +510,57 @@ async def delete_thought(thought_id: int, db: AsyncSession = Depends(get_db())):
     await db.commit()
     return {"message": "Thought deleted"}
 
+# --- Claim Endpoints ---
+@app.post("/claims/", response_model=schemas.Claim)
+async def create_claim(claim: schemas.ClaimCreate, db: AsyncSession = Depends(get_db())):
+    db_claim = models.Claim(**claim.dict())
+    db.add(db_claim)
+    await db.commit()
+    await db.refresh(db_claim)
+    return db_claim
+
+@app.get("/claims/", response_model=List[schemas.Claim])
+async def read_claims(skip: int = 0, limit: int = 100, project_id: int = None, db: AsyncSession = Depends(get_db())):
+    query = select(models.Claim)
+    if project_id is not None:
+        query = query.where(models.Claim.project_id == project_id)
+    query = query.offset(skip).limit(limit)
+    result = await db.execute(query)
+    return result.scalars().all()
+
+@app.get("/claims/{claim_id}", response_model=schemas.Claim)
+async def read_claim(claim_id: int, db: AsyncSession = Depends(get_db())):
+    query = select(models.Claim).where(models.Claim.id == claim_id)
+    result = await db.execute(query)
+    claim = result.scalar_one_or_none()
+    if claim is None:
+        raise HTTPException(status_code=404, detail="Claim not found")
+    return claim
+
+@app.put("/claims/{claim_id}", response_model=schemas.Claim)
+async def update_claim(claim_id: int, claim: schemas.ClaimUpdate, db: AsyncSession = Depends(get_db())):
+    query = select(models.Claim).where(models.Claim.id == claim_id)
+    result = await db.execute(query)
+    db_claim = result.scalar_one_or_none()
+    if db_claim is None:
+        raise HTTPException(status_code=404, detail="Claim not found")
+    for field, value in claim.dict(exclude_unset=True).items():
+        setattr(db_claim, field, value)
+    await db.commit()
+    await db.refresh(db_claim)
+    return db_claim
+
+@app.delete("/claims/{claim_id}")
+async def delete_claim(claim_id: int, db: AsyncSession = Depends(get_db())):
+    query = select(models.Claim).where(models.Claim.id == claim_id)
+    result = await db.execute(query)
+    claim = result.scalar_one_or_none()
+    if claim is None:
+        raise HTTPException(status_code=404, detail="Claim not found")
+    await db.delete(claim)
+    await db.commit()
+    return {"message": "Claim deleted"}
+
 # --- Card Endpoints ---
 @app.post("/cards/", response_model=schemas.Card)
 async def create_card(card: schemas.CardCreate, db: AsyncSession = Depends(get_db())):
@@ -617,6 +670,20 @@ async def delete_card(card_id: int, db: AsyncSession = Depends(get_db())):
                                 if key:
                                     await r2_storage.delete_file(key)
                     await db.delete(db_thought)
+            elif db_card.type == "claim":
+                claim_result = await db.execute(select(models.Claim).where(models.Claim.id == db_card.data_id))
+                db_claim = claim_result.scalar_one_or_none()
+                if db_claim:
+                    # Clean up associated files from R2
+                    if db_claim.files:
+                        file_urls = db_claim.files.split(',')
+                        for file_url in file_urls:
+                            file_url = file_url.strip()
+                            if file_url:
+                                key = r2_storage.extract_key_from_url(file_url)
+                                if key:
+                                    await r2_storage.delete_file(key)
+                    await db.delete(db_claim)
 
         # Manually delete related CardLink rows
         await db.execute(sa_delete(models.CardLink).where(
@@ -813,7 +880,8 @@ async def delete_file(filename: str):
 async def upload_insight_files(
     insight_id: int = Form(...),
     files: List[UploadFile] = File(...),
-    db: AsyncSession = Depends(get_db())
+    db: AsyncSession = Depends(get_db()),
+    current_user: models.User = Depends(get_current_user)
 ):
     # Find the insight
     result = await db.execute(select(models.Insight).where(models.Insight.id == insight_id))
@@ -863,7 +931,8 @@ async def delete_insight_file(
 async def upload_thought_files(
     thought_id: int = Form(...),
     files: List[UploadFile] = File(...),
-    db: AsyncSession = Depends(get_db())
+    db: AsyncSession = Depends(get_db()),
+    current_user: models.User = Depends(get_current_user)
 ):
     print(f"[UPLOAD] Received upload for thought_id={thought_id}, files={[f.filename for f in files]}")
     result = await db.execute(select(models.Thought).where(models.Thought.id == thought_id))
@@ -943,6 +1012,30 @@ def delete_user_custom_option(option_id: int, db: Session = Depends(get_sync_db)
     db.delete(option)
     db.commit()
     return {"ok": True}
+
+# --- Guided Experience Endpoints ---
+@app.get("/users/me/guided-experience")
+def get_guided_experience_setting(db: Session = Depends(get_sync_db), current_user: models.User = Depends(get_current_user)):
+    """Get the guided experience setting for the current user"""
+    option = crud.get_guided_experience_setting(db, current_user.id)
+    if option:
+        return {"guided": option.value.lower() == "true"}
+    else:
+        # Default to true if no setting exists
+        return {"guided": True}
+
+class GuidedExperienceUpdate(BaseModel):
+    guided: bool
+
+@app.put("/users/me/guided-experience")
+def update_guided_experience_setting(
+    update_data: GuidedExperienceUpdate,
+    db: Session = Depends(get_sync_db), 
+    current_user: models.User = Depends(get_current_user)
+):
+    """Update the guided experience setting for the current user"""
+    option = crud.set_guided_experience_setting(db, current_user.id, update_data.guided)
+    return {"guided": option.value.lower() == "true"}
 
 # --- Password Reset Endpoints ---
 @app.post("/auth/forgot-password")
@@ -1039,6 +1132,37 @@ def get_project_tags(project_id: int, db: Session = Depends(get_sync_db), curren
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching tags: {str(e)}")
 
+@app.post("/test_upload/")
+async def test_upload(
+    question_id: int = Form(...),
+    files: List[UploadFile] = File(...),
+    db: AsyncSession = Depends(get_db()),
+    current_user: models.User = Depends(get_current_user)
+):
+    """Test upload endpoint that doesn't use R2"""
+    try:
+        print(f"[TEST] User authenticated: {current_user.email}")
+        print(f"[TEST] Question ID: {question_id}")
+        print(f"[TEST] Files: {[f.filename for f in files]}")
+        
+        # Simulate file processing without R2
+        uploaded_urls = []
+        for file in files:
+            # Create a fake URL
+            fake_url = f"test://fake-storage/{uuid.uuid4()}-{file.filename}"
+            uploaded_urls.append(fake_url)
+            print(f"[TEST] Created fake URL: {fake_url}")
+        
+        return {
+            "file_urls": uploaded_urls,
+            "all_files": uploaded_urls,
+            "message": "Test upload successful (no R2)"
+        }
+        
+    except Exception as e:
+        print(f"[TEST] Error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.get("/secure-files/{folder}/{filename}")
 async def get_secure_file(folder: str, filename: str, current_user=Depends(get_current_user)):
     # TODO: Add file ownership/authorization checks here if needed
@@ -1049,3 +1173,54 @@ async def get_secure_file(folder: str, filename: str, current_user=Depends(get_c
         return StreamingResponse(file_obj['Body'], media_type=file_obj['ContentType'])
     except Exception as e:
         raise HTTPException(status_code=404, detail=f"File not found or access denied: {str(e)}")
+
+# --- Claim File Upload/Deletion Endpoints ---
+@app.post("/claims/upload_file/")
+async def upload_claim_files(
+    claim_id: int = Form(...),
+    files: List[UploadFile] = File(...),
+    db: AsyncSession = Depends(get_db()),
+    current_user: models.User = Depends(get_current_user)
+):
+    # Find the claim
+    result = await db.execute(select(models.Claim).where(models.Claim.id == claim_id))
+    db_claim = result.scalar_one_or_none()
+    if db_claim is None:
+        raise HTTPException(status_code=404, detail="Claim not found")
+
+    # Upload files to R2
+    upload_results = await r2_storage.upload_multiple_files(files, folder="claims")
+    uploaded_urls = [result["file_url"] for result in upload_results]
+
+    # Update the files field (append new files)
+    existing_files = db_claim.files.split(",") if db_claim.files else []
+    all_files = existing_files + uploaded_urls
+    db_claim.files = ",".join([f.strip() for f in all_files if f.strip()])
+    await db.commit()
+    await db.refresh(db_claim)
+    return {"file_urls": uploaded_urls, "all_files": all_files}
+
+@app.post("/claims/delete_file/")
+async def delete_claim_file(
+    claim_id: int,
+    file_url: str,
+    db: AsyncSession = Depends(get_db())
+):
+    # Find the claim
+    result = await db.execute(select(models.Claim).where(models.Claim.id == claim_id))
+    db_claim = result.scalar_one_or_none()
+    if db_claim is None:
+        raise HTTPException(status_code=404, detail="Claim not found")
+
+    # Remove file from R2
+    key = r2_storage.extract_key_from_url(file_url)
+    if key:
+        await r2_storage.delete_file(key)
+
+    # Remove file from files field
+    existing_files = db_claim.files.split(",") if db_claim.files else []
+    new_files = [f for f in existing_files if f.strip() != file_url.strip()]
+    db_claim.files = ",".join(new_files)
+    await db.commit()
+    await db.refresh(db_claim)
+    return {"ok": True, "remaining_files": new_files}

@@ -29,6 +29,7 @@ class Project(Base):
     questions = relationship("Question", back_populates="project", cascade="all, delete-orphan")
     insights = relationship("Insight", back_populates="project", cascade="all, delete-orphan")
     thoughts = relationship("Thought", back_populates="project", cascade="all, delete-orphan")
+    claims = relationship("Claim", back_populates="project", cascade="all, delete-orphan")
 
 class Citation(Base):
     __tablename__ = "citations"
@@ -113,6 +114,7 @@ class Insight(Base):
     insight_text = Column(String, nullable=False)
     sources_linked = Column(String, nullable=True)  # e.g., "3 Sources Linked"
     files = Column(String, nullable=True)  # Store as comma-separated for now
+    insight_type = Column(String, nullable=True)  # e.g., Resolved Confusion, Noticed a Pattern, etc.
     project = relationship("Project", back_populates="insights")
 
 class Thought(Base):
@@ -122,3 +124,12 @@ class Thought(Base):
     thought_text = Column(String, nullable=False)
     files = Column(String, nullable=True)  # Store as comma-separated for now
     project = relationship("Project", back_populates="thoughts")
+
+class Claim(Base):
+    __tablename__ = "claims"
+    id = Column(Integer, primary_key=True, index=True)
+    project_id = Column(Integer, ForeignKey("projects.id"))
+    claim_text = Column(String, nullable=False)
+    claim_type = Column(String, nullable=True)  # Hypothesis, Thesis, Conclusion, Proposal
+    files = Column(String, nullable=True)  # Store as comma-separated for now
+    project = relationship("Project", back_populates="claims")

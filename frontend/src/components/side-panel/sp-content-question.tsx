@@ -6,6 +6,9 @@ import UnsavedCardFileUpload from "../shared/UnsavedCardFileUpload";
 import { uploadFilesForCardType } from "../useFileUploadHandler";
 import { useCardSave } from "../shared/useCardSave";
 import LinkedCardsTab from "../LinkedCardsTab";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 
 const QUESTION_CATEGORIES = [
   "Clarify a concept",
@@ -111,6 +114,8 @@ export default function QuestionCardContent({
       });
     }
   }, [question, category, customCategory, status, priority, pendingFiles, onFormDataChange]);
+
+
 
   const saveAllFields = async (fields?: Partial<{ question: string; category: string; status: string; priority: string }>) => {
     // Always update local node data first
@@ -234,9 +239,9 @@ export default function QuestionCardContent({
       {questionTab === "info" ? (
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Question Text</label>
-            <textarea
-              className="w-full p-2 border border-gray-300 rounded-md text-sm"
+            <Label htmlFor="question-text" className="block text-sm font-medium text-gray-700 mb-1">Question Text</Label>
+            <Textarea
+              id="question-text"
               placeholder="Enter your research or essay question..."
               rows={3}
               value={question}
@@ -249,30 +254,28 @@ export default function QuestionCardContent({
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Function / Category</label>
-            <select
-              className="w-full p-2 border border-gray-300 rounded-md text-sm"
-              value={category && QUESTION_CATEGORIES.includes(category) ? category : (category ? "Custom..." : "")}
-              onChange={e => {
-                setCategory(e.target.value);
-                if (e.target.value !== "Custom...") {
+            <Label htmlFor="question-category" className="block text-sm font-medium text-gray-700 mb-1">Function / Category</Label>
+            <Select
+              value={category || ""}
+              onValueChange={(value) => {
+                setCategory(value);
+                if (value !== "Custom...") {
                   setCustomCategory("");
                   if (!isUnsaved) {
-                    saveAllFields({ category: e.target.value });
+                    saveAllFields({ category: value });
                   }
                 }
               }}
-              onBlur={() => {
-                if (!isUnsaved) {
-                  saveAllFields({ category });
-                }
-              }}
             >
-              <option value="">Select category...</option>
-              {QUESTION_CATEGORIES.map(opt => (
-                <option key={opt} value={opt}>{opt}</option>
-              ))}
-            </select>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select category..." />
+              </SelectTrigger>
+              <SelectContent>
+                {QUESTION_CATEGORIES.map(opt => (
+                  <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             {category === "Custom..." && (
               <input
                 className="w-full mt-2 p-2 border border-gray-300 rounded-md text-sm"
@@ -288,49 +291,47 @@ export default function QuestionCardContent({
             )}
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-            <select
-              className="w-full p-2 border border-gray-300 rounded-md text-sm"
-              value={status}
-              onChange={e => { 
-                setStatus(e.target.value); 
+            <Label htmlFor="question-status" className="block text-sm font-medium text-gray-700 mb-1">Status</Label>
+            <Select
+              value={status || ""}
+              onValueChange={(value) => { 
+                setStatus(value); 
                 if (!isUnsaved) {
-                  saveAllFields({ status: e.target.value }); 
-                }
-              }}
-              onBlur={() => {
-                if (!isUnsaved) {
-                  saveAllFields({ status });
+                  saveAllFields({ status: value }); 
                 }
               }}
             >
-              {QUESTION_STATUSES.map(opt => (
-                <option key={opt} value={opt}>{opt.charAt(0).toUpperCase() + opt.slice(1)}</option>
-              ))}
-            </select>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select status..." />
+              </SelectTrigger>
+              <SelectContent>
+                {QUESTION_STATUSES.map(opt => (
+                  <SelectItem key={opt} value={opt}>{opt.charAt(0).toUpperCase() + opt.slice(1)}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
-            <select
-              className="w-full p-2 border border-gray-300 rounded-md text-sm"
-              value={priority}
-              onChange={e => { 
-                setPriority(e.target.value); 
+            <Label htmlFor="question-priority" className="block text-sm font-medium text-gray-700 mb-1">Priority</Label>
+            <Select
+              value={priority || "none"}
+              onValueChange={(value) => { 
+                setPriority(value === "none" ? "" : value); 
                 if (!isUnsaved) {
-                  saveAllFields({ priority: e.target.value }); 
-                }
-              }}
-              onBlur={() => {
-                if (!isUnsaved) {
-                  saveAllFields({ priority });
+                  saveAllFields({ priority: value === "none" ? "" : value }); 
                 }
               }}
             >
-              <option value="">No Priority</option>
-              {QUESTION_PRIORITIES.filter(opt => opt !== "").map(opt => (
-                <option key={opt} value={opt}>{opt.charAt(0).toUpperCase() + opt.slice(1)}</option>
-              ))}
-            </select>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="No Priority" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">No Priority</SelectItem>
+                {QUESTION_PRIORITIES.filter(opt => opt !== "").map(opt => (
+                  <SelectItem key={opt} value={opt}>{opt.charAt(0).toUpperCase() + opt.slice(1)}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           
           {/* Use different file upload components based on save status */}
@@ -360,7 +361,7 @@ export default function QuestionCardContent({
               <button
                 onClick={handleSaveQuestion}
                 disabled={isSaving || !question.trim()}
-                className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full bg-primary text-primary-foreground py-2 px-4 rounded-lg font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isSaving ? "Saving..." : "Save Question"}
               </button>

@@ -59,7 +59,6 @@
   --color-question-300: var(--question-300);
   --color-question-400: var(--question-400);
   --color-question-500: var(--question-500);
-
   --color-question-600: var(--question-600);
   --color-question-700: var(--question-700);
   --color-question-800: var(--question-800);
@@ -71,7 +70,6 @@
   --color-source-300: var(--source-300);
   --color-source-400: var(--source-400);
   --color-source-500: var(--source-500);
-
   --color-source-600: var(--source-600);
   --color-source-700: var(--source-700);
   --color-source-800: var(--source-800);
@@ -83,7 +81,6 @@
   --color-insight-300: var(--insight-300);
   --color-insight-400: var(--insight-400);
   --color-insight-500: var(--insight-500);
-
   --color-insight-600: var(--insight-600);
   --color-insight-700: var(--insight-700);
   --color-insight-800: var(--insight-800);
@@ -95,7 +92,6 @@
   --color-thought-300: var(--thought-300);
   --color-thought-400: var(--thought-400);
   --color-thought-500: var(--thought-500);
-
   --color-thought-600: var(--thought-600);
   --color-thought-700: var(--thought-700);
   --color-thought-800: var(--thought-800);
@@ -164,6 +160,17 @@
   --color-sidebar-border: var(--sidebar-border);
 
   --color-sidebar-ring: var(--sidebar-ring);
+
+  --color-claim-50: var(--claim-50);
+  --color-claim-100: var(--claim-100);
+  --color-claim-200: var(--claim-200);
+  --color-claim-300: var(--claim-300);
+  --color-claim-400: var(--claim-400);
+  --color-claim-500: var(--claim-500);
+  --color-claim-600: var(--claim-600);
+  --color-claim-700: var(--claim-700);
+  --color-claim-800: var(--claim-800);
+  --color-claim-900: var(--claim-900);
 }
 
 /* ---break--- 
@@ -185,18 +192,18 @@
 
   --popover-foreground: #19191D;
 
-  --primary: #3b82f6;
-  --primary-50: #eff6ff;
-  --primary-100: #dbeafe;
-  --primary-200: #bfdbfe;
-  --primary-300: #93c5fd;
-  --primary-400: #60a5fa;
-  --primary-500: #3b82f6;
-  --primary-600: #2563eb;
-  --primary-700: #1d4ed8;
-  --primary-800: #1e40af;
-  --primary-900: #1e3a8a;
-  --primary-950: #172554;
+  --primary: #1f2937;
+  --primary-50: #f9fafb;
+  --primary-100: #f3f4f6;
+  --primary-200: #e5e7eb;
+  --primary-300: #d1d5db;
+  --primary-400: #9ca3af;
+  --primary-500: #6b7280;
+  --primary-600: #4b5563;
+  --primary-700: #374151;
+  --primary-800: #1f2937;
+  --primary-900: #111827;
+  --primary-950: #030712;
 
   --primary-foreground: #fff;
 
@@ -218,7 +225,7 @@
 
   --input: #e5e7eb;
 
-  --ring: #3b82f6;
+  --ring: #1f2937;
 
   --chart-1: #fbbf24;
 
@@ -234,7 +241,7 @@
 
   --sidebar-foreground: #19191D;
 
-  --sidebar-primary: #3b82f6;
+  --sidebar-primary: #1f2937;
 
   --sidebar-primary-foreground: #fff;
 
@@ -244,7 +251,7 @@
 
   --sidebar-border: #e5e7eb;
 
-  --sidebar-ring: #3b82f6;
+  --sidebar-ring: #1f2937;
 
   --question-50: #fff7ed;
   --question-100: #ffedd5;
@@ -252,7 +259,6 @@
   --question-300: #fdba74;
   --question-400: #fb923c;
   --question-500: #f97316;
-
   --question-600: #ea580c;
   --question-700: #c2410c;
   --question-800: #9a3412;
@@ -264,7 +270,6 @@
   --source-300: #93c5fd;
   --source-400: #60a5fa;
   --source-500: #3b82f6;
-
   --source-600: #2563eb;
   --source-700: #1d4ed8;
   --source-800: #1e40af;
@@ -276,7 +281,6 @@
   --insight-300: #d8b4fe;
   --insight-400: #a78bfa;
   --insight-500: #8b5cf6;
-
   --insight-600: #7c3aed;
   --insight-700: #6d28d9;
   --insight-800: #5b21b6;
@@ -288,11 +292,21 @@
   --thought-300: #5eead4;
   --thought-400: #2dd4bf;
   --thought-500: #14b8a6;
-
   --thought-600: #0d9488;
   --thought-700: #0f766e;
   --thought-800: #115e59;
   --thought-900: #134e4a;
+
+  --claim-50: #fdf2f8;
+  --claim-100: #fce7f3;
+  --claim-200: #fbcfe8;
+  --claim-300: #f9a8d4;
+  --claim-400: #f472b6;
+  --claim-500: #ec4899;
+  --claim-600: #db2777;
+  --claim-700: #be185d;
+  --claim-800: #9d174d;
+  --claim-900: #831843;
 
   --success-100: #d1fae5;
   --success-200: #6ee7b7;
@@ -330,7 +344,7 @@
 
   --popover-foreground: #fff;
 
-  --primary: #2563eb;
+  --primary: #374151;
 
   --primary-foreground: #fff;
 
@@ -352,7 +366,7 @@
 
   --input: #27272a;
 
-  --ring: #2563eb;
+  --ring: #374151;
 
   --chart-1: #fbbf24;
 
@@ -368,7 +382,7 @@
 
   --sidebar-foreground: #fff;
 
-  --sidebar-primary: #2563eb;
+  --sidebar-primary: #374151;
 
   --sidebar-primary-foreground: #fff;
 
@@ -378,7 +392,7 @@
 
   --sidebar-border: #27272a;
 
-  --sidebar-ring: #2563eb;
+  --sidebar-ring: #374151;
 }
 
 /* ---break--- 

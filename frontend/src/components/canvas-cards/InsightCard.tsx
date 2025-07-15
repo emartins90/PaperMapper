@@ -10,6 +10,7 @@ type InsightCardProps = {
     onOpen?: () => void;
     files?: string[];
     onFileClick?: (fileUrl: string, fileType: 'image' | 'pdf' | 'other' | 'audio') => void;
+    insightType?: string;
   };
   showHandles?: boolean;
   width?: string;
@@ -36,7 +37,9 @@ export default function InsightCard({ data, showHandles = true, width = 'w-96' }
         </>
       )}
       <div className="flex items-center justify-between mb-2">
-        <div className="font-bold text-insight-700">Insight: Pattern Noticed</div>
+        <div className="text-insight-700 truncate-block">
+          <span className="font-bold">Insight</span>{data.insightType ? <span className="font-normal"> : {data.insightType}</span> : ''}
+        </div>
         <button onClick={data.onOpen} aria-label="Open card">
           <span className="text-insight-400 text-xl">↗</span>
         </button>
@@ -47,8 +50,6 @@ export default function InsightCard({ data, showHandles = true, width = 'w-96' }
       {data.files && data.files.length > 0 && (
         <FileListDisplay files={data.files} onFileClick={data.onFileClick} showFilesLabel={true} cardType="insight" />
       )}
-      
-      <Tag color="gray">{data.sourcesLinked}</Tag>
     </div>
   );
 } 

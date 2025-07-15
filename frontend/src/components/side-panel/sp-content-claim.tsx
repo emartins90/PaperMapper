@@ -6,17 +6,21 @@ import UnsavedCardFileUpload from "../shared/UnsavedCardFileUpload";
 import { uploadFilesForCardType } from "../useFileUploadHandler";
 import { useCardSave } from "../shared/useCardSave";
 import LinkedCardsTab from "../LinkedCardsTab";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
 
-interface InsightCardContentProps {
+const CLAIM_TYPES = [
+  "Hypothesis",
+  "Thesis",
+  "Conclusion",
+  "Proposal"
+];
+
+interface ClaimCardContentProps {
   cardData: any;
   openCard: { id: string; type: string } | null;
   onUpdateNodeData?: (cardId: string, newData: any) => void;
   onAddCard?: (cardId: string) => void;
   onDeleteCard?: (cardId: string) => void;
-  insightTab: string;
+  claimTab: string;
   nodes: any[];
   edges: any[];
   onEdgesChange?: (changes: any[]) => void;
@@ -25,22 +29,22 @@ interface InsightCardContentProps {
   showSaveButton?: boolean;
 }
 
-export default function InsightCardContent({ 
+export default function ClaimCardContent({ 
   cardData, 
   openCard, 
   onUpdateNodeData, 
   onAddCard, 
   onDeleteCard,
-  insightTab,
+  claimTab,
   nodes,
   edges,
   onEdgesChange,
   onClose,
   onFormDataChange,
   showSaveButton
-}: InsightCardContentProps) {
-  const [insight, setInsight] = React.useState(cardData?.insight || "");
-  const [insightType, setInsightType] = React.useState(cardData?.insightType || "");
+}: ClaimCardContentProps) {
+  const [claim, setClaim] = React.useState(cardData?.claim || "");
+  const [claimType, setClaimType] = React.useState(cardData?.claimType || undefined);
   const [files, setFiles] = React.useState<string[]>(cardData?.files || []);
   const [fileEntries, setFileEntries] = React.useState<Array<{ url: string; filename: string; type: string }>>(cardData?.fileEntries || []);
   const [isUploading, setIsUploading] = React.useState(false);
@@ -50,12 +54,12 @@ export default function InsightCardContent({
   const [pendingFiles, setPendingFiles] = React.useState<File[]>(cardData?.pendingFiles || []);
 
   // Check if card is unsaved
-  const isUnsaved = !cardData?.insightId;
+  const isUnsaved = !cardData?.claimId;
 
   // Use the shared save hook
   const { saveCard, isSaving } = useCardSave({
     cardId: openCard?.id || "",
-    cardType: "insight",
+    cardType: "claim",
     projectId: cardData?.projectId || 0,
     onUpdateNodeData,
     onAddCard,
@@ -63,8 +67,8 @@ export default function InsightCardContent({
   });
 
   React.useEffect(() => {
-    setInsight(cardData?.insight || "");
-    setInsightType(cardData?.insightType || "");
+    setClaim(cardData?.claim || "");
+    setClaimType(cardData?.claimType !== undefined ? cardData.claimType : undefined);
     setFiles(cardData?.files || []);
     setFileEntries(cardData?.fileEntries || []);
     setPendingFiles(cardData?.pendingFiles || []);
@@ -74,24 +78,22 @@ export default function InsightCardContent({
   React.useEffect(() => {
     if (onFormDataChange) {
       onFormDataChange({
-        insightType,
-        insightText: insight,
+        claimText: claim,
+        claimType: claimType,
         uploadedFiles: pendingFiles,
       });
     }
-  }, [insight, insightType, pendingFiles, onFormDataChange]);
-
-
+  }, [claim, claimType, pendingFiles, onFormDataChange]);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || !openCard) return;
     setIsUploading(true);
     try {
       // If we have a backend ID, upload to backend
-      if (cardData?.insightId) {
+      if (cardData?.claimId) {
         await uploadFilesForCardType(
-          "insight",
-          cardData.insightId,
+          "claim",
+          cardData.claimId,
           Array.from(e.target.files),
           files,
           (newFiles) => {
@@ -120,7 +122,7 @@ export default function InsightCardContent({
   const handleFileDelete = async (fileUrl: string) => {
     if (!openCard) return;
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/insights/delete_file/?insight_id=${cardData?.insightId}&file_url=${encodeURIComponent(fileUrl)}`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/claims/delete_file/?claim_id=${cardData?.claimId}&file_url=${encodeURIComponent(fileUrl)}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
       });
@@ -133,39 +135,39 @@ export default function InsightCardContent({
     }
   };
 
-  const handleSaveInsight = async () => {
-    if (!openCard || !insight.trim()) return;
+  const handleSaveClaim = async () => {
+    if (!openCard || !claim.trim()) return;
 
     try {
       await saveCard({
         cardId: openCard.id,
         chatAnswers: {
-          insightType,
-          insightText: insight,
+          claimText: claim,
+          claimType: claimType,
         },
         uploadedFiles: pendingFiles,
       });
     } catch (error) {
-      console.error("Failed to save insight:", error);
-      alert("Failed to save insight: " + (error as Error).message);
+      console.error("Failed to save claim:", error);
+      alert("Failed to save claim: " + (error as Error).message);
     }
   };
 
   // Save all fields to backend for saved cards
-  const saveAllFields = async (fields?: Partial<{ insight: string; insightType: string }>) => {
-    if (!cardData?.insightId) return; // Only for saved cards
+  const saveAllFields = async (fields?: Partial<{ claim: string; claimType: string }>) => {
+    if (!cardData?.claimId) return; // Only for saved cards
 
     const token = localStorage.getItem("token");
     const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-    const insightId = cardData.insightId;
+    const claimId = cardData.claimId;
 
     const payload = {
       project_id: cardData.projectId,
-      insight_text: fields?.insight ?? insight,
-      insight_type: fields?.insightType ?? insightType,
+      claim_text: fields?.claim ?? claim,
+      claim_type: fields?.claimType ?? claimType,
     };
 
-    const response = await fetch(`${API_URL}/insights/${insightId}`, {
+    const response = await fetch(`${API_URL}/claims/${claimId}`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
@@ -183,60 +185,55 @@ export default function InsightCardContent({
     // Update node data
     if (onUpdateNodeData && openCard) {
       onUpdateNodeData(openCard.id, {
-        insight: payload.insight_text,
-        insightType: payload.insight_type,
+        claim: payload.claim_text,
+        claimType: payload.claim_type,
       });
     }
   };
 
   return (
     <div className="flex-1 p-6 overflow-y-auto">
-      {insightTab === "info" ? (
+      {claimTab === "info" ? (
         <div className="space-y-4">
           <div>
-            <Label htmlFor="insight-type" className="block text-sm font-medium text-gray-700 mb-1">Insight Type</Label>
-            <Select
-              value={insightType || ""}
-              onValueChange={(value) => {
-                setInsightType(value);
+            <label className="block text-sm font-medium text-gray-700 mb-1">Claim Type</label>
+            <select
+              className="w-full p-2 border border-gray-300 rounded-md text-sm"
+              value={claimType || ""}
+              onChange={e => {
+                const value = e.target.value || undefined;
+                setClaimType(value);
                 if (openCard && !isUnsaved) {
-                  onUpdateNodeData?.(openCard.id, { insightType: value });
-                  // Save to backend for existing insights
-                  saveAllFields({ insightType: value });
+                  saveAllFields({ claimType: value });
+                }
+              }}
+              onBlur={() => {
+                if (openCard && !isUnsaved) {
+                  saveAllFields({ claimType });
                 }
               }}
             >
-              <SelectTrigger className="w-full mb-2">
-                <SelectValue placeholder="Select type..." />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Resolved Confusion">Resolved Confusion</SelectItem>
-                <SelectItem value="Noticed a Pattern">Noticed a Pattern</SelectItem>
-                <SelectItem value="Evaluated a Source">Evaluated a Source</SelectItem>
-                <SelectItem value="Identified a Gap">Identified a Gap</SelectItem>
-                <SelectItem value="Reframed the Issue">Reframed the Issue</SelectItem>
-                <SelectItem value="Highlighted Impact">Highlighted Impact</SelectItem>
-              </SelectContent>
-            </Select>
+              <option value="">Select type...</option>
+              {CLAIM_TYPES.map(type => (
+                <option key={type} value={type}>{type}</option>
+              ))}
+            </select>
           </div>
           <div>
-            <Label htmlFor="insight-text" className="block text-sm font-medium text-gray-700 mb-1">Insight</Label>
-            <Textarea
-              id="insight-text"
-              placeholder="Describe the insight or pattern you noticed..."
+            <label className="block text-sm font-medium text-gray-700 mb-1">Claim</label>
+            <textarea
+              className="w-full p-2 border border-gray-300 rounded-md text-sm"
+              placeholder="Enter the claim..."
               rows={3}
-              value={insight}
-              onChange={e => setInsight(e.target.value)}
+              value={claim}
+              onChange={e => setClaim(e.target.value)}
               onBlur={() => {
                 if (openCard && !isUnsaved) {
-                  onUpdateNodeData?.(openCard.id, { insight });
-                  // Save to backend for existing insights
-                  saveAllFields({ insight });
+                  saveAllFields({ claim });
                 }
               }}
             />
           </div>
-          
           {/* Use different file upload components based on save status */}
           {isUnsaved ? (
             <UnsavedCardFileUpload
@@ -254,24 +251,23 @@ export default function InsightCardContent({
               onFileDelete={handleFileDelete}
               fileInputRef={fileInputRef}
               fileEntries={fileEntries}
-              cardType="insight"
+              cardType="claim"
             />
           )}
-
           {/* Save button for unsaved cards - only show if showSaveButton is true */}
           {isUnsaved && showSaveButton && (
             <div className="pt-4">
               <button
-                onClick={handleSaveInsight}
-                disabled={isSaving || !insight.trim()}
+                onClick={handleSaveClaim}
+                disabled={isSaving || !claim.trim()}
                 className="w-full bg-primary text-primary-foreground py-2 px-4 rounded-lg font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isSaving ? "Saving..." : "Save Insight"}
+                {isSaving ? "Saving..." : "Save Claim"}
               </button>
             </div>
           )}
         </div>
-      ) : insightTab === "linked" ? (
+      ) : claimTab === "linked" ? (
         <LinkedCardsTab openCard={openCard} nodes={nodes} edges={edges} onEdgesChange={onEdgesChange} onClose={onClose} />
       ) : null}
     </div>

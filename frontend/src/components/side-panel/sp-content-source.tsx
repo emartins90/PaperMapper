@@ -6,6 +6,10 @@ import UnsavedCardFileUpload from "../shared/UnsavedCardFileUpload";
 import { uploadFilesForCardType } from "../useFileUploadHandler";
 import { useCardSave } from "../shared/useCardSave";
 import LinkedCardsTab from "../LinkedCardsTab";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { MultiCombobox } from "@/components/ui/multi-combobox";
 
 interface SourceCardContentProps {
   cardType: string | undefined;
@@ -52,12 +56,9 @@ export default function SourceCardContent({
   const [summary, setSummary] = useState(cardData?.summary || "");
   const [sourceContent, setSourceContent] = useState(cardData?.text || "");
   const [tags, setTags] = useState<string[]>(Array.isArray(cardData?.tags) ? cardData.tags : []);
-  const [tagInput, setTagInput] = useState("");
   const [argumentType, setArgumentType] = useState(cardData?.thesisSupport || "");
   const [sourceFunction, setSourceFunction] = useState(cardData?.sourceFunction || "");
   const [credibility, setCredibility] = useState(cardData?.credibility || "");
-  const [showTagSuggestions, setShowTagSuggestions] = useState(false);
-  const [filteredSuggestions, setFilteredSuggestions] = useState<string[]>([]);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -87,40 +88,7 @@ export default function SourceCardContent({
     return Array.from(allTags).sort();
   };
 
-  // Filter suggestions based on input
-  const filterSuggestions = (input: string) => {
-    if (!input.trim()) {
-      setFilteredSuggestions([]);
-      return;
-    }
-    
-    const existingTags = getAllExistingTags();
-    const filtered = existingTags.filter(tag => 
-      tag.toLowerCase().includes(input.toLowerCase()) && 
-      !tags.includes(tag)
-    );
-    setFilteredSuggestions(filtered);
-  };
 
-  // Handle tag input change
-  const handleTagInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setTagInput(value);
-    filterSuggestions(value);
-    setShowTagSuggestions(value.length > 0);
-  };
-
-  // Handle suggestion click
-  const handleSuggestionClick = (suggestion: string) => {
-    const newTags = [...tags, suggestion];
-    setTags(newTags);
-    setTagInput("");
-    setShowTagSuggestions(false);
-    setFilteredSuggestions([]);
-    if (!isUnsaved) {
-      saveAllFieldsWithTags(newTags);
-    }
-  };
 
   // Update all fields when component mounts or card changes
   useEffect(() => {
@@ -492,31 +460,7 @@ export default function SourceCardContent({
     }
   };
 
-  // Handle tag input
-  const handleTagInputKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && tagInput.trim()) {
-      e.preventDefault();
-      const newTags = [...tags, tagInput.trim()];
-      setTags(newTags);
-      setTagInput("");
-      setShowTagSuggestions(false);
-      setFilteredSuggestions([]);
-      // Save immediately when tag is added with the new tags
-      if (!isUnsaved) {
-        saveAllFieldsWithTags(newTags);
-      }
-    }
-  };
 
-  // Handle tag deletion
-  const handleDeleteTag = (tagToDelete: string) => {
-    const newTags = tags.filter(tag => tag !== tagToDelete);
-    setTags(newTags);
-    // Save immediately when tag is deleted with the new tags
-    if (!isUnsaved) {
-      saveAllFieldsWithTags(newTags);
-    }
-  };
 
   // Handle file upload
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -744,9 +688,10 @@ export default function SourceCardContent({
       {sourceTab === "content" ? (
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Detailed Source Material</label>
-            <textarea
-              className="w-full p-2 border border-gray-300 rounded-md text-sm resize-none min-h-[120px] max-h-64 overflow-auto"
+            <Label htmlFor="source-content" className="block text-sm font-medium text-gray-700 mb-1">Detailed Source Material</Label>
+            <Textarea
+              id="source-content"
+              className="resize-none min-h-[120px] max-h-64 overflow-auto"
               style={{ minHeight: '120px', maxHeight: '16rem' }}
               placeholder="Type or paste the full text content, quotes, or relevant excerpts from your source..."
               rows={5}
@@ -778,9 +723,10 @@ export default function SourceCardContent({
           )}
           
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">My Notes</label>
-            <textarea
-              className="w-full p-2 border border-gray-300 rounded-md text-sm min-h-[80px] resize-y"
+            <Label htmlFor="source-notes" className="block text-xs font-medium text-gray-600 mb-1">My Notes</Label>
+            <Textarea
+              id="source-notes"
+              className="min-h-[80px] resize-y"
               placeholder="Add any personal notes, thoughts, or connections to other sources..."
               rows={3}
               value={notes}
@@ -794,7 +740,7 @@ export default function SourceCardContent({
               <button
                 onClick={handleSaveSource}
                 disabled={isSavingCard || !sourceContent.trim()}
-                className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full bg-primary text-primary-foreground py-2 px-4 rounded-lg font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isSavingCard ? "Saving..." : "Save Source"}
               </button>
@@ -804,82 +750,67 @@ export default function SourceCardContent({
       ) : sourceTab === "info" ? (
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Source Function</label>
-            <select className="w-full p-2 border border-gray-300 rounded-md text-sm" value={sourceFunction} onChange={handleSourceFunctionChange} onBlur={handleSourceFunctionBlur}>
-              <option value="">Select source function...</option>
-              <option value="Evidence">Evidence</option>
-              <option value="Definition">Definition</option>
-              <option value="Background Info">Background Info</option>
-              <option value="Data Point">Data Point</option>
-              <option value="Theory">Theory</option>
-              <option value="Concept">Concept</option>
-            </select>
+            <Label htmlFor="source-function" className="block text-sm font-medium text-gray-700 mb-1">Source Function</Label>
+            <Select value={sourceFunction || ""} onValueChange={(value) => {
+              setSourceFunction(value);
+              if (!isUnsaved) {
+                saveAllFieldsWithSourceFunction(value);
+              }
+            }}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select source function..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Evidence">Evidence</SelectItem>
+                <SelectItem value="Definition">Definition</SelectItem>
+                <SelectItem value="Background Info">Background Info</SelectItem>
+                <SelectItem value="Data Point">Data Point</SelectItem>
+                <SelectItem value="Theory">Theory</SelectItem>
+                <SelectItem value="Concept">Concept</SelectItem>
+              </SelectContent>
+            </Select>
             <p className="text-xs text-gray-500 mt-1">How does this source contribute to your research?</p>
           </div>
           
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Argument Type</label>
-            <select className="w-full p-2 border border-gray-300 rounded-md text-sm" value={argumentType} onChange={handleArgumentTypeChange} onBlur={handleArgumentTypeBlur}>
-              <option value="">Select argument type...</option>
-              <option value="Thesis-supporting">Thesis-supporting</option>
-              <option value="Counter-evidence">Counter-evidence</option>
-              <option value="Neutral to thesis">Neutral to thesis</option>
-            </select>
+            <Label htmlFor="argument-type" className="block text-sm font-medium text-gray-700 mb-1">Argument Type</Label>
+            <Select value={argumentType || ""} onValueChange={(value) => {
+              setArgumentType(value);
+              if (!isUnsaved) {
+                saveAllFieldsWithArgumentType(value);
+              }
+            }}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select argument type..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Thesis-supporting">Thesis-supporting</SelectItem>
+                <SelectItem value="Counter-evidence">Counter-evidence</SelectItem>
+                <SelectItem value="Neutral to thesis">Neutral to thesis</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Topical Tags</label>
-            <div className="space-y-2">
-              {tags.length > 0 && (
-                <div className="flex flex-wrap gap-2 mb-2">
-                  {tags.map((tag, index) => (
-                    <span
-                      key={index}
-                      className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-sm flex items-center gap-1"
-                    >
-                      {tag}
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteTag(tag)}
-                        className="text-blue-600 hover:text-blue-800 text-xs font-bold"
-                      >
-                        ×
-                      </button>
-                    </span>
-                  ))}
-                </div>
-              )}
-              <div className="relative">
-                <input
-                  className="w-full border rounded px-2 py-1"
-                  value={tagInput}
-                  onChange={handleTagInputChange}
-                  onKeyDown={handleTagInputKeyDown}
-                  placeholder="Type a tag and press Enter..."
-                />
-                {showTagSuggestions && filteredSuggestions.length > 0 && (
-                  <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-40 overflow-y-auto">
-                    {filteredSuggestions.map((suggestion, index) => (
-                      <button
-                        key={index}
-                        type="button"
-                        className="w-full text-left px-3 py-2 hover:bg-gray-100 text-sm"
-                        onClick={() => handleSuggestionClick(suggestion)}
-                      >
-                        {suggestion}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-        
-            </div>
+            <Label htmlFor="source-tags" className="block text-sm font-medium text-gray-700 mb-1">Topical Tags</Label>
+            <MultiCombobox
+              options={getAllExistingTags().map(tag => ({ value: tag, label: tag }))}
+              value={tags}
+              onChange={(newTags) => {
+                setTags(newTags);
+                if (!isUnsaved) {
+                  saveAllFieldsWithTags(newTags);
+                }
+              }}
+              placeholder="Type a tag and press Enter..."
+              allowCustom={true}
+            />
           </div>
           
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Summary</label>
-            <textarea 
-              className="w-full p-2 border border-gray-300 rounded-md text-sm"
+            <Label htmlFor="source-summary" className="block text-sm font-medium text-gray-700 mb-1">Summary</Label>
+            <Textarea 
+              id="source-summary"
               placeholder="Write a brief summary (2-3 sentences) of the key points..."
               rows={3}
               value={summary}
@@ -891,9 +822,9 @@ export default function SourceCardContent({
           
           <div className="border-t border-gray-200 pt-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Source Citation</label>
-              <textarea 
-                className="w-full p-2 border border-gray-300 rounded-md text-sm"
+              <Label htmlFor="source-citation" className="block text-sm font-medium text-gray-700 mb-1">Source Citation</Label>
+              <Textarea 
+                id="source-citation"
                 placeholder="Author, Title, Publication, Date, URL..."
                 rows={3}
                 value={sourceCitation}
@@ -904,30 +835,39 @@ export default function SourceCardContent({
             </div>
             
             <div className="mt-4">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Source Credibility</label>
-              <select className="w-full p-2 border border-gray-300 rounded-md text-sm" value={credibility} onChange={handleCredibilityChange} onBlur={handleCredibilityBlur}>
-                <option value="">Select credibility level...</option>
-                <option value="Peer-reviewed study">Peer-reviewed study</option>
-                <option value="News article (reputable)">News article (reputable)</option>
-                <option value="News article (biased)">News article (biased)</option>
-                <option value="Expert opinion">Expert opinion</option>
-                <option value="Institutional report">Institutional report</option>
-                <option value="Personal experience">Personal experience</option>
-                <option value="Blog or opinion piece">Blog or opinion piece</option>
-                <option value="Speculative claim">Speculative claim</option>
-                <option value="Social media post">Social media post</option>
-                <option value="Unclear origin">Unclear origin</option>
-              </select>
+              <Label htmlFor="source-credibility" className="block text-sm font-medium text-gray-700 mb-1">Source Credibility</Label>
+              <Select value={credibility || ""} onValueChange={(value) => {
+                setCredibility(value);
+                if (!isUnsaved) {
+                  saveAllFieldsWithCredibility(value);
+                }
+              }}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select credibility level..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Peer-reviewed study">Peer-reviewed study</SelectItem>
+                  <SelectItem value="News article (reputable)">News article (reputable)</SelectItem>
+                  <SelectItem value="News article (biased)">News article (biased)</SelectItem>
+                  <SelectItem value="Expert opinion">Expert opinion</SelectItem>
+                  <SelectItem value="Institutional report">Institutional report</SelectItem>
+                  <SelectItem value="Personal experience">Personal experience</SelectItem>
+                  <SelectItem value="Blog or opinion piece">Blog or opinion piece</SelectItem>
+                  <SelectItem value="Speculative claim">Speculative claim</SelectItem>
+                  <SelectItem value="Social media post">Social media post</SelectItem>
+                  <SelectItem value="Unclear origin">Unclear origin</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
-          {/* Save button for unsaved cards */}
-          {isUnsaved && (
+          {/* Save button for unsaved cards - only show if showSaveButton is true */}
+          {isUnsaved && showSaveButton && (
             <div className="pt-4">
               <button
                 onClick={handleSaveSource}
                 disabled={isSavingCard || !sourceContent.trim()}
-                className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full bg-primary text-primary-foreground py-2 px-4 rounded-lg font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isSavingCard ? "Saving..." : "Save Source"}
               </button>

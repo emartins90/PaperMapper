@@ -73,6 +73,7 @@ export const useCardSave = ({
           payload = {
             project_id: projectId,
             insight_text: chatAnswers.insightText || "",
+            insight_type: chatAnswers.insightType || "",
           };
           break;
 
@@ -81,6 +82,16 @@ export const useCardSave = ({
           payload = {
             project_id: projectId,
             thought_text: chatAnswers.thoughtText || "",
+          };
+          break;
+
+        case "claim":
+          endpoint = "/claims/";
+          payload = {
+            project_id: projectId,
+            claim_text: chatAnswers.claimText || "",
+            claim_type: chatAnswers.claimType || "Hypothesis",
+            files: "",
           };
           break;
 
@@ -123,6 +134,9 @@ export const useCardSave = ({
             backendId = parseInt(createdCard.id);
             break;
           case "thought":
+            backendId = parseInt(createdCard.id);
+            break;
+          case "claim":
             backendId = parseInt(createdCard.id);
             break;
           default:
@@ -179,11 +193,18 @@ export const useCardSave = ({
         case "insight":
           nodeDataUpdate.insightId = createdCard.id;
           nodeDataUpdate.insight = chatAnswers.insightText || "";
+          nodeDataUpdate.insightType = chatAnswers.insightType || "";
           break;
 
         case "thought":
           nodeDataUpdate.thoughtId = createdCard.id;
           nodeDataUpdate.thought = chatAnswers.thoughtText || "";
+          break;
+
+        case "claim":
+          nodeDataUpdate.claimId = createdCard.id;
+          nodeDataUpdate.claim = chatAnswers.claimText || "";
+          nodeDataUpdate.claimType = chatAnswers.claimType || "Hypothesis";
           break;
       }
 

@@ -79,11 +79,11 @@ export default function DrawerTabs({ tabs, activeTab, onTabChange, className = "
             className={`flex-shrink-0 ${vertical ? "w-full text-left px-6 py-4 border-l-4" : "px-4 py-2 -mb-px"} font-medium text-sm focus:outline-none transition-colors duration-200
               ${activeTab === tab.id
                 ? vertical
-                  ? "text-blue-600 border-blue-600 bg-white" // active vertical
-                  : "text-blue-600 border-b-2 border-blue-600" // active horizontal
+                  ? "text-primary border-primary bg-white" // active vertical
+                  : "text-primary border-b-2 border-primary" // active horizontal
                 : vertical
-                  ? "text-gray-500 hover:text-blue-600 border-transparent bg-gray-50 hover:bg-white" // inactive vertical
-                  : "text-gray-500 hover:text-blue-600 border-b-2 border-transparent" // inactive horizontal
+                  ? "text-gray-500 hover:text-primary border-transparent bg-gray-50 hover:bg-white" // inactive vertical
+                  : "text-gray-500 hover:text-primary border-b-2 border-transparent" // inactive horizontal
               }
             `}
             onClick={() => onTabChange(tab.id)}

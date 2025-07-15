@@ -167,10 +167,10 @@ const ChatExperienceBase: React.FC<ChatExperienceBaseProps> = ({
   useEffect(() => { if (chatType === 'source' && projectId) fetchExistingTags(); }, [chatType, projectId]);
 
   // Option selection
-  const handleOptionSelect = (option: string) => {
-    setSelectedOptions(prev => ({ ...prev, [currentPrompt.id]: option }));
-    setChatInputs(prev => ({ ...prev, [currentPrompt.id]: option }));
-    setShowCustomInput(prev => ({ ...prev, [currentPrompt.id]: false }));
+  const handleOptionSelect = (optionType: string, option: string) => {
+    setSelectedOptions(prev => ({ ...prev, [optionType]: option }));
+    setChatInputs(prev => ({ ...prev, [optionType]: option }));
+    setShowCustomInput(prev => ({ ...prev, [optionType]: false }));
   };
 
   // Back button handler
@@ -325,6 +325,10 @@ const ChatExperienceBase: React.FC<ChatExperienceBaseProps> = ({
     if (chatType === 'question' && chatStep === prompts.length - 1) {
       updatedChatAnswers[currentPrompt.id] = chatInputs[currentPrompt.id] || "";
     }
+    // For claim cards, save the current input if we're on the last step
+    if (chatType === 'claim' && chatStep === prompts.length - 1) {
+      updatedChatAnswers[currentPrompt.id] = chatInputs[currentPrompt.id] || "";
+    }
     
     // For insight and thought cards, update chatAnswers with current input
     if (chatType === 'insight' || chatType === 'thought') {
@@ -388,9 +392,31 @@ const ChatExperienceBase: React.FC<ChatExperienceBaseProps> = ({
             }
             return (
               <div key={i} className={`flex items-center gap-2 ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
-                <div className={`${msg.role === "system" ? "text-gray-700 bg-gray-100 rounded-lg px-3 py-2 w-fit" : "text-primary bg-primary/10 rounded-lg px-3 py-2 w-fit"} ${msg.role === "user" ? "self-end" : ""}`}>
-                  {/* Main text */}
-                  {msg.text && <div>{msg.text}</div>}
+                <div
+                  className={
+                    msg.role === "system"
+                      ? "text-gray-700 bg-gray-100 rounded-lg px-3 py-2 w-fit"
+                      : (() => {
+                          const colorVars = {
+                            source: 'bg-[var(--color-source-100)]',
+                            question: 'bg-[var(--color-question-100)]',
+                            insight: 'bg-[var(--color-insight-100)]',
+                            thought: 'bg-[var(--color-thought-100)]',
+                            claim: 'bg-[var(--color-claim-100)]',
+                          };
+                          return `${colorVars[chatType] || 'bg-primary/10'} text-primary rounded-lg px-3 py-2 w-fit`;
+                        })()
+                  }
+                >
+                  {/* Main text with paragraph breaks for system messages */}
+                  {msg.text && msg.role === "system"
+                    ? msg.text.split(/\n\n/).map((para, idx) => (
+                        <p key={idx} style={{ marginBottom: idx < msg.text.split(/\n\n/).length - 1 ? '1em' : 0 }}>{para.split(/\n/).map((line, i) => (
+                          <React.Fragment key={i}>{line}{i < para.split(/\n/).length - 1 && <br />}</React.Fragment>
+                        ))}</p>
+                      ))
+                    : msg.text && <div>{msg.text}</div>
+                  }
                   {/* If user message and files were uploaded for this prompt, show them */}
                   {msg.role === "user" && promptId && filesByPrompt[promptId] && filesByPrompt[promptId].length > 0 && (
                     <div className="mt-2 space-y-1">
@@ -425,40 +451,126 @@ const ChatExperienceBase: React.FC<ChatExperienceBaseProps> = ({
         {chatStep < prompts.length && (
           <div className="space-y-3">
             {(() => {
+              // DEBUG: Log the current prompt and its options
+              console.log('DEBUG currentPrompt:', currentPrompt);
+              console.log('DEBUG currentPrompt.options:', currentPrompt?.options);
               if (currentPrompt.options && currentPrompt.options.length > 0) {
-                const defaultOptions: ComboboxOption[] = currentPrompt.options.map((o: any) => ({ value: o, label: o }));
-                const customOptions: ComboboxOption[] = userOptions[currentPrompt.id] || [];
-                const allCustomOptions = customOptions.filter(co => !defaultOptions.some(do_ => do_.value === co.value));
                 const selectedValue = selectedOptions[currentPrompt.id] || "";
-                const filteredOptions = inputValue[currentPrompt.id]
-                  ? allCustomOptions.filter(option => option.label.toLowerCase().includes(inputValue[currentPrompt.id]?.toLowerCase()) || option.value.toLowerCase().includes(inputValue[currentPrompt.id]?.toLowerCase()))
-                  : allCustomOptions;
-                const showCustomOption = inputValue[currentPrompt.id] && !allCustomOptions.some(option => option.label.toLowerCase() === inputValue[currentPrompt.id]?.toLowerCase() || option.value.toLowerCase() === inputValue[currentPrompt.id]?.toLowerCase());
-                return (
-                  <div className="space-y-2">
+                // Check for grouped options
+                const isGrouped = Array.isArray(currentPrompt.options) && currentPrompt.options[0] && typeof currentPrompt.options[0] === 'object' && 'group' in currentPrompt.options[0];
+                if (isGrouped) {
+                  return (
+                    <div className="space-y-2">
+                      {Array.isArray(currentPrompt.options) && (currentPrompt.options[0] as any)?.group
+                        ? (
+                            (currentPrompt.options as { group: string; options: (string | { label: string })[] }[]).map((groupObj, groupIdx) => (
+                              <div key={groupIdx} className={groupIdx > 0 ? "mt-4" : ""}>
+                                <div className="text-xs text-gray-500 font-semibold mb-2 pl-1">{groupObj.group}</div>
+                                {groupObj.options.map((option: string | { label: string }, optIdx: number) => {
+                                  if (typeof option === 'string') {
+                                    const [main, ...descParts] = option.split(' – ');
+                                    const description = descParts.join(' – ');
+                                    return (
+                                      <Button
+                                        key={option}
+                                        type="button"
+                                        variant={selectedOptions[currentPrompt.id] === option ? "default" : "outline"}
+                                        aria-pressed={selectedOptions[currentPrompt.id] === option}
+                                        onClick={() => handleOptionSelect(currentPrompt.id, option)}
+                                        className={`w-full text-left px-4 py-5 mb-2 border rounded-lg transition-colors ${selectedOptions[currentPrompt.id] === option ? 'bg-primary text-white font-bold border-primary ring-2 ring-primary/50' : ''}`}
+                                      >
+                                        <div>
+                                          {description ? (
+                                            <>
+                                              <strong className={`text-sm ${selectedOptions[currentPrompt.id] === option ? 'text-white' : 'text-foreground'}`}>{main}</strong>
+                                              <span className={`text-sm ${selectedOptions[currentPrompt.id] === option ? 'text-white' : 'text-foreground'}`}> – {description}</span>
+                                            </>
+                                          ) : (
+                                            <span className={`text-sm ${selectedOptions[currentPrompt.id] === option ? 'text-white' : 'text-foreground'}`}>{main}</span>
+                                          )}
+                                        </div>
+                                      </Button>
+                                    );
+                                  } else {
+                                    // Option is an object (for future compatibility)
+                                    return (
+                                      <Button
+                                        key={option.label}
+                                        type="button"
+                                        variant={selectedOptions[currentPrompt.id] === option.label ? "default" : "outline"}
+                                        aria-pressed={selectedOptions[currentPrompt.id] === option.label}
+                                        onClick={() => handleOptionSelect(currentPrompt.id, option.label)}
+                                        className={`w-full text-left px-4 py-5 mb-2 border rounded-lg transition-colors ${selectedOptions[currentPrompt.id] === option.label ? 'bg-primary text-white font-bold border-primary ring-2 ring-primary/50' : ''}`}
+                                      >
+                                        <div>
+                                          <strong className={`text-sm ${selectedOptions[currentPrompt.id] === option.label ? 'text-white' : 'text-foreground'}`}>{option.label}</strong>
+                                        </div>
+                                      </Button>
+                                    );
+                                  }
+                                })}
+                              </div>
+                            ))
+                          )
+                        : null}
+                    </div>
+                  );
+                } else {
+                  // FLAT OPTIONS BLOCK
+                  return (
                     <div className="grid grid-cols-1 gap-2">
-                      {defaultOptions.map((option) => (
-                        <Button
-                          key={option.value}
-                          type="button"
-                          variant={selectedValue === option.value ? "default" : "outline"}
-                          aria-pressed={selectedValue === option.value}
-                          onClick={() => handleOptionSelect(option.value)}
-                          className={`text-left py-5 border rounded-lg transition-colors ${selectedValue === option.value ? 'bg-blue-600 text-white font-bold border-blue-700 ring-2 ring-blue-400' : ''}`}
-                        >
-                          {option.label}
-                        </Button>
-                      ))}
+                      {(currentPrompt.options as (string | { label: string })[]).map((o) => {
+                        if (typeof o === 'string') {
+                          const [main, ...descParts] = o.split(' – ');
+                          const description = descParts.join(' – ');
+                          return (
+                            <Button
+                              key={o}
+                              type="button"
+                              variant={selectedValue === o ? "default" : "outline"}
+                              aria-pressed={selectedValue === o}
+                              onClick={() => handleOptionSelect(currentPrompt.id, o)}
+                              className={`w-full text-left px-4 py-5 mb-2 border rounded-lg transition-colors ${selectedValue === o ? 'bg-primary text-white font-bold border-primary ring-2 ring-primary/50' : ''}`}
+                            >
+                              <div>
+                                {description ? (
+                                  <>
+                                    <strong className={`text-sm ${selectedValue === o ? 'text-white' : 'text-foreground'}`}>{main}</strong>
+                                    <span className={`text-sm ${selectedValue === o ? 'text-white' : 'text-foreground'}`}> – {description}</span>
+                                  </>
+                                ) : (
+                                  <span className={`text-sm ${selectedValue === o ? 'text-white' : 'text-foreground'}`}>{main}</span>
+                                )}
+                              </div>
+                            </Button>
+                          );
+                        } else {
+                          return (
+                            <Button
+                              key={o.label}
+                              type="button"
+                              variant={selectedValue === o.label ? "default" : "outline"}
+                              aria-pressed={selectedValue === o.label}
+                              onClick={() => handleOptionSelect(currentPrompt.id, o.label)}
+                              className={`w-full text-left px-4 py-5 mb-2 border rounded-lg transition-colors ${selectedValue === o.label ? 'bg-primary text-white font-bold border-primary ring-2 ring-primary/50' : ''}`}
+                            >
+                              <div>
+                                <strong className={`text-sm ${selectedValue === o.label ? 'text-white' : 'text-foreground'}`}>{o.label}</strong>
+                              </div>
+                            </Button>
+                          );
+                        }
+                      })}
                       {currentPrompt.hasCustomOption && (
                         <Popover>
                           <PopoverTrigger asChild>
                             <Button
                               type="button"
-                              variant={selectedValue && allCustomOptions.some(o => o.value === selectedValue) ? "default" : "outline"}
-                              aria-pressed={!!(selectedValue && allCustomOptions.some(o => o.value === selectedValue))}
-                              className={`text-left py-5 border rounded-lg transition-colors ${selectedValue && allCustomOptions.some(o => o.value === selectedValue) ? 'bg-blue-600 text-white font-bold border-blue-700 ring-2 ring-blue-400' : ''}`}
+                              variant={selectedValue && userOptions[currentPrompt.id]?.some(o => o.value === selectedValue) ? "default" : "outline"}
+                              aria-pressed={!!(selectedValue && userOptions[currentPrompt.id]?.some(o => o.value === selectedValue))}
+                              className={`w-full text-left px-4 py-5 mb-2 border rounded-lg transition-colors ${selectedValue && userOptions[currentPrompt.id]?.some(o => o.value === selectedValue) ? 'bg-primary text-white font-bold border-primary ring-2 ring-primary/50' : ''}`}
                             >
-                              {selectedValue && allCustomOptions.some(o => o.value === selectedValue) ? selectedValue : "Add your own..."}
+                              {selectedValue && userOptions[currentPrompt.id]?.some(o => o.value === selectedValue) ? selectedValue : "Add your own..."}
                             </Button>
                           </PopoverTrigger>
                           <PopoverContent className="w-92 min-w-[200px] p-0 z-[10000]">
@@ -472,20 +584,20 @@ const ChatExperienceBase: React.FC<ChatExperienceBaseProps> = ({
                               <CommandList>
                                 <CommandEmpty className="px-4 py-2">No custom options found.</CommandEmpty>
                                 <CommandGroup>
-                                  {filteredOptions.map((option) => (
+                                  {userOptions[currentPrompt.id]?.filter(option => option.label.toLowerCase().includes(inputValue[currentPrompt.id]?.toLowerCase()) || option.value.toLowerCase().includes(inputValue[currentPrompt.id]?.toLowerCase())).map((option) => (
                                     <CommandItem
                                       key={option.value}
                                       value={option.value}
                                       onSelect={() => {
                                         setInputValue({ ...inputValue, [currentPrompt.id]: "" });
-                                        handleOptionSelect(option.value);
+                                        handleOptionSelect(currentPrompt.id, option.value);
                                       }}
                                     >
-                                      <Check className={cn("mr-2 h-4 w-4", selectedValue === option.value ? "opacity-100" : "opacity-0")} />
+                                      <Check className={cn("mr-2 h-4 w-4", selectedValue === option.value ? "opacity-100" : "opacity-0")}/>
                                       {option.label}
                                     </CommandItem>
                                   ))}
-                                  {showCustomOption && (
+                                  {inputValue[currentPrompt.id] && !userOptions[currentPrompt.id]?.some(option => option.label.toLowerCase() === inputValue[currentPrompt.id]?.toLowerCase() || option.value.toLowerCase() === inputValue[currentPrompt.id]?.toLowerCase()) && (
                                     <CommandItem
                                       key={inputValue[currentPrompt.id] || ""}
                                       value={inputValue[currentPrompt.id] || ""}
@@ -494,19 +606,19 @@ const ChatExperienceBase: React.FC<ChatExperienceBaseProps> = ({
                                         // Save new custom option to backend
                                         if (
                                           inputValue[currentPrompt.id] &&
-                                          !defaultOptions.some((o) => o.value === inputValue[currentPrompt.id]) &&
-                                          !customOptions.some((o) => o.value === inputValue[currentPrompt.id])
+                                          !currentPrompt.options.some((o: string) => o === inputValue[currentPrompt.id]) &&
+                                          !userOptions[currentPrompt.id]?.some((o: { value: string }) => o.value === inputValue[currentPrompt.id])
                                         ) {
                                           setSavingOption((prev) => ({ ...prev, [currentPrompt.id]: true }));
                                           try {
-                                                        const res = await fetch(`${API_URL}/users/me/custom-options`, {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              credentials: "include", // Send cookies with request
-              body: JSON.stringify({ option_type: currentPrompt.id, value: inputValue[currentPrompt.id] }),
-            });
+                                            const res = await fetch(`${API_URL}/users/me/custom-options`, {
+                                              method: "POST",
+                                              headers: {
+                                                "Content-Type": "application/json",
+                                              },
+                                              credentials: "include", // Send cookies with request
+                                              body: JSON.stringify({ option_type: currentPrompt.id, value: inputValue[currentPrompt.id] }),
+                                            });
                                             if (res.ok) {
                                               setUserOptions((prev) => ({
                                                 ...prev,
@@ -516,7 +628,7 @@ const ChatExperienceBase: React.FC<ChatExperienceBaseProps> = ({
                                           } catch {}
                                           setSavingOption((prev) => ({ ...prev, [currentPrompt.id]: false }));
                                         }
-                                        handleOptionSelect(inputValue[currentPrompt.id] || "");
+                                        handleOptionSelect(currentPrompt.id, inputValue[currentPrompt.id] || "");
                                       }}
                                     >
                                       <Check className="mr-2 h-4 w-4 opacity-0" />
@@ -530,8 +642,8 @@ const ChatExperienceBase: React.FC<ChatExperienceBaseProps> = ({
                         </Popover>
                       )}
                     </div>
-                  </div>
-                );
+                  );
+                }
               } else if (currentPrompt.id === mainTextPromptId[chatType]) {
                 // Textarea + file upload for the main text prompt of each card type
                 return (
@@ -584,7 +696,7 @@ const ChatExperienceBase: React.FC<ChatExperienceBaseProps> = ({
                                 style={{ objectFit: 'contain' }}
                               />
                               <button
-                                onClick={() => handleDeleteImage(idx)}
+                                onClick={() => handleDeleteImage(uploadedFiles.findIndex(f => f === file))}
                                 className="absolute top-1 right-1 bg-white border border-gray-300 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-200 shadow-md"
                                 title="Delete file"
                               >
@@ -767,7 +879,10 @@ const ChatExperienceBase: React.FC<ChatExperienceBaseProps> = ({
               return;
             }
             
-            if ((chatType === 'question' && chatStep === prompts.length - 1) || chatType === 'insight' || chatType === 'thought') {
+            if (
+              ((chatType === 'question' || chatType === 'claim') && chatStep === prompts.length - 1) ||
+              ((chatType === 'insight' || chatType === 'thought') && chatStep === prompts.length - 1)
+            ) {
               handleSaveCard();
               return; // Prevent form submission from continuing
             } else if (chatType === 'source' && chatStep === prompts.length - 1) {
@@ -788,7 +903,13 @@ const ChatExperienceBase: React.FC<ChatExperienceBaseProps> = ({
             disabled={chatStep === 0 && chatType === 'question' && !(chatInputs[currentPrompt.id]?.trim()) || isSaving || cardSaved}
             className={`flex-1 ${chatStep === 0 && chatType === 'question' && !(chatInputs[currentPrompt.id]?.trim()) || cardSaved ? "opacity-50 cursor-not-allowed" : ""}`}
           >
-            {isSaving ? "Saving..." : cardSaved ? "Saved!" : ((chatType === 'question' && chatStep === prompts.length - 1) || chatType === 'insight' || chatType === 'thought' ? "Done" : "Continue")}
+            {isSaving ? "Saving..." : cardSaved ? "Saved!" : (
+              ((chatType === 'question' || chatType === 'claim') && chatStep === prompts.length - 1)
+                ? "Done"
+                : ((chatType === 'insight' || chatType === 'thought') && chatStep === prompts.length - 1)
+                  ? "Done"
+                  : "Continue"
+            )}
           </Button>
         </form>
       )}

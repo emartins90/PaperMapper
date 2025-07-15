@@ -10,6 +10,8 @@ import SourceCardContent from "./sp-content-source";
 import QuestionCardContent from "./sp-content-question";
 import InsightCardContent from "./sp-content-insight";
 import ThoughtCardContent from "./sp-content-thought";
+import ClaimCardContent from "./sp-content-claim";
+import ClaimChatExperience from "../chat/ClaimChatExperience";
 import { useCardSave } from "../shared/useCardSave";
 
 interface SidePanelBaseProps {
@@ -27,6 +29,8 @@ interface SidePanelBaseProps {
   onInsightTabChange: (tab: string) => void;
   thoughtTab: string;
   onThoughtTabChange: (tab: string) => void;
+  claimTab: string;
+  onClaimTabChange: (tab: string) => void;
   onSaveCard?: (data: { cardId: string; chatAnswers: any; uploadedFiles: File[] }) => void;
   onUpdateNodeData?: (cardId: string, newData: any) => void;
   onEdgesChange?: (changes: any[]) => void;
@@ -50,6 +54,8 @@ export default function SidePanelBase({
   onInsightTabChange,
   thoughtTab,
   onThoughtTabChange,
+  claimTab,
+  onClaimTabChange,
   onSaveCard,
   onUpdateNodeData,
   onEdgesChange,
@@ -79,7 +85,7 @@ export default function SidePanelBase({
 
   const cardType = openCard.type;
   const cardData = openCard ? nodes.find(n => n.id === openCard.id)?.data : undefined;
-  const isInChatMode = guided && openCard.id === chatActiveCardId && (cardType === "source" || cardType === "question" || cardType === "insight" || cardType === "thought");
+  const isInChatMode = guided && openCard.id === chatActiveCardId && (cardType === "source" || cardType === "question" || cardType === "insight" || cardType === "thought" || cardType === "claim");
   
   // Detect if card is unsaved (has UUID ID or missing data IDs)
   const isUnsaved = () => {
@@ -93,7 +99,8 @@ export default function SidePanelBase({
       (cardType === "source" && (!cardData.sourceMaterialId || !cardData.citationId)) ||
       (cardType === "question" && !cardData.questionId) ||
       (cardType === "insight" && !cardData.insightId) ||
-      (cardType === "thought" && !cardData.thoughtId);
+      (cardType === "thought" && !cardData.thoughtId) ||
+      (cardType === "claim" && !cardData.claimId);
     
     // If we have valid data IDs, the card is saved regardless of the ID format
     if (!hasMissingDataIds) {
@@ -143,6 +150,8 @@ export default function SidePanelBase({
         return formData.insightText?.trim();
       case "thought":
         return formData.thoughtText?.trim();
+      case "claim":
+        return formData.claimText?.trim();
       default:
         return false;
     }
@@ -161,6 +170,8 @@ export default function SidePanelBase({
           return <InsightChatExperience cardId={openCard.id} projectId={projectId || 0} nodes={nodes} onClose={onClose} onUpdateNodeData={onUpdateNodeData} />;
         case "thought":
           return <ThoughtChatExperience cardId={openCard.id} projectId={projectId || 0} nodes={nodes} onClose={onClose} onUpdateNodeData={onUpdateNodeData} />;
+        case "claim":
+          return <ClaimChatExperience cardId={openCard.id} projectId={projectId || 0} nodes={nodes} onClose={onClose} onUpdateNodeData={onUpdateNodeData} />;
         default:
           return null;
       }
@@ -211,6 +222,17 @@ export default function SidePanelBase({
               ]}
               activeTab={thoughtTab}
               onTabChange={onThoughtTabChange}
+              className="px-4 pt-2"
+            />
+          )}
+          {cardType === "claim" && (
+            <DrawerTabs
+              tabs={[
+                { id: "info", label: "Claim Info" },
+                { id: "linked", label: "Linked Cards" },
+              ]}
+              activeTab={claimTab}
+              onTabChange={onClaimTabChange}
               className="px-4 pt-2"
             />
           )}
@@ -281,13 +303,29 @@ export default function SidePanelBase({
               showSaveButton={false} // Hide individual save button since we have sticky one
             />
           )}
+          {cardType === 'claim' && (
+            <ClaimCardContent
+              cardData={cardData}
+              openCard={openCard}
+              onUpdateNodeData={onUpdateNodeData}
+              onAddCard={onAddCard}
+              onDeleteCard={onDeleteCard}
+              claimTab={claimTab}
+              nodes={nodes}
+              edges={edges}
+              onEdgesChange={onEdgesChange}
+              onClose={onClose}
+              onFormDataChange={setFormData}
+              showSaveButton={false}
+            />
+          )}
         </>
       );
     }
   };
 
   return (
-    <div className="fixed right-0 top-0 h-full w-[400px] max-w-full z-[9999] bg-white shadow-2xl flex flex-col border-l">
+    <div className="fixed right-0 top-0 h-full w-[400px] max-w-full z-40 bg-white shadow-2xl flex flex-col border-l">
       {/* Header */}
       <div className="flex flex-row items-center justify-between border-b p-4">
         <div className="text-lg font-bold">
@@ -311,7 +349,7 @@ export default function SidePanelBase({
             <button
               onClick={handleSaveClick}
               disabled={isSaving || !canSave()}
-              className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full bg-primary text-primary-foreground py-3 px-4 rounded-lg font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isSaving ? "Saving..." : `Save ${cardType?.replace(/^(.)/, (c: string) => c.toUpperCase())}`}
             </button>

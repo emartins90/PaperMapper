@@ -101,15 +101,15 @@ export default function QuestionCard({ data, showHandles = true, width = 'w-96' 
         </>
       )}
       <div className="flex items-center justify-between mb-2">
-        <div className={`font-bold ${titleColorClass} flex-1 min-w-0 flex items-center gap-2`}>
+        <div className={`${titleColorClass} flex-1 min-w-0 flex items-center gap-2`}>
           {data.priority && getPriorityIndicator(data.priority) && (
             <span className={`font-bold text-lg ${getPriorityIndicator(data.priority)?.color}`}>
               {getPriorityIndicator(data.priority)?.text}
             </span>
           )}
-          <span className="truncate block">
-            Question{data.category ? ` : ${data.category}` : ''}
-          </span>
+          <div className="truncate block">
+            <span className="font-bold">Question</span>{data.category ? <span className="font-normal"> : {data.category}</span> : ''}
+          </div>
         </div>
         <button onClick={data.onOpen} aria-label="Open card" className="flex-shrink-0 ml-2">
           <span className={`text-xl ${arrowColorClass}`}>↗</span>

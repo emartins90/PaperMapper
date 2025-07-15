@@ -286,7 +286,7 @@ export default function AccountSettings({ open, onOpenChange }: AccountSettingsP
                 </div>
                 {resetStep === "idle" && (
                   <Button
-                    className="bg-blue-600 text-white"
+                    className="bg-primary text-primary-foreground"
                     onClick={handleStartReset}
                     disabled={resetLoading}
                   >

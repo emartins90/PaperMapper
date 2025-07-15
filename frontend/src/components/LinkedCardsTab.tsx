@@ -4,6 +4,7 @@ import SourceMaterialCard from "./canvas-cards/SourceMaterialCard";
 import QuestionCard from "./canvas-cards/QuestionCard";
 import InsightCard from "./canvas-cards/InsightCard";
 import ThoughtCard from "./canvas-cards/ThoughtCard";
+import ClaimCard from "./canvas-cards/ClaimCard";
 
 interface LinkedCardsTabProps {
   openCard: { id: string; type: string } | null;
@@ -62,11 +63,12 @@ export default function LinkedCardsTab({ openCard, nodes, edges, onEdgesChange, 
             insight: 'Insights',
             question: 'Questions', 
             thought: 'Thoughts',
-            source: 'Source Materials'
+            source: 'Source Materials',
+            claim: 'Claims',
           };
 
           // Define the order we want to display card types
-          const cardTypeOrder = ['insight', 'question', 'thought', 'source'];
+          const cardTypeOrder = ['insight', 'question', 'thought', 'source', 'claim'];
 
           // Check if there's only one card type
           const cardTypes = Object.keys(groupedCards);
@@ -136,6 +138,7 @@ export default function LinkedCardsTab({ openCard, nodes, edges, onEdgesChange, 
                             {card.type === 'question' && <QuestionCard {...cardProps} showHandles={false} width="w-full" />}
                             {card.type === 'insight' && <InsightCard {...cardProps} showHandles={false} width="w-full" />}
                             {card.type === 'thought' && <ThoughtCard {...cardProps} showHandles={false} width="w-full" />}
+                            {card.type === 'claim' && <ClaimCard {...cardProps} showHandles={false} width="w-full" />}
                           </div>
                         );
                       })}
