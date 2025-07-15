@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { MultiCombobox } from "@/components/ui/multi-combobox";
+import { Combobox, useCustomOptions } from "@/components/ui/combobox";
 
 interface SourceCardContentProps {
   cardType: string | undefined;
@@ -61,6 +62,9 @@ export default function SourceCardContent({
   const [credibility, setCredibility] = useState(cardData?.credibility || "");
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const sourceFunctionOptions = useCustomOptions("sourceFunction");
+  const sourceCredibilityOptions = useCustomOptions("sourceCredibility");
 
   // Check if card is unsaved
   const isUnsaved = !cardData?.sourceMaterialId;
@@ -751,24 +755,36 @@ export default function SourceCardContent({
         <div className="space-y-4">
           <div>
             <Label htmlFor="source-function" className="block text-sm font-medium text-gray-700 mb-1">Source Function</Label>
-            <Select value={sourceFunction || ""} onValueChange={(value) => {
-              setSourceFunction(value);
-              if (!isUnsaved) {
-                saveAllFieldsWithSourceFunction(value);
-              }
-            }}>
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select source function..." />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Evidence">Evidence</SelectItem>
-                <SelectItem value="Definition">Definition</SelectItem>
-                <SelectItem value="Background Info">Background Info</SelectItem>
-                <SelectItem value="Data Point">Data Point</SelectItem>
-                <SelectItem value="Theory">Theory</SelectItem>
-                <SelectItem value="Concept">Concept</SelectItem>
-              </SelectContent>
-            </Select>
+            <Combobox
+              options={[
+                { value: "Evidence", label: "Evidence" },
+                { value: "Definition", label: "Definition" },
+                { value: "Background Info", label: "Background Info" },
+                { value: "Data Point", label: "Data Point" },
+                { value: "Theory", label: "Theory" },
+                { value: "Concept", label: "Concept" },
+                ...sourceFunctionOptions.options.filter(
+                  o => !["Evidence","Definition","Background Info","Data Point","Theory","Concept"].includes(o.value)
+                ),
+              ]}
+              value={sourceFunction || ""}
+              onChange={async (value) => {
+                setSourceFunction(value);
+                if (!isUnsaved) {
+                  saveAllFieldsWithSourceFunction(value);
+                }
+                // If it's a new custom option, persist it
+                if (
+                  value &&
+                  !["Evidence","Definition","Background Info","Data Point","Theory","Concept"].includes(value) &&
+                  !sourceFunctionOptions.options.some(o => o.value === value)
+                ) {
+                  await sourceFunctionOptions.addOption(value);
+                }
+              }}
+              placeholder="Select or type source function..."
+              allowCustom={true}
+            />
             <p className="text-xs text-gray-500 mt-1">How does this source contribute to your research?</p>
           </div>
           
@@ -836,28 +852,62 @@ export default function SourceCardContent({
             
             <div className="mt-4">
               <Label htmlFor="source-credibility" className="block text-sm font-medium text-gray-700 mb-1">Source Credibility</Label>
-              <Select value={credibility || ""} onValueChange={(value) => {
-                setCredibility(value);
-                if (!isUnsaved) {
-                  saveAllFieldsWithCredibility(value);
-                }
-              }}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select credibility level..." />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Peer-reviewed study">Peer-reviewed study</SelectItem>
-                  <SelectItem value="News article (reputable)">News article (reputable)</SelectItem>
-                  <SelectItem value="News article (biased)">News article (biased)</SelectItem>
-                  <SelectItem value="Expert opinion">Expert opinion</SelectItem>
-                  <SelectItem value="Institutional report">Institutional report</SelectItem>
-                  <SelectItem value="Personal experience">Personal experience</SelectItem>
-                  <SelectItem value="Blog or opinion piece">Blog or opinion piece</SelectItem>
-                  <SelectItem value="Speculative claim">Speculative claim</SelectItem>
-                  <SelectItem value="Social media post">Social media post</SelectItem>
-                  <SelectItem value="Unclear origin">Unclear origin</SelectItem>
-                </SelectContent>
-              </Select>
+              <Combobox
+                options={[
+                  { value: "Peer-reviewed study", label: "Peer-reviewed study" },
+                  { value: "News article (reputable)", label: "News article (reputable)" },
+                  { value: "News article (biased)", label: "News article (biased)" },
+                  { value: "Expert opinion", label: "Expert opinion" },
+                  { value: "Institutional report", label: "Institutional report" },
+                  { value: "Personal experience", label: "Personal experience" },
+                  { value: "Blog or opinion piece", label: "Blog or opinion piece" },
+                  { value: "Speculative claim", label: "Speculative claim" },
+                  { value: "Social media post", label: "Social media post" },
+                  { value: "Unclear origin", label: "Unclear origin" },
+                  ...sourceCredibilityOptions.options.filter(
+                    o => ![
+                      "Peer-reviewed study",
+                      "News article (reputable)",
+                      "News article (biased)",
+                      "Expert opinion",
+                      "Institutional report",
+                      "Personal experience",
+                      "Blog or opinion piece",
+                      "Speculative claim",
+                      "Social media post",
+                      "Unclear origin"
+                    ].includes(o.value)
+                  ),
+                ]}
+                value={credibility || ""}
+                onChange={async (value) => {
+                  setCredibility(value);
+                  if (!isUnsaved) {
+                    saveAllFieldsWithCredibility(value);
+                  }
+                  // If it's a new custom option, persist it
+                  if (
+                    value &&
+                    ![
+                      "Peer-reviewed study",
+                      "News article (reputable)",
+                      "News article (biased)",
+                      "Expert opinion",
+                      "Institutional report",
+                      "Personal experience",
+                      "Blog or opinion piece",
+                      "Speculative claim",
+                      "Social media post",
+                      "Unclear origin"
+                    ].includes(value) &&
+                    !sourceCredibilityOptions.options.some(o => o.value === value)
+                  ) {
+                    await sourceCredibilityOptions.addOption(value);
+                  }
+                }}
+                placeholder="Select or type credibility level..."
+                allowCustom={true}
+              />
             </div>
           </div>
 

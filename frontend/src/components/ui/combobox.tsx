@@ -54,6 +54,16 @@ export const Combobox: React.FC<ComboboxProps> = ({
   const setActualOpen = isControlled ? setControlledOpen! : setOpen;
   const [inputValue, setInputValue] = React.useState("");
 
+  // Add ref for trigger
+  const triggerRef = React.useRef<HTMLButtonElement>(null);
+  const [popoverWidth, setPopoverWidth] = React.useState<string | undefined>(undefined);
+
+  React.useEffect(() => {
+    if (actualOpen && triggerRef.current) {
+      setPopoverWidth(`${triggerRef.current.offsetWidth}px`);
+    }
+  }, [actualOpen]);
+
   React.useEffect(() => {
     if (!actualOpen) setInputValue("");
   }, [actualOpen]);
@@ -78,6 +88,7 @@ export const Combobox: React.FC<ComboboxProps> = ({
       {!dropdownOnly && (
         <PopoverTrigger asChild>
           <Button
+            ref={triggerRef}
             variant="outline"
             role="combobox"
             aria-expanded={actualOpen}
@@ -90,7 +101,7 @@ export const Combobox: React.FC<ComboboxProps> = ({
           </Button>
         </PopoverTrigger>
       )}
-      <PopoverContent className="w-full min-w-[200px] p-0">
+      <PopoverContent className="min-w-[200px] p-0" style={popoverWidth ? { width: popoverWidth } : {}}>
         <Command>
           <CommandInput
             placeholder={placeholder}
@@ -143,4 +154,81 @@ export const Combobox: React.FC<ComboboxProps> = ({
       </PopoverContent>
     </Popover>
   );
-}; 
+};
+
+// Custom hook for fetching and saving custom options
+import { useCallback, useEffect, useState } from "react";
+
+export function useCustomOptions(optionType: string) {
+  const [options, setOptions] = useState<ComboboxOption[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
+  const getToken = () => {
+    if (typeof window === "undefined") return "";
+    const token = localStorage.getItem("token");
+    return token || "";
+  };
+
+  const fetchOptions = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const token = getToken();
+      if (!token) {
+        setOptions([]);
+        setLoading(false);
+        return;
+      }
+      const response = await fetch(`${API_URL}/users/me/custom-options?option_type=${optionType}`, {
+        credentials: "include",
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setOptions(data.map((option: any) => ({ value: option.value, label: option.value })));
+      } else {
+        setOptions([]);
+        setError("Failed to fetch options");
+      }
+    } catch (err) {
+      setOptions([]);
+      setError("Failed to fetch options");
+    } finally {
+      setLoading(false);
+    }
+  }, [optionType]);
+
+  const addOption = useCallback(async (value: string) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const token = getToken();
+      if (!token) return;
+      const res = await fetch(`${API_URL}/users/me/custom-options`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify({ option_type: optionType, value }),
+      });
+      if (res.ok) {
+        setOptions((prev) => [...prev, { value, label: value }]);
+      } else {
+        setError("Failed to add option");
+      }
+    } catch (err) {
+      setError("Failed to add option");
+    } finally {
+      setLoading(false);
+    }
+  }, [optionType]);
+
+  useEffect(() => {
+    fetchOptions();
+  }, [fetchOptions]);
+
+  return { options, loading, error, addOption, refetch: fetchOptions };
+} 

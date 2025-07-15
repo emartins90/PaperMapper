@@ -9,6 +9,7 @@ import LinkedCardsTab from "../LinkedCardsTab";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Combobox, useCustomOptions } from "@/components/ui/combobox";
 
 interface InsightCardContentProps {
   cardData: any;
@@ -61,6 +62,8 @@ export default function InsightCardContent({
     onAddCard,
     onDeleteCard,
   });
+
+  const insightTypeOptions = useCustomOptions("insightType");
 
   React.useEffect(() => {
     setInsight(cardData?.insight || "");
@@ -195,29 +198,51 @@ export default function InsightCardContent({
         <div className="space-y-4">
           <div>
             <Label htmlFor="insight-type" className="block text-sm font-medium text-gray-700 mb-1">Insight Type</Label>
-            <Select
+            <Combobox
+              options={[
+                { value: "Resolved Confusion", label: "Resolved Confusion" },
+                { value: "Noticed a Pattern", label: "Noticed a Pattern" },
+                { value: "Evaluated a Source", label: "Evaluated a Source" },
+                { value: "Identified a Gap", label: "Identified a Gap" },
+                { value: "Reframed the Issue", label: "Reframed the Issue" },
+                { value: "Highlighted Impact", label: "Highlighted Impact" },
+                ...insightTypeOptions.options.filter(
+                  o => ![
+                    "Resolved Confusion",
+                    "Noticed a Pattern",
+                    "Evaluated a Source",
+                    "Identified a Gap",
+                    "Reframed the Issue",
+                    "Highlighted Impact"
+                  ].includes(o.value)
+                ),
+              ]}
               value={insightType || ""}
-              onValueChange={(value) => {
+              onChange={async (value) => {
                 setInsightType(value);
                 if (openCard && !isUnsaved) {
                   onUpdateNodeData?.(openCard.id, { insightType: value });
-                  // Save to backend for existing insights
                   saveAllFields({ insightType: value });
                 }
+                // If it's a new custom option, persist it
+                if (
+                  value &&
+                  ![
+                    "Resolved Confusion",
+                    "Noticed a Pattern",
+                    "Evaluated a Source",
+                    "Identified a Gap",
+                    "Reframed the Issue",
+                    "Highlighted Impact"
+                  ].includes(value) &&
+                  !insightTypeOptions.options.some(o => o.value === value)
+                ) {
+                  await insightTypeOptions.addOption(value);
+                }
               }}
-            >
-              <SelectTrigger className="w-full mb-2">
-                <SelectValue placeholder="Select type..." />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Resolved Confusion">Resolved Confusion</SelectItem>
-                <SelectItem value="Noticed a Pattern">Noticed a Pattern</SelectItem>
-                <SelectItem value="Evaluated a Source">Evaluated a Source</SelectItem>
-                <SelectItem value="Identified a Gap">Identified a Gap</SelectItem>
-                <SelectItem value="Reframed the Issue">Reframed the Issue</SelectItem>
-                <SelectItem value="Highlighted Impact">Highlighted Impact</SelectItem>
-              </SelectContent>
-            </Select>
+              placeholder="Select or type insight type..."
+              allowCustom={true}
+            />
           </div>
           <div>
             <Label htmlFor="insight-text" className="block text-sm font-medium text-gray-700 mb-1">Insight</Label>

@@ -20,11 +20,13 @@ interface AccountSettingsProps {
 
 const SOURCE_FUNCTION_TYPE = "sourceFunction";
 const SOURCE_CREDIBILITY_TYPE = "sourceCredibility";
+const INSIGHT_TYPE = "insightType";
 
 const TABS = [
   { id: "account", label: "Account Info" },
   { id: "sourceFunctions", label: "Custom Source Functions" },
   { id: "sourceCredibilities", label: "Custom Source Credibilities" },
+  { id: "insightTypes", label: "Custom Insight Types" },
 ];
 
 export default function AccountSettings({ open, onOpenChange }: AccountSettingsProps) {
@@ -32,7 +34,7 @@ export default function AccountSettings({ open, onOpenChange }: AccountSettingsP
   const [loadingOptions, setLoadingOptions] = useState(false);
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState("account");
-  const [addInput, setAddInput] = useState({ sourceFunction: "", sourceCredibility: "" });
+  const [addInput, setAddInput] = useState<{ sourceFunction: string; sourceCredibility: string; insightType: string }>({ sourceFunction: "", sourceCredibility: "", insightType: "" });
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editInput, setEditInput] = useState("");
   const [savingEdit, setSavingEdit] = useState(false);
@@ -83,10 +85,10 @@ export default function AccountSettings({ open, onOpenChange }: AccountSettingsP
   }, [open]);
 
   // Add new custom option
-  const getAddInput = (type: 'sourceFunction' | 'sourceCredibility') => addInput[type];
+  const getAddInput = (type: 'sourceFunction' | 'sourceCredibility' | 'insightType') => addInput[type] || "";
 
   const handleAddOption = async (type: string) => {
-    const value = getAddInput(type as 'sourceFunction' | 'sourceCredibility');
+    const value = getAddInput(type as 'sourceFunction' | 'sourceCredibility' | 'insightType');
     if (!value.trim()) return;
     setAddingType(type);
     const token = localStorage.getItem("token");
@@ -97,6 +99,7 @@ export default function AccountSettings({ open, onOpenChange }: AccountSettingsP
           "Content-Type": "application/json",
           Authorization: token ? `Bearer ${token}` : "",
         },
+        credentials: "include", // Ensure cookies/session are sent
         body: JSON.stringify({ option_type: type, value }),
       });
       if (res.ok) {
@@ -131,6 +134,7 @@ export default function AccountSettings({ open, onOpenChange }: AccountSettingsP
           "Content-Type": "application/json",
           Authorization: token ? `Bearer ${token}` : "",
         },
+        credentials: "include", // Ensure cookies/session are sent
         body: JSON.stringify({ value: editInput }),
       });
       if (res.ok) {
@@ -155,6 +159,7 @@ export default function AccountSettings({ open, onOpenChange }: AccountSettingsP
       const res = await fetch(`${API_URL}/users/me/custom-options/${id}`, {
         method: "DELETE",
         headers: { Authorization: token ? `Bearer ${token}` : "" },
+        credentials: "include", // Ensure cookies/session are sent
       });
       if (res.ok) {
         setCustomOptions((prev) => prev.filter((opt) => opt.id !== id));
@@ -396,12 +401,12 @@ export default function AccountSettings({ open, onOpenChange }: AccountSettingsP
                     value={getAddInput(SOURCE_FUNCTION_TYPE)}
                     onChange={e => setAddInput(prev => ({ ...prev, [SOURCE_FUNCTION_TYPE]: e.target.value }))}
                     placeholder="Add new source function..."
-                    className="border rounded px-3 py-2 text-sm w-full"
+                    className="border border-gray-300 rounded-lg px-4 py-2 text-sm w-full focus:ring-2 focus:ring-primary focus:border-primary outline-none transition"
                     onKeyDown={e => { if (e.key === 'Enter') handleAddOption(SOURCE_FUNCTION_TYPE); }}
                   />
                   <Button
                     type="button"
-                    className="px-4"
+                    className="px-5 h-10 rounded-lg bg-primary text-white font-semibold hover:bg-primary/90 transition"
                     disabled={addingType === SOURCE_FUNCTION_TYPE || !getAddInput(SOURCE_FUNCTION_TYPE).trim()}
                     onClick={() => handleAddOption(SOURCE_FUNCTION_TYPE)}
                   >
@@ -411,25 +416,25 @@ export default function AccountSettings({ open, onOpenChange }: AccountSettingsP
                 {loadingOptions ? (
                   <div className="text-gray-500 text-sm">Loading...</div>
                 ) : getOptionsByType(SOURCE_FUNCTION_TYPE).length === 0 ? (
-                  <div className="text-gray-500 text-sm">No custom source functions saved.</div>
+                  <div className="text-gray-400 text-sm italic">No custom source functions saved.</div>
                 ) : (
-                  <ul className="space-y-2">
-                    {getOptionsByType(SOURCE_FUNCTION_TYPE).map((opt) => (
-                      <li key={opt.id} className="flex items-center justify-between bg-gray-100 rounded px-3 py-2">
+                  <ul className="divide-y divide-gray-200 border border-gray-200 rounded-lg bg-white">
+                    {getOptionsByType(SOURCE_FUNCTION_TYPE).map((opt, idx, arr) => (
+                      <li key={opt.id} className="flex items-center justify-between px-3 py-2 group">
                         {editingId === opt.id ? (
                           <>
                             <input
                               type="text"
                               value={editInput}
                               onChange={e => setEditInput(e.target.value)}
-                              className="border rounded px-2 py-1 text-sm w-full mr-2"
+                              className="border border-gray-300 rounded px-2 py-1 text-sm w-full mr-2 focus:ring-2 focus:ring-primary focus:border-primary outline-none transition"
                               onKeyDown={e => { if (e.key === 'Enter') handleSaveEdit(opt.id, SOURCE_FUNCTION_TYPE); }}
                               autoFocus
                             />
                             <Button
                               type="button"
                               size="sm"
-                              className="px-2 py-1 text-xs mr-2"
+                              className="px-3 py-1 text-xs mr-2 rounded bg-primary text-white hover:bg-primary/90 transition"
                               disabled={savingEdit || !editInput.trim()}
                               onClick={() => handleSaveEdit(opt.id, SOURCE_FUNCTION_TYPE)}
                             >
@@ -439,7 +444,7 @@ export default function AccountSettings({ open, onOpenChange }: AccountSettingsP
                               type="button"
                               size="sm"
                               variant="secondary"
-                              className="px-2 py-1 text-xs"
+                              className="px-3 py-1 text-xs rounded hover:bg-gray-100 transition"
                               onClick={() => { setEditingId(null); setEditInput(""); }}
                             >
                               Cancel
@@ -447,26 +452,34 @@ export default function AccountSettings({ open, onOpenChange }: AccountSettingsP
                           </>
                         ) : (
                           <>
-                            <span className="truncate text-sm mr-2">{opt.value}</span>
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="outline"
-                              className="px-2 py-1 text-xs mr-2"
-                              onClick={() => handleEditOption(opt.id, opt.value)}
-                            >
-                              Edit
-                            </Button>
-                            <Button
-                              type="button"
-                              variant="destructive"
-                              size="sm"
-                              className="px-2 py-1 text-xs"
-                              disabled={deletingId === opt.id}
-                              onClick={() => handleDeleteOption(opt.id)}
-                            >
-                              {deletingId === opt.id ? "Deleting..." : "Delete"}
-                            </Button>
+                            <span className="truncate text-sm mr-2 font-medium text-gray-800">{opt.value}</span>
+                            <div className="flex gap-1"> {/* Always visible now */}
+                              <Button
+                                type="button"
+                                size="icon"
+                                variant="ghost"
+                                className="rounded-full hover:bg-gray-100"
+                                onClick={() => handleEditOption(opt.id, opt.value)}
+                                aria-label="Edit"
+                              >
+                                <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M15.232 5.232l3.536 3.536M9 11l6 6M3 21h6l11.293-11.293a1 1 0 0 0 0-1.414l-3.586-3.586a1 1 0 0 0-1.414 0L3 15v6z"/></svg>
+                              </Button>
+                              <Button
+                                type="button"
+                                size="icon"
+                                variant="ghost"
+                                className="rounded-full hover:bg-red-50"
+                                disabled={deletingId === opt.id}
+                                onClick={() => handleDeleteOption(opt.id)}
+                                aria-label="Delete"
+                              >
+                                {deletingId === opt.id ? (
+                                  <span className="text-xs">...</span>
+                                ) : (
+                                  <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M6 19a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7H6v12zM19 7V5a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v2m5 4v6m4-6v6"/></svg>
+                                )}
+                              </Button>
+                            </div>
                           </>
                         )}
                       </li>
@@ -484,12 +497,12 @@ export default function AccountSettings({ open, onOpenChange }: AccountSettingsP
                     value={getAddInput(SOURCE_CREDIBILITY_TYPE)}
                     onChange={e => setAddInput(prev => ({ ...prev, [SOURCE_CREDIBILITY_TYPE]: e.target.value }))}
                     placeholder="Add new source credibility..."
-                    className="border rounded px-3 py-2 text-sm w-full"
+                    className="border border-gray-300 rounded-lg px-4 py-2 text-sm w-full focus:ring-2 focus:ring-primary focus:border-primary outline-none transition"
                     onKeyDown={e => { if (e.key === 'Enter') handleAddOption(SOURCE_CREDIBILITY_TYPE); }}
                   />
                   <Button
                     type="button"
-                    className="px-4"
+                    className="px-5 h-10 rounded-lg bg-primary text-white font-semibold hover:bg-primary/90 transition"
                     disabled={addingType === SOURCE_CREDIBILITY_TYPE || !getAddInput(SOURCE_CREDIBILITY_TYPE).trim()}
                     onClick={() => handleAddOption(SOURCE_CREDIBILITY_TYPE)}
                   >
@@ -499,25 +512,25 @@ export default function AccountSettings({ open, onOpenChange }: AccountSettingsP
                 {loadingOptions ? (
                   <div className="text-gray-500 text-sm">Loading...</div>
                 ) : getOptionsByType(SOURCE_CREDIBILITY_TYPE).length === 0 ? (
-                  <div className="text-gray-500 text-sm">No custom source credibilities saved.</div>
+                  <div className="text-gray-400 text-sm italic">No custom source credibilities saved.</div>
                 ) : (
-                  <ul className="space-y-2">
-                    {getOptionsByType(SOURCE_CREDIBILITY_TYPE).map((opt) => (
-                      <li key={opt.id} className="flex items-center justify-between bg-gray-100 rounded px-3 py-2">
+                  <ul className="divide-y divide-gray-200 border border-gray-200 rounded-lg bg-white">
+                    {getOptionsByType(SOURCE_CREDIBILITY_TYPE).map((opt, idx, arr) => (
+                      <li key={opt.id} className="flex items-center justify-between px-3 py-2 group">
                         {editingId === opt.id ? (
                           <>
                             <input
                               type="text"
                               value={editInput}
                               onChange={e => setEditInput(e.target.value)}
-                              className="border rounded px-2 py-1 text-sm w-full mr-2"
+                              className="border border-gray-300 rounded px-2 py-1 text-sm w-full mr-2 focus:ring-2 focus:ring-primary focus:border-primary outline-none transition"
                               onKeyDown={e => { if (e.key === 'Enter') handleSaveEdit(opt.id, SOURCE_CREDIBILITY_TYPE); }}
                               autoFocus
                             />
                             <Button
                               type="button"
                               size="sm"
-                              className="px-2 py-1 text-xs mr-2"
+                              className="px-3 py-1 text-xs mr-2 rounded bg-primary text-white hover:bg-primary/90 transition"
                               disabled={savingEdit || !editInput.trim()}
                               onClick={() => handleSaveEdit(opt.id, SOURCE_CREDIBILITY_TYPE)}
                             >
@@ -527,7 +540,7 @@ export default function AccountSettings({ open, onOpenChange }: AccountSettingsP
                               type="button"
                               size="sm"
                               variant="secondary"
-                              className="px-2 py-1 text-xs"
+                              className="px-3 py-1 text-xs rounded hover:bg-gray-100 transition"
                               onClick={() => { setEditingId(null); setEditInput(""); }}
                             >
                               Cancel
@@ -535,26 +548,130 @@ export default function AccountSettings({ open, onOpenChange }: AccountSettingsP
                           </>
                         ) : (
                           <>
-                            <span className="truncate text-sm mr-2">{opt.value}</span>
+                            <span className="truncate text-sm mr-2 font-medium text-gray-800">{opt.value}</span>
+                            <div className="flex gap-1"> {/* Always visible now */}
+                              <Button
+                                type="button"
+                                size="icon"
+                                variant="ghost"
+                                className="rounded-full hover:bg-gray-100"
+                                onClick={() => handleEditOption(opt.id, opt.value)}
+                                aria-label="Edit"
+                              >
+                                <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M15.232 5.232l3.536 3.536M9 11l6 6M3 21h6l11.293-11.293a1 1 0 0 0 0-1.414l-3.586-3.586a1 1 0 0 0-1.414 0L3 15v6z"/></svg>
+                              </Button>
+                              <Button
+                                type="button"
+                                size="icon"
+                                variant="ghost"
+                                className="rounded-full hover:bg-red-50"
+                                disabled={deletingId === opt.id}
+                                onClick={() => handleDeleteOption(opt.id)}
+                                aria-label="Delete"
+                              >
+                                {deletingId === opt.id ? (
+                                  <span className="text-xs">...</span>
+                                ) : (
+                                  <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M6 19a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7H6v12zM19 7V5a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v2m5 4v6m4-6v6"/></svg>
+                                )}
+                              </Button>
+                            </div>
+                          </>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </>
+            )}
+            {activeTab === "insightTypes" && (
+              <>
+                <DialogTitle className="mb-2">Custom Insight Types</DialogTitle>
+                <div className="flex gap-2 mb-4">
+                  <input
+                    type="text"
+                    value={getAddInput(INSIGHT_TYPE)}
+                    onChange={e => setAddInput(prev => ({ ...prev, [INSIGHT_TYPE]: e.target.value }))}
+                    placeholder="Add new insight type..."
+                    className="border border-gray-300 rounded-lg px-4 py-2 text-sm w-full focus:ring-2 focus:ring-primary focus:border-primary outline-none transition"
+                    onKeyDown={e => { if (e.key === 'Enter') handleAddOption(INSIGHT_TYPE); }}
+                  />
+                  <Button
+                    type="button"
+                    className="px-5 h-10 rounded-lg bg-primary text-white font-semibold hover:bg-primary/90 transition"
+                    disabled={addingType === INSIGHT_TYPE || !getAddInput(INSIGHT_TYPE).trim()}
+                    onClick={() => handleAddOption(INSIGHT_TYPE)}
+                  >
+                    {addingType === INSIGHT_TYPE ? "Adding..." : "Add"}
+                  </Button>
+                </div>
+                {loadingOptions ? (
+                  <div className="text-gray-500 text-sm">Loading...</div>
+                ) : getOptionsByType(INSIGHT_TYPE).length === 0 ? (
+                  <div className="text-gray-400 text-sm italic">No custom insight types saved.</div>
+                ) : (
+                  <ul className="divide-y divide-gray-200 border border-gray-200 rounded-lg bg-white">
+                    {getOptionsByType(INSIGHT_TYPE).map((opt, idx, arr) => (
+                      <li key={opt.id} className="flex items-center justify-between px-3 py-2 group">
+                        {editingId === opt.id ? (
+                          <>
+                            <input
+                              type="text"
+                              value={editInput}
+                              onChange={e => setEditInput(e.target.value)}
+                              className="border border-gray-300 rounded px-2 py-1 text-sm w-full mr-2 focus:ring-2 focus:ring-primary focus:border-primary outline-none transition"
+                              onKeyDown={e => { if (e.key === 'Enter') handleSaveEdit(opt.id, INSIGHT_TYPE); }}
+                              autoFocus
+                            />
                             <Button
                               type="button"
                               size="sm"
-                              variant="outline"
-                              className="px-2 py-1 text-xs mr-2"
-                              onClick={() => handleEditOption(opt.id, opt.value)}
+                              className="px-3 py-1 text-xs mr-2 rounded bg-primary text-white hover:bg-primary/90 transition"
+                              disabled={savingEdit || !editInput.trim()}
+                              onClick={() => handleSaveEdit(opt.id, INSIGHT_TYPE)}
                             >
-                              Edit
+                              {savingEdit ? "Saving..." : "Save"}
                             </Button>
                             <Button
                               type="button"
-                              variant="destructive"
                               size="sm"
-                              className="px-2 py-1 text-xs"
-                              disabled={deletingId === opt.id}
-                              onClick={() => handleDeleteOption(opt.id)}
+                              variant="secondary"
+                              className="px-3 py-1 text-xs rounded hover:bg-gray-100 transition"
+                              onClick={() => { setEditingId(null); setEditInput(""); }}
                             >
-                              {deletingId === opt.id ? "Deleting..." : "Delete"}
+                              Cancel
                             </Button>
+                          </>
+                        ) : (
+                          <>
+                            <span className="truncate text-sm mr-2 font-medium text-gray-800">{opt.value}</span>
+                            <div className="flex gap-1"> {/* Always visible now */}
+                              <Button
+                                type="button"
+                                size="icon"
+                                variant="ghost"
+                                className="rounded-full hover:bg-gray-100"
+                                onClick={() => handleEditOption(opt.id, opt.value)}
+                                aria-label="Edit"
+                              >
+                                <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M15.232 5.232l3.536 3.536M9 11l6 6M3 21h6l11.293-11.293a1 1 0 0 0 0-1.414l-3.586-3.586a1 1 0 0 0-1.414 0L3 15v6z"/></svg>
+                              </Button>
+                              <Button
+                                type="button"
+                                size="icon"
+                                variant="ghost"
+                                className="rounded-full hover:bg-red-50"
+                                disabled={deletingId === opt.id}
+                                onClick={() => handleDeleteOption(opt.id)}
+                                aria-label="Delete"
+                              >
+                                {deletingId === opt.id ? (
+                                  <span className="text-xs">...</span>
+                                ) : (
+                                  <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M6 19a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7H6v12zM19 7V5a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v2m5 4v6m4-6v6"/></svg>
+                                )}
+                              </Button>
+                            </div>
                           </>
                         )}
                       </li>

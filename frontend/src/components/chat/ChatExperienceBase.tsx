@@ -658,7 +658,7 @@ const ChatExperienceBase: React.FC<ChatExperienceBaseProps> = ({
                         chatType === 'thought' ? "Share your thought..." :
                         ""
                       }
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[120px] resize-y"
+                      className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 min-h-[120px] resize-y"
                     />
                     <div className="flex items-center gap-2">
                       <input
@@ -798,7 +798,7 @@ const ChatExperienceBase: React.FC<ChatExperienceBaseProps> = ({
                       value={chatInputs[currentPrompt.id] || ""}
                       onChange={e => setChatInputs(prev => ({ ...prev, [currentPrompt.id]: e.target.value }))}
                       placeholder={`Enter your ${promptTitles[currentPrompt.id] || currentPrompt.id.toLowerCase()}...`}
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[80px] resize-y"
+                      className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 min-h-[80px] resize-y"
                     />
                   </div>
                 );

@@ -9,6 +9,7 @@ import LinkedCardsTab from "../LinkedCardsTab";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Combobox, useCustomOptions } from "@/components/ui/combobox";
 
 const QUESTION_CATEGORIES = [
   "Clarify a concept",
@@ -90,6 +91,8 @@ export default function QuestionCardContent({
     onAddCard,
     onDeleteCard,
   });
+
+  const questionFunctionOptions = useCustomOptions("questionFunction");
 
   React.useEffect(() => {
     setQuestion(cardData?.question || "");
@@ -255,40 +258,60 @@ export default function QuestionCardContent({
           </div>
           <div>
             <Label htmlFor="question-category" className="block text-sm font-medium text-gray-700 mb-1">Function / Category</Label>
-            <Select
+            <Combobox
+              options={[
+                { value: "Clarify a concept", label: "Clarify a concept" },
+                { value: "Challenge an assumption", label: "Challenge an assumption" },
+                { value: "Evaluate a source", label: "Evaluate a source" },
+                { value: "Compare or contrast", label: "Compare or contrast" },
+                { value: "Explore cause and effect", label: "Explore cause and effect" },
+                { value: "Test a hypothesis", label: "Test a hypothesis" },
+                { value: "Consider a counterpoint", label: "Consider a counterpoint" },
+                { value: "Ask an ethical question", label: "Ask an ethical question" },
+                { value: "Propose a solution", label: "Propose a solution" },
+                ...questionFunctionOptions.options.filter(
+                  o => ![
+                    "Clarify a concept",
+                    "Challenge an assumption",
+                    "Evaluate a source",
+                    "Compare or contrast",
+                    "Explore cause and effect",
+                    "Test a hypothesis",
+                    "Consider a counterpoint",
+                    "Ask an ethical question",
+                    "Propose a solution"
+                  ].includes(o.value)
+                ),
+              ]}
               value={category || ""}
-              onValueChange={(value) => {
+              onChange={async (value) => {
                 setCategory(value);
-                if (value !== "Custom...") {
-                  setCustomCategory("");
-                  if (!isUnsaved) {
-                    saveAllFields({ category: value });
-                  }
+                setCustomCategory("");
+                if (!isUnsaved) {
+                  saveAllFields({ category: value });
+                }
+                // If it's a new custom option, persist it
+                if (
+                  value &&
+                  ![
+                    "Clarify a concept",
+                    "Challenge an assumption",
+                    "Evaluate a source",
+                    "Compare or contrast",
+                    "Explore cause and effect",
+                    "Test a hypothesis",
+                    "Consider a counterpoint",
+                    "Ask an ethical question",
+                    "Propose a solution"
+                  ].includes(value) &&
+                  !questionFunctionOptions.options.some(o => o.value === value)
+                ) {
+                  await questionFunctionOptions.addOption(value);
                 }
               }}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select category..." />
-              </SelectTrigger>
-              <SelectContent>
-                {QUESTION_CATEGORIES.map(opt => (
-                  <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {category === "Custom..." && (
-              <input
-                className="w-full mt-2 p-2 border border-gray-300 rounded-md text-sm"
-                placeholder="Enter custom category..."
-                value={customCategory}
-                onChange={e => setCustomCategory(e.target.value)}
-                onBlur={() => {
-                  if (!isUnsaved) {
-                    saveAllFields({ category: customCategory });
-                  }
-                }}
-              />
-            )}
+              placeholder="Select or type category..."
+              allowCustom={true}
+            />
           </div>
           <div>
             <Label htmlFor="question-status" className="block text-sm font-medium text-gray-700 mb-1">Status</Label>

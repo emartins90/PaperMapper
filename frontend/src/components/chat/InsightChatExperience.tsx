@@ -13,7 +13,7 @@ const insightPrompts = [
       "Reframed the Issue",
       "Highlighted Impact"
     ],
-    hasCustomOption: false
+    hasCustomOption: true // Enable add your own option
   },
   {
     id: "insightText",
