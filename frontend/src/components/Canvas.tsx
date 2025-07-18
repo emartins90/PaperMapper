@@ -84,6 +84,16 @@ const nodeTypes = {
   ghost: GhostNode,
 };
 
+// Helper to determine file type from filename or entry
+function getFileTypeFromEntry(entry: any): 'image' | 'pdf' | 'audio' | 'other' {
+  if (!entry || !entry.filename) return 'other';
+  const ext = entry.filename.split('.').pop()?.toLowerCase();
+  if (["jpg", "jpeg", "png", "gif", "webp"].includes(ext)) return 'image';
+  if (ext === "pdf") return 'pdf';
+  if (["mp3", "wav", "m4a", "ogg"].includes(ext)) return 'audio';
+  return 'other';
+}
+
 export default function CanvasInner({ projectId }: CanvasProps) {
   const [nodes, setNodes] = useState<Node[]>([]);
   const [edges, setEdges] = useState<Edge[]>([]);
@@ -116,7 +126,7 @@ export default function CanvasInner({ projectId }: CanvasProps) {
   // Fullscreen file viewer state
   const [viewerOpen, setViewerOpen] = useState(false);
   const [viewerFile, setViewerFile] = useState<string | null>(null);
-  const [viewerType, setViewerType] = useState<'image' | 'pdf' | 'other'>('image');
+  const [viewerType, setViewerType] = useState<'image' | 'pdf' | 'other' | 'audio'>('image');
 
   // Load cards from backend when projectId changes
   useEffect(() => {
@@ -144,7 +154,7 @@ export default function CanvasInner({ projectId }: CanvasProps) {
               if (smRes.ok) {
                 const sourceMaterial = await smRes.json();
                 cardData = {
-                  tags: sourceMaterial.tags ? sourceMaterial.tags.split(',').map((tag: string) => tag.trim()) : [],
+                  tags: Array.isArray(sourceMaterial.tags) ? sourceMaterial.tags : (sourceMaterial.tags ? [sourceMaterial.tags] : []),
                   text: sourceMaterial.content || "",
                   thesisSupport: sourceMaterial.argument_type || "",
                   source: sourceMaterial.source || sourceMaterial.citation || "",
@@ -170,6 +180,7 @@ export default function CanvasInner({ projectId }: CanvasProps) {
               if (questionRes.ok) {
                 const question = await questionRes.json();
                 cardData = {
+                  tags: Array.isArray(question.tags) ? question.tags : (question.tags ? [question.tags] : []),
                   question: question.question_text || "",
                   category: question.category || "",
                   status: question.status || "unexplored",
@@ -198,6 +209,7 @@ export default function CanvasInner({ projectId }: CanvasProps) {
               if (insightRes.ok) {
                 const insight = await insightRes.json();
                 cardData = {
+                  tags: Array.isArray(insight.tags) ? insight.tags : (insight.tags ? [insight.tags] : []),
                   insight: insight.insight_text || "",
                   sourcesLinked: insight.sources_linked || "0 Sources Linked",
                   insightType: insight.insight_type || "",
@@ -224,6 +236,7 @@ export default function CanvasInner({ projectId }: CanvasProps) {
               if (thoughtRes.ok) {
                 const thought = await thoughtRes.json();
                 cardData = {
+                  tags: Array.isArray(thought.tags) ? thought.tags : (thought.tags ? [thought.tags] : []),
                   thought: thought.thought_text || "",
                   thoughtId: thought.id,
                   projectId: thought.project_id,
@@ -247,6 +260,7 @@ export default function CanvasInner({ projectId }: CanvasProps) {
               if (claimRes.ok) {
                 const claim = await claimRes.json();
                 cardData = {
+                  tags: Array.isArray(claim.tags) ? claim.tags : (claim.tags ? [claim.tags] : []),
                   claim: claim.claim_text || "",
                   claimType: claim.claim_type || undefined,
                   claimId: claim.id,
@@ -295,7 +309,7 @@ export default function CanvasInner({ projectId }: CanvasProps) {
             target: link.target_card_id.toString(),
             sourceHandle: link.source_handle,
             targetHandle: link.target_handle,
-            type: 'default',
+            type: 'default', // changed from 'default'
           }));
       
           setEdges(loadedEdges);
@@ -337,6 +351,13 @@ export default function CanvasInner({ projectId }: CanvasProps) {
   const handleFileClick = (fileUrl: string, fileType: 'image' | 'pdf' | 'other') => {
     setViewerFile(fileUrl);
     setViewerType(fileType);
+    setViewerOpen(true);
+  };
+
+  // Handler for file click from side panel
+  const handleSidePanelFileClick = (fileUrl: string, entry: any) => {
+    setViewerFile(fileUrl);
+    setViewerType(getFileTypeFromEntry(entry));
     setViewerOpen(true);
   };
 
@@ -806,7 +827,7 @@ export default function CanvasInner({ projectId }: CanvasProps) {
           target: params.target,
           sourceHandle: params.sourceHandle,
           targetHandle: params.targetHandle,
-          type: 'default',
+          type: 'smoothstep', // changed from 'default'
         };
         setEdges((eds) => addEdge(newEdge, eds));
         
@@ -898,7 +919,7 @@ export default function CanvasInner({ projectId }: CanvasProps) {
           const sourceMaterialPayload = {
             content: chatAnswers.sourceContent,
             summary: chatAnswers.summary,
-            tags: chatAnswers.topicalTags,
+            tags: Array.isArray(chatAnswers.topicalTags) ? chatAnswers.topicalTags : (chatAnswers.topicalTags ? [chatAnswers.topicalTags] : []),
             argument_type: chatAnswers.argumentType,
             function: chatAnswers.sourceFunction,
             notes: '',
@@ -939,7 +960,7 @@ export default function CanvasInner({ projectId }: CanvasProps) {
             citation_id: savedCitation.id,
             content: chatAnswers.sourceContent,
             summary: chatAnswers.summary,
-            tags: chatAnswers.topicalTags,
+            tags: Array.isArray(chatAnswers.topicalTags) ? chatAnswers.topicalTags : (chatAnswers.topicalTags ? [chatAnswers.topicalTags] : []),
             argument_type: chatAnswers.argumentType,
             function: chatAnswers.sourceFunction,
             files: "",
@@ -963,7 +984,7 @@ export default function CanvasInner({ projectId }: CanvasProps) {
           ...chatAnswers,
           sourceMaterialId: backendId,
           citationId: citationId,
-          tags: chatAnswers.topicalTags ? chatAnswers.topicalTags.split(',').map((tag: string) => tag.trim()).filter((tag: string) => tag.length > 0) : [],
+          tags: Array.isArray(chatAnswers.topicalTags) ? chatAnswers.topicalTags : (chatAnswers.topicalTags ? [chatAnswers.topicalTags] : []),
           text: chatAnswers.sourceContent || "",
           thesisSupport: chatAnswers.argumentType || "",
           source: chatAnswers.sourceCitation || "",
@@ -1255,6 +1276,7 @@ export default function CanvasInner({ projectId }: CanvasProps) {
           id: savedCard.id.toString(),
           data: updatedNodeData,
         };
+        console.log("[handleSaveCard] Updated nodes after save:", [...filtered, updatedNode]);
         return [...filtered, updatedNode];
       });
       setOpenCard({ id: savedCard.id.toString(), type: node.type || "source" });
@@ -1379,7 +1401,7 @@ export default function CanvasInner({ projectId }: CanvasProps) {
           citation_id: savedCitation.id,
           content: node.data.text || "",
           summary: node.data.summary || "",
-          tags: Array.isArray(node.data.tags) ? node.data.tags.join(', ') : "",
+          tags: Array.isArray(node.data.tags) ? node.data.tags : (node.data.tags ? [node.data.tags] : []),
           argument_type: node.data.thesisSupport || "",
           function: node.data.sourceFunction || "",
           files: Array.isArray(node.data.files) ? node.data.files.join(',') : "",
@@ -1764,18 +1786,16 @@ export default function CanvasInner({ projectId }: CanvasProps) {
   const isCardUnsaved = useCallback((cardId: string) => {
     const node = nodes.find(n => n.id === cardId);
     if (!node) return false;
-    
     // Check if ID is a UUID (unsaved cards have UUIDs)
     const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(cardId);
-    
     // Check if data IDs are missing (null or undefined)
     const hasMissingDataIds = 
-      (node.type === "source" && (!node.data.sourceMaterialId || !node.data.citationId)) ||
+      (node.type === "source" && !node.data.sourceMaterialId) ||
       (node.type === "question" && !node.data.questionId) ||
       (node.type === "insight" && !node.data.insightId) ||
       (node.type === "thought" && !node.data.thoughtId) ||
       (node.type === "claim" && !node.data.claimId);
-    
+    console.log("[isCardUnsaved] cardId:", cardId, "type:", node.type, "isUUID:", isUUID, "sourceMaterialId:", node.data.sourceMaterialId, "citationId:", node.data.citationId, "questionId:", node.data.questionId, "insightId:", node.data.insightId, "thoughtId:", node.data.thoughtId, "claimId:", node.data.claimId, "hasMissingDataIds:", hasMissingDataIds);
     return isUUID || hasMissingDataIds;
   }, [nodes]);
 
@@ -1828,10 +1848,11 @@ export default function CanvasInner({ projectId }: CanvasProps) {
       };
       
       const result = [...filteredNodes, updatedNode];
+        console.log("[handleUpdateNodeData] Nodes after updateNodeData (ID updated):", result);
         return result;
       } else {
         // Just update the data without changing the ID
-        return nds.map((n) => {
+        const updated = nds.map((n) => {
           if (n.id === cardId) {
             return {
               ...n,
@@ -1851,6 +1872,8 @@ export default function CanvasInner({ projectId }: CanvasProps) {
           }
           return n;
         });
+        console.log("[handleUpdateNodeData] Nodes after updateNodeData (data updated):", updated);
+        return updated;
       }
     });
     
@@ -1897,6 +1920,14 @@ export default function CanvasInner({ projectId }: CanvasProps) {
     window.dispatchEvent(event);
   }, [nodes]);
 
+  // Helper to get filename from a file URL
+  function getFileNameFromUrl(url: string | null | undefined): string {
+    if (!url) return '';
+    const parts = url.split('/');
+    return parts[parts.length - 1];
+  }
+  const viewerFileName = getFileNameFromUrl(viewerFile);
+  const viewerNode = viewerFileName ? nodes.find(n => Array.isArray(n.data.files) && n.data.files.some((f: string) => getFileNameFromUrl(f) === viewerFileName)) : undefined;
   return (
     <div 
       style={{ 
@@ -1916,7 +1947,9 @@ export default function CanvasInner({ projectId }: CanvasProps) {
         fileUrl={viewerFile} 
         fileType={viewerType} 
         onClose={() => setViewerOpen(false)}
-        cardType={viewerFile && nodes.find(n => n.data.files?.includes(viewerFile))?.type || "questions"}
+        cardType={viewerNode?.type || "questions"}
+        cardNode={viewerNode}
+        onUpdateCard={handleUpdateNodeData}
       />
       
 
@@ -1971,6 +2004,7 @@ export default function CanvasInner({ projectId }: CanvasProps) {
         onAddCard={handleAddCard}
         onDeleteCard={handleDeleteCard}
         projectId={projectId}
+        onFileClick={handleSidePanelFileClick}
       />
       <BottomNav 
         onAddClaim={startPlacingClaim}

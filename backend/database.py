@@ -17,4 +17,9 @@ else:
     engine = create_engine(DATABASE_URL, echo=True)
     SessionLocal = sessionmaker(bind=engine)
 
+# Always define a sync engine/session for auth and migrations
+from sqlalchemy import create_engine as sync_create_engine
+sync_engine = sync_create_engine(DATABASE_URL.replace("+asyncpg", ""))
+SyncSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=sync_engine)
+
 Base = declarative_base()

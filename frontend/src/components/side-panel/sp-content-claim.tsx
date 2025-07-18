@@ -6,6 +6,8 @@ import UnsavedCardFileUpload from "../shared/UnsavedCardFileUpload";
 import { uploadFilesForCardType } from "../useFileUploadHandler";
 import { useCardSave } from "../shared/useCardSave";
 import LinkedCardsTab from "../LinkedCardsTab";
+import { Label } from "@/components/ui/label";
+import { MultiCombobox } from "@/components/ui/multi-combobox";
 
 const CLAIM_TYPES = [
   "Hypothesis",
@@ -27,6 +29,7 @@ interface ClaimCardContentProps {
   onClose?: () => void;
   onFormDataChange?: (data: any) => void;
   showSaveButton?: boolean;
+  onFileClick?: (fileUrl: string, entry: any) => void; // Add this
 }
 
 export default function ClaimCardContent({ 
@@ -41,7 +44,8 @@ export default function ClaimCardContent({
   onEdgesChange,
   onClose,
   onFormDataChange,
-  showSaveButton
+  showSaveButton,
+  onFileClick // Add this
 }: ClaimCardContentProps) {
   const [claim, setClaim] = React.useState(cardData?.claim || "");
   const [claimType, setClaimType] = React.useState(cardData?.claimType || undefined);
@@ -50,8 +54,11 @@ export default function ClaimCardContent({
   const [isUploading, setIsUploading] = React.useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
-  // For unsaved cards, store files as File[] objects
+  // For unsaved cards, store files as File objects
   const [pendingFiles, setPendingFiles] = React.useState<File[]>(cardData?.pendingFiles || []);
+
+  // Add tags state
+  const [tags, setTags] = React.useState<string[]>(Array.isArray(cardData?.tags) ? cardData.tags : []);
 
   // Check if card is unsaved
   const isUnsaved = !cardData?.claimId;
@@ -66,12 +73,25 @@ export default function ClaimCardContent({
     onDeleteCard,
   });
 
+  // Get all existing tags from all cards
+  const getAllExistingTags = () => {
+    const allTags = new Set<string>();
+    nodes.forEach(node => {
+      if (node.data?.tags) {
+        const nodeTags = Array.isArray(node.data.tags) ? node.data.tags : [];
+        nodeTags.forEach((tag: string) => allTags.add(tag));
+      }
+    });
+    return Array.from(allTags).sort();
+  };
+
   React.useEffect(() => {
     setClaim(cardData?.claim || "");
     setClaimType(cardData?.claimType !== undefined ? cardData.claimType : undefined);
     setFiles(cardData?.files || []);
     setFileEntries(cardData?.fileEntries || []);
     setPendingFiles(cardData?.pendingFiles || []);
+    setTags(Array.isArray(cardData?.tags) ? cardData.tags : []);
   }, [openCard?.id]);
 
   // Update form data for parent component when fields change
@@ -154,18 +174,21 @@ export default function ClaimCardContent({
   };
 
   // Save all fields to backend for saved cards
-  const saveAllFields = async (fields?: Partial<{ claim: string; claimType: string }>) => {
+  const saveAllFields = async (fields?: Partial<{ claim: string; claimType: string; tags: string[] }>) => {
     if (!cardData?.claimId) return; // Only for saved cards
 
     const token = localStorage.getItem("token");
     const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
     const claimId = cardData.claimId;
 
-    const payload = {
+    let payload = {
       project_id: cardData.projectId,
       claim_text: fields?.claim ?? claim,
       claim_type: fields?.claimType ?? claimType,
+      files: files.join(','),
+      ...fields
     };
+    payload.tags = Array.isArray(payload.tags) ? payload.tags : tags;
 
     const response = await fetch(`${API_URL}/claims/${claimId}`, {
       method: "PUT",
@@ -187,6 +210,7 @@ export default function ClaimCardContent({
       onUpdateNodeData(openCard.id, {
         claim: payload.claim_text,
         claimType: payload.claim_type,
+        tags: payload.tags, // Update tags in node data
       });
     }
   };
@@ -234,6 +258,22 @@ export default function ClaimCardContent({
               }}
             />
           </div>
+          
+          <div>
+            <Label htmlFor="claim-tags" className="block text-sm font-medium text-gray-700">Tags</Label>
+            <MultiCombobox
+              options={getAllExistingTags().map(tag => ({ value: tag, label: tag }))}
+              value={tags}
+              onChange={(newTags) => {
+                setTags(newTags);
+                if (!isUnsaved) {
+                  saveAllFields({ tags: newTags });
+                }
+              }}
+              placeholder="Type a tag and press Enter..."
+              allowCustom={true}
+            />
+          </div>
           {/* Use different file upload components based on save status */}
           {isUnsaved ? (
             <UnsavedCardFileUpload
@@ -252,6 +292,7 @@ export default function ClaimCardContent({
               fileInputRef={fileInputRef}
               fileEntries={fileEntries}
               cardType="claim"
+              onFileClick={onFileClick}
             />
           )}
           {/* Save button for unsaved cards - only show if showSaveButton is true */}

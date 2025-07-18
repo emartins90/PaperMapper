@@ -26,6 +26,7 @@ interface SourceCardContentProps {
   onDeleteCard?: (cardId: string) => void;
   onFormDataChange?: (data: any) => void;
   showSaveButton?: boolean;
+  onFileClick?: (fileUrl: string, entry: any) => void; // Add this
 }
 
 export default function SourceCardContent({ 
@@ -41,7 +42,8 @@ export default function SourceCardContent({
   onAddCard, 
   onDeleteCard, 
   onFormDataChange,
-  showSaveButton
+  showSaveButton,
+  onFileClick // Add this
 }: SourceCardContentProps) {
   const [notes, setNotes] = useState(cardData?.additionalNotes || "");
   const [isSaving, setIsSaving] = useState(false);
@@ -84,8 +86,7 @@ export default function SourceCardContent({
     const allTags = new Set<string>();
     nodes.forEach(node => {
       if (node.data?.tags) {
-        const nodeTags = Array.isArray(node.data.tags) ? node.data.tags : 
-                        typeof node.data.tags === 'string' ? node.data.tags.split(',').map((tag: string) => tag.trim()).filter((tag: string) => tag.length > 0) : [];
+        const nodeTags = Array.isArray(node.data.tags) ? node.data.tags : [];
         nodeTags.forEach((tag: string) => allTags.add(tag));
       }
     });
@@ -113,7 +114,7 @@ export default function SourceCardContent({
       onFormDataChange({
         sourceContent: sourceContent,
         summary: summary,
-        topicalTags: tags.join(", "),
+        topicalTags: tags,
         argumentType: argumentType,
         sourceFunction: sourceFunction,
         sourceCredibility: credibility,
@@ -167,7 +168,7 @@ export default function SourceCardContent({
           citation_id: cardData.citationId,
           content: sourceContent,
           summary: summary,
-          tags: tags.join(', '),
+          tags: tags,
           argument_type: argumentType,
           function: sourceFunction,
           files: files.join(','),
@@ -226,7 +227,7 @@ export default function SourceCardContent({
           citation_id: cardData.citationId,
           content: sourceContent,
           summary: summary,
-          tags: tagsToSave.join(', '),
+          tags: tagsToSave,
           argument_type: argumentType,
           function: sourceFunction,
           files: files.join(','),
@@ -285,7 +286,7 @@ export default function SourceCardContent({
           citation_id: cardData.citationId,
           content: sourceContent,
           summary: summary,
-          tags: tags.join(', '),
+          tags: tags,
           argument_type: argumentTypeToSave,
           function: sourceFunction,
           files: files.join(','),
@@ -344,7 +345,7 @@ export default function SourceCardContent({
           citation_id: cardData.citationId,
           content: sourceContent,
           summary: summary,
-          tags: tags.join(', '),
+          tags: tags,
           argument_type: argumentType,
           function: sourceFunctionToSave,
           files: files.join(','),
@@ -403,7 +404,7 @@ export default function SourceCardContent({
           citation_id: cardData.citationId,
           content: sourceContent,
           summary: summary,
-          tags: tags.join(', '),
+          tags: tags,
           argument_type: argumentType,
           function: sourceFunction,
           files: files.join(','),
@@ -444,7 +445,7 @@ export default function SourceCardContent({
           citation_id: cardData.citationId,
           content: sourceContent,
           summary: summary,
-          tags: tags.join(', '),
+          tags: tags,
           argument_type: argumentType,
           function: sourceFunction,
           files: files.join(','),
@@ -527,7 +528,7 @@ export default function SourceCardContent({
         project_id: cardData.projectId,
         content: cardData.text ?? "",
         summary: cardData.summary ?? "",
-        tags: Array.isArray(cardData.tags) ? cardData.tags.join(', ') : (cardData.tags ?? ""),
+        tags: Array.isArray(cardData.tags) ? cardData.tags : (cardData.tags ?? []),
         argument_type: cardData.thesisSupport ?? "",
         function: cardData.sourceFunction ?? "",
         files: newFiles.length ? newFiles.join(',') : "",
@@ -582,37 +583,6 @@ export default function SourceCardContent({
     setSourceContent(e.target.value);
   };
 
-  const handleArgumentTypeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const newValue = e.target.value;
-    setArgumentType(newValue);
-    // Save immediately when selection is made (only for saved cards)
-    if (!isUnsaved) {
-      saveAllFieldsWithArgumentType(newValue);
-    }
-  };
-
-  const handleSourceFunctionChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const newValue = e.target.value;
-    setSourceFunction(newValue);
-    // Save immediately when selection is made (only for saved cards)
-    if (!isUnsaved) {
-      saveAllFieldsWithSourceFunction(newValue);
-    }
-  };
-
-  const handleCredibilityChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const newValue = e.target.value;
-    setCredibility(newValue);
-    // Save immediately when selection is made (only for saved cards)
-    if (!isUnsaved) {
-      saveAllFieldsWithCredibility(newValue);
-    }
-  };
-
-  const handleTagsChange = (newTags: string[]) => {
-    setTags(newTags);
-  };
-
   // Handle field blur (save when user leaves the field, only for saved cards)
   const handleSourceCitationBlur = () => {
     if (!isUnsaved) {
@@ -627,30 +597,6 @@ export default function SourceCardContent({
   };
 
   const handleSourceContentBlur = () => {
-    if (!isUnsaved) {
-      saveAllFields();
-    }
-  };
-
-  const handleArgumentTypeBlur = () => {
-    if (!isUnsaved) {
-      saveAllFields();
-    }
-  };
-
-  const handleSourceFunctionBlur = () => {
-    if (!isUnsaved) {
-      saveAllFields();
-    }
-  };
-
-  const handleCredibilityBlur = () => {
-    if (!isUnsaved) {
-      saveAllFields();
-    }
-  };
-
-  const handleTagsBlur = () => {
     if (!isUnsaved) {
       saveAllFields();
     }
@@ -723,11 +669,12 @@ export default function SourceCardContent({
               fileInputRef={fileInputRef}
               fileEntries={fileEntries}
               cardType="source"
+              onFileClick={onFileClick}
             />
           )}
           
           <div>
-            <Label htmlFor="source-notes" className="block text-xs font-medium text-gray-600 mb-1">My Notes</Label>
+            <Label htmlFor="source-notes" className="block text-sm font-medium text-gray-600 mb-1">Additional Notes</Label>
             <Textarea
               id="source-notes"
               className="min-h-[80px] resize-y"

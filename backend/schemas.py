@@ -39,7 +39,7 @@ class SourceMaterialBase(BaseModel):
     project_id: int
     content: Optional[str] = None
     summary: Optional[str] = None
-    tags: Optional[str] = None  # Comma-separated string
+    tags: Optional[List[str]] = None
     argument_type: Optional[str] = None
     function: Optional[str] = None
     files: Optional[str] = None  # Comma-separated string
@@ -115,6 +115,7 @@ class QuestionBase(BaseModel):
     category: Optional[str] = None  # e.g., Clarify a concept, Challenge an assumption, etc. (custom allowed)
     status: Optional[str] = None    # e.g., unexplored, needs sources, in progress, answered, not relevant
     priority: Optional[str] = None  # e.g., high, medium, low
+    tags: Optional[List[str]] = None  # Comma-separated string
     files: Optional[str] = None  # Comma-separated string
 
 class QuestionCreate(QuestionBase):
@@ -132,6 +133,7 @@ class QuestionUpdate(BaseModel):
     status: Optional[str] = None
     priority: Optional[str] = None
     files: Optional[str] = None
+    tags: Optional[List[str]] = None
 
 class InsightBase(BaseModel):
     project_id: int
@@ -139,6 +141,7 @@ class InsightBase(BaseModel):
     sources_linked: Optional[str] = None  # e.g., "3 Sources Linked"
     files: Optional[str] = None  # Comma-separated string
     insight_type: Optional[str] = None
+    tags: Optional[List[str]] = None  # Comma-separated string
 
 class InsightCreate(InsightBase):
     pass
@@ -149,6 +152,7 @@ class InsightUpdate(BaseModel):
     sources_linked: Optional[str] = None
     files: Optional[str] = None
     insight_type: Optional[str] = None
+    tags: Optional[List[str]] = None
 
 class Insight(InsightBase):
     id: int
@@ -158,6 +162,7 @@ class Insight(InsightBase):
 class ThoughtBase(BaseModel):
     project_id: int
     thought_text: str
+    tags: Optional[List[str]] = None  # Comma-separated string
     files: Optional[str] = None  # Comma-separated string
 
 class ThoughtCreate(ThoughtBase):
@@ -167,6 +172,7 @@ class ThoughtUpdate(BaseModel):
     project_id: Optional[int] = None
     thought_text: Optional[str] = None
     files: Optional[str] = None
+    tags: Optional[List[str]] = None
 
 class Thought(ThoughtBase):
     id: int
@@ -177,6 +183,7 @@ class ClaimBase(BaseModel):
     project_id: int
     claim_text: str
     claim_type: Optional[str] = None  # Hypothesis, Thesis, Conclusion, Proposal
+    tags: Optional[List[str]] = None  # Comma-separated string
     files: Optional[str] = None  # Comma-separated string
 
 class ClaimCreate(ClaimBase):
@@ -192,3 +199,4 @@ class ClaimUpdate(BaseModel):
     claim_text: Optional[str] = None
     claim_type: Optional[str] = None
     files: Optional[str] = None
+    tags: Optional[List[str]] = None

@@ -2,15 +2,17 @@ import React from "react";
 import Tag from "@/components/Tag";
 import { Handle, Position } from "reactflow";
 import { FileListDisplay } from "../canvas-add-files/FileListDisplay";
+import { MdLightbulbOutline } from "react-icons/md";
 
 type InsightCardProps = {
   data: {
     insight: string;
-    sourcesLinked: string;
+    insightType?: string;
+    sourcesLinked?: string;
+    tags?: string[] | string;
     onOpen?: () => void;
     files?: string[];
     onFileClick?: (fileUrl: string, fileType: 'image' | 'pdf' | 'other' | 'audio') => void;
-    insightType?: string;
   };
   showHandles?: boolean;
   width?: string;
@@ -25,6 +27,10 @@ const handleStyle = {
 };
 
 export default function InsightCard({ data, showHandles = true, width = 'w-96' }: InsightCardProps) {
+  // Ensure tags is always an array
+  const tags = Array.isArray(data.tags) ? data.tags : (data.tags ? [data.tags] : []);
+
+  const onFileClick = data.onFileClick;
   return (
     <div className={`rounded-xl border-2 border-insight-300 bg-white p-4 shadow-md ${width} relative`}>
       {/* Source handles on all four sides */}
@@ -37,13 +43,22 @@ export default function InsightCard({ data, showHandles = true, width = 'w-96' }
         </>
       )}
       <div className="flex items-center justify-between mb-2">
-        <div className="text-insight-700 truncate-block">
+        <div className="text-insight-700 truncate-block flex items-center gap-1">
+          <MdLightbulbOutline className="text-insight-400" size={22} />
           <span className="font-bold">Insight</span>{data.insightType ? <span className="font-normal"> : {data.insightType}</span> : ''}
         </div>
         <button onClick={data.onOpen} aria-label="Open card">
           <span className="text-insight-400 text-xl">↗</span>
         </button>
       </div>
+      {/* Only show tags section if there are tags and not '(skipped)' */}
+      {tags.length > 0 && tags[0] !== '(skipped)' && (
+        <div className="flex flex-wrap gap-2 mb-2">
+          {tags.map((tag: string) => (
+            tag && tag !== '(skipped)' && <Tag key={tag} color="primary">{tag}</Tag>
+          ))}
+        </div>
+      )}
       <div className="text-black mb-4">{data.insight}</div>
       
       {/* Render uploaded files (images as thumbnails, others as file names) */}

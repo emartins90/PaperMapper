@@ -22,12 +22,19 @@ const questionPrompts = [
     options: ["High", "Medium", "Low"],
     hasCustomOption: false
   },
+  { 
+    id: "topicalTags", 
+    prompt: "Great! Now let's add some tags to help you find and organize this question later. Think of 2-4 words or short phrases that capture the main themes. Don't overthink it - just go with what feels right!",
+    options: [],
+    hasCustomOption: false
+  },
 ];
 
 const promptTitles: { [key: string]: string } = {
   questionText: "Question Text",
   questionFunction: "Question Function",
   questionPriority: "Question Priority",
+  topicalTags: "Topical Tags",
 };
 
 const QuestionChatExperience = (props: any) => (

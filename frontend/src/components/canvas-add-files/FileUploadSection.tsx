@@ -14,6 +14,7 @@ type FileUploadSectionProps = {
   accept?: string;
   fileEntries?: FileEntry[];
   cardType?: string; // Add cardType prop
+  onFileClick?: (fileUrl: string, entry: FileEntry) => void; // Optional click handler
 };
 
 export default function FileUploadSection({
@@ -24,7 +25,8 @@ export default function FileUploadSection({
   fileInputRef,
   accept = "image/*,.pdf,.doc,.docx,audio/mp3,audio/wav,audio/m4a,audio/ogg",
   fileEntries = [],
-  cardType = "questions" // Default to questions for backward compatibility
+  cardType = "questions", // Default to questions for backward compatibility
+  onFileClick
 }: FileUploadSectionProps) {
   // Prefer fileEntries if present (for new cards), else fall back to files array
   const displayFiles: FileEntry[] = fileEntries.length > 0
@@ -100,8 +102,10 @@ export default function FileUploadSection({
                 <img
                   src={getImageSrc(entry)}
                   alt={entry.filename}
-                  className="w-full h-auto rounded border"
+                  className={`w-full h-auto rounded border ${onFileClick ? 'cursor-pointer' : ''}`}
                   style={{ objectFit: 'contain' }}
+                  onClick={onFileClick ? () => onFileClick(entry.url, entry) : undefined}
+                  aria-label={onFileClick ? `Open ${entry.filename}` : undefined}
                 />
                 <button
                   onClick={() => onFileDelete(entry.url)}
@@ -119,11 +123,15 @@ export default function FileUploadSection({
             return (
               <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg mb-2">
                 <div className="flex items-center space-x-3">
-                  <div className={`w-10 h-10 rounded flex items-center justify-center ${color}`}>
-                    {icon}
-                  </div>
+                  <div className={`w-10 h-10 rounded flex items-center justify-center ${color}`}>{icon}</div>
                   <div>
-                    <p className="text-sm font-medium text-gray-900">{entry.filename}</p>
+                    <p
+                      className={`text-sm font-medium text-gray-900 ${onFileClick ? 'cursor-pointer underline' : ''}`}
+                      onClick={onFileClick ? () => onFileClick(entry.url, entry) : undefined}
+                      aria-label={onFileClick ? `Open ${entry.filename}` : undefined}
+                    >
+                      {entry.filename}
+                    </p>
                   </div>
                 </div>
                 <button

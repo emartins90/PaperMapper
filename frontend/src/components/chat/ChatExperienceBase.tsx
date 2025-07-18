@@ -43,7 +43,7 @@ const ChatExperienceBase: React.FC<ChatExperienceBaseProps> = ({
   onClose,
 }) => {
   const [chatStep, setChatStep] = useState(0);
-  const [chatAnswers, setChatAnswers] = useState<{ [key: string]: string }>({});
+  const [chatAnswers, setChatAnswers] = useState<{ [key: string]: string | string[] }>({});
   const [chatInput, setChatInput] = useState("");
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
   const [selectedOptions, setSelectedOptions] = useState<{ [key: string]: string }>({});
@@ -142,9 +142,8 @@ const ChatExperienceBase: React.FC<ChatExperienceBaseProps> = ({
     });
   }, [prompts, fetchCustomOptions]);
 
-  // Fetch existing tags from backend (for source chat)
+  // Fetch existing tags from backend (for all card types)
   const fetchExistingTags = async () => {
-    if (chatType !== 'source') return;
     try {
       const token = getToken();
       if (!token) {
@@ -164,12 +163,17 @@ const ChatExperienceBase: React.FC<ChatExperienceBaseProps> = ({
       setExistingTags([]);
     }
   };
-  useEffect(() => { if (chatType === 'source' && projectId) fetchExistingTags(); }, [chatType, projectId]);
+  useEffect(() => { if (projectId) fetchExistingTags(); }, [projectId]);
 
   // Option selection
   const handleOptionSelect = (optionType: string, option: string) => {
-    setSelectedOptions(prev => ({ ...prev, [optionType]: option }));
-    setChatInputs(prev => ({ ...prev, [optionType]: option }));
+    let valueToSave = option;
+    // Only save the label part for claimType and similar prompts
+    if ((optionType === "claimType" || optionType.endsWith("Type")) && typeof option === "string" && option.includes("–")) {
+      valueToSave = option.split("–")[0].trim();
+    }
+    setSelectedOptions(prev => ({ ...prev, [optionType]: valueToSave }));
+    setChatInputs(prev => ({ ...prev, [optionType]: valueToSave }));
     setShowCustomInput(prev => ({ ...prev, [optionType]: false }));
   };
 
@@ -184,7 +188,10 @@ const ChatExperienceBase: React.FC<ChatExperienceBaseProps> = ({
         if (i === 0) {
           newHistory.push({ role: "system" as const, text: prompts[i].prompt });
         } else {
-          const answer = chatAnswers[prompts[i-1].id] || "";
+          let answer = chatAnswers[prompts[i-1].id] || "";
+          if (Array.isArray(answer)) {
+            answer = answer.join(", ");
+          }
           newHistory.push({ role: "user" as const, text: answer === "" ? "Skipped" : answer });
           newHistory.push({ role: "system" as const, text: prompts[i].prompt });
         }
@@ -288,12 +295,12 @@ const ChatExperienceBase: React.FC<ChatExperienceBaseProps> = ({
     setFilteredTagSuggestions(filtered);
   };
 
-  // Handle final submission for source material using shared save hook
-  const handleSourceFinalSubmit = async () => {
+  // Handle final submission for all card types using shared save hook
+  const handleFinalSubmit = async () => {
     // Include tags in the final submission
     const finalAnswers = { ...chatAnswers };
     if (currentTags.length > 0) {
-      finalAnswers.topicalTags = currentTags.join(", ");
+      finalAnswers.topicalTags = currentTags;
     }
     // Aggregate all files from filesByPrompt
     const allFiles: File[] = Object.values(filesByPrompt).flat();
@@ -305,8 +312,8 @@ const ChatExperienceBase: React.FC<ChatExperienceBaseProps> = ({
         uploadedFiles: allFiles,
       });
     } catch (error) {
-      console.error("Failed to save source:", error);
-      toast.error("Failed to save source: " + (error as Error).message);
+      console.error("Failed to save card:", error);
+      toast.error("Failed to save card: " + (error as Error).message);
     }
   };
 
@@ -335,6 +342,10 @@ const ChatExperienceBase: React.FC<ChatExperienceBaseProps> = ({
       updatedChatAnswers[currentPrompt.id] = chatInputs[currentPrompt.id] || "";
     }
     
+    // Set topicalTags as array
+    if (currentTags.length > 0) {
+      updatedChatAnswers.topicalTags = currentTags;
+    }
     // Use uploadedFilesRef.current for insight and thought cards (files uploaded in chat)
     // Use filesByPrompt for other card types (files uploaded per prompt)
     let filesToUpload: File[] = [];
@@ -470,23 +481,24 @@ const ChatExperienceBase: React.FC<ChatExperienceBaseProps> = ({
                                   if (typeof option === 'string') {
                                     const [main, ...descParts] = option.split(' – ');
                                     const description = descParts.join(' – ');
+                                    const isSelected = selectedOptions[currentPrompt.id] === main.trim();
                                     return (
                                       <Button
                                         key={option}
                                         type="button"
-                                        variant={selectedOptions[currentPrompt.id] === option ? "default" : "outline"}
-                                        aria-pressed={selectedOptions[currentPrompt.id] === option}
+                                        variant={isSelected ? "default" : "outline"}
+                                        aria-pressed={isSelected}
                                         onClick={() => handleOptionSelect(currentPrompt.id, option)}
-                                        className={`w-full text-left px-4 py-5 mb-2 border rounded-lg transition-colors ${selectedOptions[currentPrompt.id] === option ? 'bg-primary text-white font-bold border-primary ring-2 ring-primary/50' : ''}`}
+                                        className={`w-full text-left px-4 py-5 mb-2 border rounded-lg transition-colors ${isSelected ? 'bg-primary text-white font-bold border-primary ring-2 ring-primary/50' : ''}`}
                                       >
                                         <div>
                                           {description ? (
                                             <>
-                                              <strong className={`text-sm ${selectedOptions[currentPrompt.id] === option ? 'text-white' : 'text-foreground'}`}>{main}</strong>
-                                              <span className={`text-sm ${selectedOptions[currentPrompt.id] === option ? 'text-white' : 'text-foreground'}`}> – {description}</span>
+                                              <strong className={`text-sm ${isSelected ? 'text-white' : 'text-foreground'}`}>{main}</strong>
+                                              <span className={`text-sm ${isSelected ? 'text-white' : 'text-foreground'}`}> – {description}</span>
                                             </>
                                           ) : (
-                                            <span className={`text-sm ${selectedOptions[currentPrompt.id] === option ? 'text-white' : 'text-foreground'}`}>{main}</span>
+                                            <span className={`text-sm ${isSelected ? 'text-white' : 'text-foreground'}`}>{main}</span>
                                           )}
                                         </div>
                                       </Button>
@@ -523,23 +535,24 @@ const ChatExperienceBase: React.FC<ChatExperienceBaseProps> = ({
                         if (typeof o === 'string') {
                           const [main, ...descParts] = o.split(' – ');
                           const description = descParts.join(' – ');
+                          const isSelected = selectedValue === main.trim();
                           return (
                             <Button
                               key={o}
                               type="button"
-                              variant={selectedValue === o ? "default" : "outline"}
-                              aria-pressed={selectedValue === o}
+                              variant={isSelected ? "default" : "outline"}
+                              aria-pressed={isSelected}
                               onClick={() => handleOptionSelect(currentPrompt.id, o)}
-                              className={`w-full text-left px-4 py-5 mb-2 border rounded-lg transition-colors ${selectedValue === o ? 'bg-primary text-white font-bold border-primary ring-2 ring-primary/50' : ''}`}
+                              className={`w-full text-left px-4 py-5 mb-2 border rounded-lg transition-colors ${isSelected ? 'bg-primary text-white font-bold border-primary ring-2 ring-primary/50' : ''}`}
                             >
                               <div>
                                 {description ? (
                                   <>
-                                    <strong className={`text-sm ${selectedValue === o ? 'text-white' : 'text-foreground'}`}>{main}</strong>
-                                    <span className={`text-sm ${selectedValue === o ? 'text-white' : 'text-foreground'}`}> – {description}</span>
+                                    <strong className={`text-sm ${isSelected ? 'text-white' : 'text-foreground'}`}>{main}</strong>
+                                    <span className={`text-sm ${isSelected ? 'text-white' : 'text-foreground'}`}> – {description}</span>
                                   </>
                                 ) : (
-                                  <span className={`text-sm ${selectedValue === o ? 'text-white' : 'text-foreground'}`}>{main}</span>
+                                  <span className={`text-sm ${isSelected ? 'text-white' : 'text-foreground'}`}>{main}</span>
                                 )}
                               </div>
                             </Button>
@@ -742,31 +755,32 @@ const ChatExperienceBase: React.FC<ChatExperienceBaseProps> = ({
                     )}
                   </div>
                 );
-              } else if (chatType === 'source' && currentPrompt.id === 'topicalTags') {
-                // Tags input for source chat
+              } else if (currentPrompt.id === 'topicalTags') {
+                // Tags input for all card types
                 return (
                   <div className="space-y-2">
                     <div className="flex flex-wrap gap-2 mb-2">
                       {currentTags.map((tag, index) => (
                         <span
                           key={index}
-                          className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-sm flex items-center gap-1"
+                          className="bg-primary-200 text-foreground px-2 py-1 rounded-full text-sm flex items-center gap-1"
                         >
                           {tag}
                           <button
                             type="button"
                             onClick={() => handleDeleteTag(tag)}
-                            className="text-blue-600 hover:text-blue-800 text-xs font-bold"
+                            className="text-primary-600 hover:text-primary-800 text-xs font-bold"
                           >
                             ×
                           </button>
                         </span>
                       ))}
                     </div>
+                    
                     <div className="relative">
                       <input
                         type="text"
-                        value={tagInput}
+                        value={typeof tagInput === 'string' ? tagInput : ''}
                         onChange={handleTagInputChange}
                         onKeyDown={handleTagInputKeyDown}
                         placeholder="Type a tag and press Enter..."
@@ -856,7 +870,7 @@ const ChatExperienceBase: React.FC<ChatExperienceBaseProps> = ({
                   <span className="text-sm font-medium text-gray-700">Tags:</span>
                   <div className="flex flex-wrap gap-1 mt-1">
                     {currentTags.map((tag, index) => (
-                      <span key={index} className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs">
+                      <span key={index} className="bg-primary-200 text-foreground px-2 py-1 rounded-full text-xs">
                         {tag}
                       </span>
                     ))}
@@ -918,7 +932,7 @@ const ChatExperienceBase: React.FC<ChatExperienceBaseProps> = ({
           <Button type="button" variant="secondary" onClick={() => setChatStep(chatStep - 1)} className="flex-1">
             Back
           </Button>
-          <Button type="button" onClick={handleSourceFinalSubmit} disabled={isSaving} className="flex-1">
+          <Button type="button" onClick={handleFinalSubmit} disabled={isSaving} className="flex-1">
             {isSaving ? "Saving..." : "Done"}
           </Button>
         </div>

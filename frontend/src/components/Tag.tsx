@@ -14,7 +14,7 @@ const colorClasses: Record<string, string> = {
   purple: "bg-purple-100 text-purple-700",
   orange: "bg-orange-100 text-orange-700",
   teal: "bg-teal-100 text-teal-700",
-  primary: "bg-primary-600 text-white",
+  primary: "bg-primary-200 text-foreground",
 };
 
 export default function Tag({ children, color = "gray", className = "" }: TagProps) {

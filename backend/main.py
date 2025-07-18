@@ -2,7 +2,7 @@ from fastapi import FastAPI, Depends, HTTPException, status, UploadFile, File, F
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional
-from backend.database import SessionLocal, engine, Base, DATABASE_URL
+from backend.database import SessionLocal, engine, Base, DATABASE_URL, SyncSessionLocal
 from backend import models, schemas
 from backend.models import User, Project, PasswordResetCode
 from backend.schemas import UserRead, UserCreate, UserUpdate, Project as ProjectSchema, ProjectCreate, CardUpdate
@@ -47,8 +47,8 @@ class ResetPasswordRequest(BaseModel):
 SECRET = settings.JWT_SECRET
 
 # Create sync engine for sync operations
-sync_engine = create_engine(DATABASE_URL.replace("+asyncpg", ""))
-SyncSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=sync_engine)
+# sync_engine = create_engine(DATABASE_URL.replace("+asyncpg", ""))
+# SyncSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=sync_engine)
 
 class UserManager(BaseUserManager[User, int]):
     reset_password_token_secret = SECRET
@@ -284,6 +284,8 @@ async def read_question(question_id: int, db: AsyncSession = Depends(get_db())):
 
 @app.put("/questions/{question_id}", response_model=schemas.Question)
 async def update_question(question_id: int, question: schemas.QuestionUpdate, db: AsyncSession = Depends(get_db())):
+    print(f"[backend] /questions/{{question_id}} PUT body: {question.dict()}")
+    print(f"[backend] /questions/{{question_id}} tags: {question.tags} type: {type(question.tags)}")
     query = select(models.Question).where(models.Question.id == question_id)
     result = await db.execute(query)
     db_question = result.scalar_one_or_none()
@@ -403,6 +405,8 @@ async def read_insight(insight_id: int, db: AsyncSession = Depends(get_db())):
 
 @app.put("/insights/{insight_id}", response_model=schemas.Insight)
 async def update_insight(insight_id: int, insight: schemas.InsightUpdate, db: AsyncSession = Depends(get_db())):
+    print(f"[backend] /insights/{{insight_id}} PUT body: {insight.dict()}")
+    print(f"[backend] /insights/{{insight_id}} tags: {insight.tags} type: {type(insight.tags)}")
     query = select(models.Insight).where(models.Insight.id == insight_id)
     result = await db.execute(query)
     db_insight = result.scalar_one_or_none()
@@ -471,6 +475,8 @@ async def read_thought(thought_id: int, db: AsyncSession = Depends(get_db())):
 
 @app.put("/thoughts/{thought_id}", response_model=schemas.Thought)
 async def update_thought(thought_id: int, thought: schemas.ThoughtUpdate, db: AsyncSession = Depends(get_db())):
+    print(f"[backend] /thoughts/{{thought_id}} PUT body: {thought.dict()}")
+    print(f"[backend] /thoughts/{{thought_id}} tags: {thought.tags} type: {type(thought.tags)}")
     query = select(models.Thought).where(models.Thought.id == thought_id)
     result = await db.execute(query)
     db_thought = result.scalar_one_or_none()
@@ -539,6 +545,8 @@ async def read_claim(claim_id: int, db: AsyncSession = Depends(get_db())):
 
 @app.put("/claims/{claim_id}", response_model=schemas.Claim)
 async def update_claim(claim_id: int, claim: schemas.ClaimUpdate, db: AsyncSession = Depends(get_db())):
+    print(f"[backend] /claims/{{claim_id}} PUT body: {claim.dict()}")
+    print(f"[backend] /claims/{{claim_id}} tags: {claim.tags} type: {type(claim.tags)}")
     query = select(models.Claim).where(models.Claim.id == claim_id)
     result = await db.execute(query)
     db_claim = result.scalar_one_or_none()
@@ -1107,27 +1115,44 @@ async def reset_password(request: ResetPasswordRequest, db: Session = Depends(ge
 # --- Tags Endpoint ---
 @app.get("/projects/{project_id}/tags")
 def get_project_tags(project_id: int, db: Session = Depends(get_sync_db), current_user: models.User = Depends(get_current_user)):
-    """Get all unique tags from all source materials in a project"""
+    """Get all unique tags from all card types in a project"""
     try:
+        all_tags = set()
         # Get all source materials for this project
         source_materials = db.query(models.SourceMaterial).filter(
             models.SourceMaterial.project_id == project_id
         ).all()
-        
-        # Extract all unique tags
-        all_tags = set()
         for sm in source_materials:
             if sm.tags:
-                # Handle both string and list formats
-                if isinstance(sm.tags, str):
-                    tags_list = [tag.strip() for tag in sm.tags.split(',') if tag.strip()]
-                elif isinstance(sm.tags, list):
-                    tags_list = [tag.strip() for tag in sm.tags if tag.strip()]
-                else:
-                    continue
-                
-                all_tags.update(tags_list)
-        
+                all_tags.update([tag.strip() for tag in sm.tags if tag.strip()])
+        # Get all questions for this project
+        questions = db.query(models.Question).filter(
+            models.Question.project_id == project_id
+        ).all()
+        for q in questions:
+            if q.tags:
+                all_tags.update([tag.strip() for tag in q.tags if tag.strip()])
+        # Get all insights for this project
+        insights = db.query(models.Insight).filter(
+            models.Insight.project_id == project_id
+        ).all()
+        for i in insights:
+            if i.tags:
+                all_tags.update([tag.strip() for tag in i.tags if tag.strip()])
+        # Get all thoughts for this project
+        thoughts = db.query(models.Thought).filter(
+            models.Thought.project_id == project_id
+        ).all()
+        for t in thoughts:
+            if t.tags:
+                all_tags.update([tag.strip() for tag in t.tags if tag.strip()])
+        # Get all claims for this project
+        claims = db.query(models.Claim).filter(
+            models.Claim.project_id == project_id
+        ).all()
+        for c in claims:
+            if c.tags:
+                all_tags.update([tag.strip() for tag in c.tags if tag.strip()])
         return {"tags": sorted(list(all_tags))}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching tags: {str(e)}")

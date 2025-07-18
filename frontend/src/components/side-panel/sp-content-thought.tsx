@@ -6,6 +6,8 @@ import UnsavedCardFileUpload from "../shared/UnsavedCardFileUpload";
 import { uploadFilesForCardType } from "../useFileUploadHandler";
 import { useCardSave } from "../shared/useCardSave";
 import LinkedCardsTab from "../LinkedCardsTab";
+import { Label } from "@/components/ui/label";
+import { MultiCombobox } from "@/components/ui/multi-combobox";
 
 interface ThoughtCardContentProps {
   cardData: any;
@@ -20,6 +22,7 @@ interface ThoughtCardContentProps {
   onClose?: () => void;
   onFormDataChange?: (data: any) => void;
   showSaveButton?: boolean;
+  onFileClick?: (fileUrl: string, entry: any) => void; // Add this
 }
 
 export default function ThoughtCardContent({ 
@@ -34,7 +37,8 @@ export default function ThoughtCardContent({
   onEdgesChange,
   onClose,
   onFormDataChange,
-  showSaveButton
+  showSaveButton,
+  onFileClick // Add this
 }: ThoughtCardContentProps) {
   const [thought, setThought] = React.useState(cardData?.thought || "");
   const [files, setFiles] = React.useState<string[]>(cardData?.files || []);
@@ -42,8 +46,11 @@ export default function ThoughtCardContent({
   const [isUploading, setIsUploading] = React.useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
-  // For unsaved cards, store files as File[] objects
+  // For unsaved cards, store files as File objects
   const [pendingFiles, setPendingFiles] = React.useState<File[]>(cardData?.pendingFiles || []);
+
+  // Add tags state
+  const [tags, setTags] = React.useState<string[]>(Array.isArray(cardData?.tags) ? cardData.tags : []);
 
   // Check if card is unsaved
   const isUnsaved = !cardData?.thoughtId;
@@ -58,11 +65,24 @@ export default function ThoughtCardContent({
     onDeleteCard,
   });
 
+  // Get all existing tags from all cards
+  const getAllExistingTags = () => {
+    const allTags = new Set<string>();
+    nodes.forEach(node => {
+      if (node.data?.tags) {
+        const nodeTags = Array.isArray(node.data.tags) ? node.data.tags : (node.data.tags ? [node.data.tags] : []);
+        nodeTags.forEach((tag: string) => allTags.add(tag));
+      }
+    });
+    return Array.from(allTags).sort();
+  };
+
   React.useEffect(() => {
     setThought(cardData?.thought || "");
     setFiles(cardData?.files || []);
     setFileEntries(cardData?.fileEntries || []);
     setPendingFiles(cardData?.pendingFiles || []);
+    setTags(Array.isArray(cardData?.tags) ? cardData.tags : []);
   }, [openCard?.id]);
 
   // Update form data for parent component when fields change
@@ -162,6 +182,22 @@ export default function ThoughtCardContent({
             />
           </div>
           
+          <div>
+            <Label htmlFor="thought-tags" className="block text-sm font-medium text-gray-700 mb-1">Tags</Label>
+            <MultiCombobox
+              options={getAllExistingTags().map(tag => ({ value: tag, label: tag }))}
+              value={tags}
+              onChange={(newTags) => {
+                setTags(newTags);
+                if (!isUnsaved) {
+                  onUpdateNodeData?.(openCard?.id || "", { tags: newTags });
+                }
+              }}
+              placeholder="Type a tag and press Enter..."
+              allowCustom={true}
+            />
+          </div>
+
           {/* Use different file upload components based on save status */}
           {isUnsaved ? (
             <UnsavedCardFileUpload
@@ -180,6 +216,7 @@ export default function ThoughtCardContent({
               fileInputRef={fileInputRef}
               fileEntries={fileEntries}
               cardType="thought"
+              onFileClick={onFileClick}
             />
           )}
 

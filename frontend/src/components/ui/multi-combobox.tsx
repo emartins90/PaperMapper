@@ -98,7 +98,7 @@ export const MultiCombobox: React.FC<MultiComboboxProps> = ({
             <Badge
               key={tag}
               variant="default"
-              className="flex items-center gap-1 px-2 py-1 bg-primary-600 text-white hover:bg-primary-700 rounded-full"
+              className="flex items-center gap-1 px-2 py-1 bg-primary-200 text-foreground rounded-full"
             >
               {tag}
               <button

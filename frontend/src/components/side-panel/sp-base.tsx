@@ -37,6 +37,7 @@ interface SidePanelBaseProps {
   onAddCard?: (cardId: string) => void; // For saving unsaved cards
   onDeleteCard?: (cardId: string) => void; // For deleting unsaved cards
   projectId?: number; // Add projectId prop
+  onFileClick?: (fileUrl: string, entry: any) => void; // Optional handler for file click
 }
 
 export default function SidePanelBase({
@@ -62,6 +63,7 @@ export default function SidePanelBase({
   onAddCard,
   onDeleteCard,
   projectId,
+  onFileClick,
 }: SidePanelBaseProps) {
   // Move hooks before any early returns - always call them with consistent parameters
   const [formData, setFormData] = useState<any>({});
@@ -80,6 +82,20 @@ export default function SidePanelBase({
     onAddCard: undefined, // Don't call onAddCard since we're using the shared save hook
     onDeleteCard,
   });
+
+  // Add state for file viewer
+  const [sidePanelFileViewer, setSidePanelFileViewer] = useState<{ fileUrl: string; cardId: string; cardType: string } | null>(null);
+
+  // Handler to open file viewer
+  const handleFileClick = (fileUrl: string, entry: any) => {
+    if (onFileClick) {
+      onFileClick(fileUrl, entry);
+      return;
+    }
+    if (!openCard) return;
+    setSidePanelFileViewer({ fileUrl, cardId: openCard.id, cardType: openCard.type });
+    // You may want to call a prop or context handler here to open the global FullscreenFileViewer
+  };
 
   if (!openCard) return null;
 
@@ -253,6 +269,7 @@ export default function SidePanelBase({
               onDeleteCard={onDeleteCard}
               onFormDataChange={setFormData}
               showSaveButton={false} // Hide individual save button since we have sticky one
+              onFileClick={handleFileClick}
             />
           )}
           {cardType === 'question' && (
@@ -269,6 +286,7 @@ export default function SidePanelBase({
               onDeleteCard={onDeleteCard}
               onFormDataChange={setFormData}
               showSaveButton={false} // Hide individual save button since we have sticky one
+              onFileClick={handleFileClick}
             />
           )}
           {cardType === 'insight' && (
@@ -285,6 +303,7 @@ export default function SidePanelBase({
               onClose={onClose}
               onFormDataChange={setFormData}
               showSaveButton={false} // Hide individual save button since we have sticky one
+              onFileClick={handleFileClick}
             />
           )}
           {cardType === 'thought' && (
@@ -301,6 +320,7 @@ export default function SidePanelBase({
               onClose={onClose}
               onFormDataChange={setFormData}
               showSaveButton={false} // Hide individual save button since we have sticky one
+              onFileClick={handleFileClick}
             />
           )}
           {cardType === 'claim' && (
@@ -317,6 +337,7 @@ export default function SidePanelBase({
               onClose={onClose}
               onFormDataChange={setFormData}
               showSaveButton={false}
+              onFileClick={handleFileClick}
             />
           )}
         </>

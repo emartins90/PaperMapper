@@ -2,10 +2,11 @@ import React, { useState, useEffect } from "react";
 import Tag from "@/components/Tag";
 import { Handle, Position } from "reactflow";
 import { FileListDisplay } from "../canvas-add-files/FileListDisplay";
+import { MdLibraryBooks } from "react-icons/md";
 
 type SourceMaterialCardProps = {
   data: {
-    tags: string[] | string | undefined;
+    tags: string[] | undefined;
     text: string;
     summary?: string;
     thesisSupport: string;
@@ -31,9 +32,7 @@ const handleStyle = {
 export default function SourceMaterialCard({ data, showHandles = true, width = 'w-96' }: SourceMaterialCardProps) {
   const onFileClick = data.onFileClick;
   // Ensure tags is always an array
-  const tags = Array.isArray(data.tags) ? data.tags : 
-               typeof data.tags === 'string' ? data.tags.split(',').map((tag: string) => tag.trim()).filter(tag => tag.length > 0) : 
-               [];
+  const tags = Array.isArray(data.tags) ? data.tags : (data.tags ? [data.tags] : []);
 
   // Get argument type color
   const getArgumentTypeColor = (argumentType: string) => {
@@ -64,7 +63,8 @@ export default function SourceMaterialCard({ data, showHandles = true, width = '
       )}
       
       <div className="flex items-center justify-between mb-2">
-        <div className="text-source-700 truncate-block">
+        <div className="text-source-700 truncate-block flex items-center gap-1">
+          <MdLibraryBooks className="text-source-400" size={22} />
           <span className="font-bold">Source Material</span>{data.sourceFunction ? <span className="font-normal"> : {data.sourceFunction}</span> : ''}
         </div>
         <button onClick={data.onOpen} aria-label="Open card">

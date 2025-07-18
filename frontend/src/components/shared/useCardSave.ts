@@ -48,7 +48,7 @@ export const useCardSave = ({
             citation_id: null, // Will be created by backend
             content: chatAnswers.sourceContent || "",
             summary: chatAnswers.summary || "",
-            tags: chatAnswers.topicalTags || "",
+            tags: chatAnswers.topicalTags || [],
             argument_type: chatAnswers.argumentType || "",
             function: chatAnswers.sourceFunction || "",
             files: "",
@@ -64,8 +64,8 @@ export const useCardSave = ({
             category: chatAnswers.questionFunction || chatAnswers.category || "",
             status: chatAnswers.status || "unexplored",
             priority: chatAnswers.questionPriority || chatAnswers.priority || "",
+            tags: chatAnswers.topicalTags || [],
           };
-          
           break;
 
         case "insight":
@@ -74,6 +74,7 @@ export const useCardSave = ({
             project_id: projectId,
             insight_text: chatAnswers.insightText || "",
             insight_type: chatAnswers.insightType || "",
+            tags: chatAnswers.topicalTags || [],
           };
           break;
 
@@ -82,6 +83,7 @@ export const useCardSave = ({
           payload = {
             project_id: projectId,
             thought_text: chatAnswers.thoughtText || "",
+            tags: chatAnswers.topicalTags || [],
           };
           break;
 
@@ -91,6 +93,7 @@ export const useCardSave = ({
             project_id: projectId,
             claim_text: chatAnswers.claimText || "",
             claim_type: chatAnswers.claimType || "Hypothesis",
+            tags: chatAnswers.topicalTags || [],
             files: "",
           };
           break;
@@ -100,6 +103,7 @@ export const useCardSave = ({
       }
 
       // Create the card in the backend
+      console.log('[useCardSave] Creating card:', { endpoint, payload, tags: payload.tags, tagsType: typeof payload.tags });
       const response = await fetch(`${API_URL}${endpoint}`, {
         method: "POST",
         headers: {
@@ -175,7 +179,7 @@ export const useCardSave = ({
           nodeDataUpdate.source = chatAnswers.sourceCitation || "";
           nodeDataUpdate.summary = chatAnswers.summary || "";
           nodeDataUpdate.text = chatAnswers.sourceContent || "";
-          nodeDataUpdate.tags = chatAnswers.topicalTags ? chatAnswers.topicalTags.split(", ") : [];
+          nodeDataUpdate.tags = chatAnswers.topicalTags || [];
           nodeDataUpdate.thesisSupport = chatAnswers.argumentType || "";
           nodeDataUpdate.sourceFunction = chatAnswers.sourceFunction || "";
           nodeDataUpdate.credibility = chatAnswers.sourceCredibility || "";
@@ -188,23 +192,27 @@ export const useCardSave = ({
           nodeDataUpdate.category = chatAnswers.questionFunction || chatAnswers.category || "";
           nodeDataUpdate.status = chatAnswers.status || "unexplored";
           nodeDataUpdate.priority = chatAnswers.questionPriority || chatAnswers.priority || "";
+          nodeDataUpdate.tags = chatAnswers.topicalTags || [];
           break;
 
         case "insight":
           nodeDataUpdate.insightId = createdCard.id;
           nodeDataUpdate.insight = chatAnswers.insightText || "";
           nodeDataUpdate.insightType = chatAnswers.insightType || "";
+          nodeDataUpdate.tags = chatAnswers.topicalTags || [];
           break;
 
         case "thought":
           nodeDataUpdate.thoughtId = createdCard.id;
           nodeDataUpdate.thought = chatAnswers.thoughtText || "";
+          nodeDataUpdate.tags = chatAnswers.topicalTags || [];
           break;
 
         case "claim":
           nodeDataUpdate.claimId = createdCard.id;
           nodeDataUpdate.claim = chatAnswers.claimText || "";
           nodeDataUpdate.claimType = chatAnswers.claimType || "Hypothesis";
+          nodeDataUpdate.tags = chatAnswers.topicalTags || [];
           break;
       }
 

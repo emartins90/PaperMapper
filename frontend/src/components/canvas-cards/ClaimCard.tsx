@@ -2,13 +2,15 @@ import React from "react";
 import Tag from "@/components/Tag";
 import { Handle, Position } from "reactflow";
 import { FileListDisplay } from "../canvas-add-files/FileListDisplay";
+import { MdOutlineRecordVoiceOver } from "react-icons/md";
 
 type ClaimType = "Hypothesis" | "Thesis" | "Conclusion" | "Proposal";
 
 type ClaimCardProps = {
   data: {
     claim: string;
-    claimType: ClaimType;
+    claimType?: string;
+    tags?: string[] | string;
     onOpen?: () => void;
     files?: string[];
     onFileClick?: (fileUrl: string, fileType: 'image' | 'pdf' | 'other' | 'audio') => void;
@@ -26,6 +28,10 @@ const handleStyle = {
 };
 
 export default function ClaimCard({ data, showHandles = true, width = 'w-96' }: ClaimCardProps) {
+  // Ensure tags is always an array
+  const tags = Array.isArray(data.tags) ? data.tags : (data.tags ? [data.tags] : []);
+
+  const onFileClick = data.onFileClick;
   return (
     <div className={`rounded-xl border-2 border-claim-300 bg-white p-4 shadow-md ${width} relative`}>
       {/* Source handles on all four sides */}
@@ -38,14 +44,24 @@ export default function ClaimCard({ data, showHandles = true, width = 'w-96' }: 
         </>
       )}
       <div className="flex items-center justify-between mb-2">
-        <div className="text-claim-700 flex items-center gap-2">
+        <div className="text-claim-700 flex items-center gap-1">
+          <MdOutlineRecordVoiceOver className="text-claim-400" size={22} />
           <span className="font-bold">{data.claimType ? data.claimType : "Claim"}</span>
         </div>
         <button onClick={data.onOpen} aria-label="Open card">
           <span className="text-claim-400 text-xl">↗</span>
         </button>
       </div>
+      {/* Only show tags section if there are tags and not '(skipped)' */}
+      {tags.length > 0 && tags[0] !== '(skipped)' && (
+        <div className="flex flex-wrap gap-2 mb-2">
+          {tags.map((tag: string) => (
+            tag && tag !== '(skipped)' && <Tag key={tag} color="primary">{tag}</Tag>
+          ))}
+        </div>
+      )}
       <div className="text-black mb-4">{data.claim}</div>
+      
       {/* Render uploaded files (images as thumbnails, others as file names) */}
       {data.files && data.files.length > 0 && (
         <FileListDisplay files={data.files} onFileClick={data.onFileClick} showFilesLabel={true} cardType="claim" />

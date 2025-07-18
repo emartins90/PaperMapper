@@ -2,6 +2,7 @@ import React from "react";
 import Tag from "@/components/Tag";
 import { Handle, Position } from "reactflow";
 import { FileListDisplay } from "../canvas-add-files/FileListDisplay";
+import { MdHelpOutline } from "react-icons/md";
 
 type QuestionCardProps = {
   data: {
@@ -10,6 +11,7 @@ type QuestionCardProps = {
     status: string;
     priority?: string;
     statusColor?: string;
+    tags?: string[] | string;
     onOpen?: () => void;
     files?: string[];
     onFileClick?: (fileUrl: string, fileType: 'image' | 'pdf' | 'other' | 'audio') => void;
@@ -35,6 +37,9 @@ const grayHandleStyle = {
 };
 
 export default function QuestionCard({ data, showHandles = true, width = 'w-96' }: QuestionCardProps) {
+  // Ensure tags is always an array
+  const tags = Array.isArray(data.tags) ? data.tags : (data.tags ? [data.tags] : []);
+
   // Helper function to get status color
   const getStatusColor = (status: string) => {
     const normalizedStatus = status.toLowerCase().trim();
@@ -101,12 +106,13 @@ export default function QuestionCard({ data, showHandles = true, width = 'w-96' 
         </>
       )}
       <div className="flex items-center justify-between mb-2">
-        <div className={`${titleColorClass} flex-1 min-w-0 flex items-center gap-2`}>
+        <div className={`${titleColorClass} flex-1 min-w-0 flex items-center gap-1`}>
           {data.priority && getPriorityIndicator(data.priority) && (
             <span className={`font-bold text-lg ${getPriorityIndicator(data.priority)?.color}`}>
               {getPriorityIndicator(data.priority)?.text}
             </span>
           )}
+          <MdHelpOutline className="text-question-400" size={22} />
           <div className="truncate block">
             <span className="font-bold">Question</span>{data.category ? <span className="font-normal"> : {data.category}</span> : ''}
           </div>
@@ -115,6 +121,14 @@ export default function QuestionCard({ data, showHandles = true, width = 'w-96' 
           <span className={`text-xl ${arrowColorClass}`}>↗</span>
         </button>
       </div>
+      {/* Only show tags section if there are tags and not '(skipped)' */}
+      {tags.length > 0 && tags[0] !== '(skipped)' && (
+        <div className="flex flex-wrap gap-2 mb-2">
+          {tags.map((tag: string) => (
+            tag && tag !== '(skipped)' && <Tag key={tag} color="primary">{tag}</Tag>
+          ))}
+        </div>
+      )}
       <div className="text-black mb-4">{data.question}</div>
       
       {/* Render uploaded files (images as thumbnails, others as file names) */}

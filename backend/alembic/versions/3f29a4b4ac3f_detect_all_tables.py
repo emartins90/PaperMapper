@@ -9,6 +9,7 @@ from typing import Sequence, Union
 
 from alembic import op
 import sqlalchemy as sa
+from sqlalchemy.dialects import postgresql
 
 
 # revision identifiers, used by Alembic.
@@ -86,6 +87,27 @@ def upgrade() -> None:
     sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_source_materials_id'), 'source_materials', ['id'], unique=False)
+    # Convert tags columns to ARRAY(String)
+    op.alter_column('source_materials', 'tags',
+        type_=postgresql.ARRAY(sa.String()),
+        postgresql_using="string_to_array(tags, ',')"
+    )
+    op.alter_column('questions', 'tags',
+        type_=postgresql.ARRAY(sa.String()),
+        postgresql_using="string_to_array(tags, ',')"
+    )
+    op.alter_column('insights', 'tags',
+        type_=postgresql.ARRAY(sa.String()),
+        postgresql_using="string_to_array(tags, ',')"
+    )
+    op.alter_column('thoughts', 'tags',
+        type_=postgresql.ARRAY(sa.String()),
+        postgresql_using="string_to_array(tags, ',')"
+    )
+    op.alter_column('claims', 'tags',
+        type_=postgresql.ARRAY(sa.String()),
+        postgresql_using="string_to_array(tags, ',')"
+    )
     # ### end Alembic commands ###
 
 
@@ -105,4 +127,25 @@ def downgrade() -> None:
     op.drop_index(op.f('ix_users_id'), table_name='users')
     op.drop_index(op.f('ix_users_email'), table_name='users')
     op.drop_table('users')
+    # Convert tags columns back to String
+    op.alter_column('source_materials', 'tags',
+        type_=sa.String(),
+        postgresql_using="array_to_string(tags, ',')"
+    )
+    op.alter_column('questions', 'tags',
+        type_=sa.String(),
+        postgresql_using="array_to_string(tags, ',')"
+    )
+    op.alter_column('insights', 'tags',
+        type_=sa.String(),
+        postgresql_using="array_to_string(tags, ',')"
+    )
+    op.alter_column('thoughts', 'tags',
+        type_=sa.String(),
+        postgresql_using="array_to_string(tags, ',')"
+    )
+    op.alter_column('claims', 'tags',
+        type_=sa.String(),
+        postgresql_using="array_to_string(tags, ',')"
+    )
     # ### end Alembic commands ###

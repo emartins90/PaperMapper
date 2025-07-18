@@ -4,6 +4,7 @@ from sqlalchemy import Column, Integer, String, ForeignKey, Float
 from sqlalchemy.orm import relationship
 from backend.database import Base
 import datetime
+from sqlalchemy.dialects.postgresql import ARRAY
 
 class User(Base, SQLAlchemyBaseUserTable[int]):
     __tablename__ = "users"
@@ -47,7 +48,7 @@ class SourceMaterial(Base):
     project_id = Column(Integer, ForeignKey("projects.id"))
     content = Column(String, nullable=True)
     summary = Column(String, nullable=True)
-    tags = Column(String, nullable=True)  # Store as comma-separated for now
+    tags = Column(ARRAY(String), nullable=True)
     argument_type = Column(String, nullable=True)
     function = Column(String, nullable=True)
     files = Column(String, nullable=True)  # Store as comma-separated for now
@@ -104,6 +105,7 @@ class Question(Base):
     category = Column(String, nullable=True)  # e.g., Clarify a concept, Challenge an assumption, etc. (custom allowed)
     status = Column(String, nullable=True)    # e.g., unexplored, needs sources, in progress, answered, not relevant
     priority = Column(String, nullable=True)  # e.g., high, medium, low
+    tags = Column(ARRAY(String), nullable=True)  # Store as comma-separated for now
     files = Column(String, nullable=True)  # Store as comma-separated for now
     project = relationship("Project", back_populates="questions")
 
@@ -115,6 +117,7 @@ class Insight(Base):
     sources_linked = Column(String, nullable=True)  # e.g., "3 Sources Linked"
     files = Column(String, nullable=True)  # Store as comma-separated for now
     insight_type = Column(String, nullable=True)  # e.g., Resolved Confusion, Noticed a Pattern, etc.
+    tags = Column(ARRAY(String), nullable=True)  # Store as comma-separated for now
     project = relationship("Project", back_populates="insights")
 
 class Thought(Base):
@@ -122,6 +125,7 @@ class Thought(Base):
     id = Column(Integer, primary_key=True, index=True)
     project_id = Column(Integer, ForeignKey("projects.id"))
     thought_text = Column(String, nullable=False)
+    tags = Column(ARRAY(String), nullable=True)  # Store as comma-separated for now
     files = Column(String, nullable=True)  # Store as comma-separated for now
     project = relationship("Project", back_populates="thoughts")
 
@@ -131,5 +135,6 @@ class Claim(Base):
     project_id = Column(Integer, ForeignKey("projects.id"))
     claim_text = Column(String, nullable=False)
     claim_type = Column(String, nullable=True)  # Hypothesis, Thesis, Conclusion, Proposal
+    tags = Column(ARRAY(String), nullable=True)  # Store as comma-separated for now
     files = Column(String, nullable=True)  # Store as comma-separated for now
     project = relationship("Project", back_populates="claims")

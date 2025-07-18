@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Combobox, useCustomOptions } from "@/components/ui/combobox";
+import { MultiCombobox } from "@/components/ui/multi-combobox";
 
 const QUESTION_CATEGORIES = [
   "Clarify a concept",
@@ -50,6 +51,7 @@ interface QuestionCardContentProps {
   onClose?: () => void;
   onFormDataChange?: (data: any) => void;
   showSaveButton?: boolean;
+  onFileClick?: (fileUrl: string, entry: any) => void; // Add this
 }
 
 export default function QuestionCardContent({ 
@@ -64,7 +66,8 @@ export default function QuestionCardContent({
   onEdgesChange,
   onClose,
   onFormDataChange,
-  showSaveButton
+  showSaveButton,
+  onFileClick // Add this
 }: QuestionCardContentProps) {
   const [question, setQuestion] = React.useState(cardData?.question || "");
   const [category, setCategory] = React.useState(cardData?.category || "");
@@ -74,16 +77,20 @@ export default function QuestionCardContent({
   const [files, setFiles] = React.useState<string[]>(cardData?.files || []);
   const [fileEntries, setFileEntries] = React.useState<Array<{ url: string; filename: string; type: string }>>(cardData?.fileEntries || []);
   const [isUploading, setIsUploading] = React.useState(false);
+  const [isSaving, setIsSaving] = React.useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   // For unsaved cards, store files as File[] objects
   const [pendingFiles, setPendingFiles] = React.useState<File[]>(cardData?.pendingFiles || []);
 
+  // Add tags state
+  const [tags, setTags] = React.useState<string[]>(Array.isArray(cardData?.tags) ? cardData.tags : []);
+
   // Check if card is unsaved
   const isUnsaved = !cardData?.questionId;
 
   // Use the shared save hook
-  const { saveCard, isSaving } = useCardSave({
+  const { saveCard, isSaving: isSavingFromHook } = useCardSave({
     cardId: openCard?.id || "",
     cardType: "question",
     projectId: cardData?.projectId || 0,
@@ -94,15 +101,27 @@ export default function QuestionCardContent({
 
   const questionFunctionOptions = useCustomOptions("questionFunction");
 
+  // Get all existing tags from all cards
+  const getAllExistingTags = () => {
+    const allTags = new Set<string>();
+    nodes.forEach(node => {
+      if (node.data?.tags) {
+        const nodeTags = Array.isArray(node.data.tags) ? node.data.tags : [];
+        nodeTags.forEach((tag: string) => allTags.add(tag));
+      }
+    });
+    return Array.from(allTags).sort();
+  };
+
   React.useEffect(() => {
     setQuestion(cardData?.question || "");
     setCategory(cardData?.category || "");
     setStatus(cardData?.status || "unexplored");
     setPriority(cardData?.priority || "");
-    setCustomCategory("");
     setFiles(cardData?.files || []);
     setFileEntries(cardData?.fileEntries || []);
     setPendingFiles(cardData?.pendingFiles || []);
+    setTags(Array.isArray(cardData?.tags) ? cardData.tags : []);
   }, [openCard?.id]);
 
   // Update form data for parent component when fields change
@@ -120,50 +139,59 @@ export default function QuestionCardContent({
 
 
 
-  const saveAllFields = async (fields?: Partial<{ question: string; category: string; status: string; priority: string }>) => {
+  const saveAllFields = async (additionalFields?: any) => {
     // Always update local node data first
     if (onUpdateNodeData) {
       onUpdateNodeData(openCard?.id || "", {
-        question: fields?.question ?? question,
-        category: fields?.category ?? (category === "Custom..." ? customCategory : category),
-        status: fields?.status ?? status,
-        priority: fields?.priority ?? priority,
+        question: question,
+        category: category,
+        status: status,
+        priority: priority,
+        tags: tags,
+        ...additionalFields
       });
     }
     
     // Only try to save to backend if we have a backend ID
-    if (!cardData?.questionId && !cardData?.data_id) {
+    if (!cardData?.questionId) {
       return;
     }
     
-    // setIsSaving(true); // This is now handled by useCardSave
+    setIsSaving(true);
     try {
       const token = localStorage.getItem("token");
       const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-      const questionId = cardData?.questionId || cardData?.data_id;
-      const response = await fetch(`${API_URL}/questions/${questionId}`, {
+      
+      let payload = {
+        project_id: cardData.projectId,
+        question_text: question,
+        category: category,
+        status: status,
+        priority: priority,
+        files: files.join(','),
+        ...additionalFields
+      };
+      payload.tags = Array.isArray(payload.tags) ? payload.tags : tags;
+      console.log('[sp-content-question] PUT payload:', payload, 'tags:', payload.tags, 'tagsType:', typeof payload.tags);
+      const response = await fetch(`${API_URL}/questions/${cardData.questionId}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
           Authorization: token ? `Bearer ${token}` : "",
         },
-        body: JSON.stringify({
-          project_id: cardData?.projectId,
-          question_text: fields?.question ?? question,
-          category: fields?.category ?? (category === "Custom..." ? customCategory : category),
-          status: fields?.status ?? status,
-          priority: fields?.priority ?? priority,
-        }),
+        body: JSON.stringify(payload),
       });
+      
       if (!response.ok) {
         const errorText = await response.text();
         throw new Error(`Failed to save changes: ${response.status} ${errorText}`);
       }
     } catch (error) {
-      console.error("Error saving question changes:", error);
+      console.error("Error saving changes:", error);
       alert("Failed to save changes: " + (error as Error).message);
     } finally {
-      // setTimeout(() => setIsSaving(false), 500); // This is now handled by useCardSave
+      // Keep the save indicator visible briefly for better UX
+      setTimeout(() => setIsSaving(false), 500);
     }
   };
 
@@ -336,27 +364,39 @@ export default function QuestionCardContent({
           </div>
           <div>
             <Label htmlFor="question-priority" className="block text-sm font-medium text-gray-700 mb-1">Priority</Label>
-            <Select
-              value={priority || "none"}
-              onValueChange={(value) => { 
-                setPriority(value === "none" ? "" : value); 
-                if (!isUnsaved) {
-                  saveAllFields({ priority: value === "none" ? "" : value }); 
-                }
-              }}
-            >
+            <Select value={priority || ""} onValueChange={(value) => {
+              setPriority(value);
+              if (!isUnsaved) {
+                saveAllFields({ priority: value });
+              }
+            }}>
               <SelectTrigger className="w-full">
-                <SelectValue placeholder="No Priority" />
+                <SelectValue placeholder="Select priority..." />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="none">No Priority</SelectItem>
-                {QUESTION_PRIORITIES.filter(opt => opt !== "").map(opt => (
-                  <SelectItem key={opt} value={opt}>{opt.charAt(0).toUpperCase() + opt.slice(1)}</SelectItem>
-                ))}
+                <SelectItem value="high">High</SelectItem>
+                <SelectItem value="medium">Medium</SelectItem>
+                <SelectItem value="low">Low</SelectItem>
               </SelectContent>
             </Select>
           </div>
           
+          <div>
+            <Label htmlFor="question-tags" className="block text-sm font-medium text-gray-700 mb-1">Topical Tags</Label>
+            <MultiCombobox
+              options={getAllExistingTags().map(tag => ({ value: tag, label: tag }))}
+              value={tags}
+              onChange={(newTags) => {
+                setTags(newTags);
+                if (!isUnsaved) {
+                  saveAllFields({ tags: newTags });
+                }
+              }}
+              placeholder="Type a tag and press Enter..."
+              allowCustom={true}
+            />
+          </div>
+
           {/* Use different file upload components based on save status */}
           {isUnsaved ? (
             <UnsavedCardFileUpload
@@ -375,6 +415,7 @@ export default function QuestionCardContent({
               fileInputRef={fileInputRef}
               fileEntries={fileEntries}
               cardType="question"
+              onFileClick={onFileClick}
             />
           )}
 

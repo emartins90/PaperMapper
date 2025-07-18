@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Combobox, useCustomOptions } from "@/components/ui/combobox";
+import { MultiCombobox } from "@/components/ui/multi-combobox";
 
 interface InsightCardContentProps {
   cardData: any;
@@ -24,6 +25,7 @@ interface InsightCardContentProps {
   onClose?: () => void;
   onFormDataChange?: (data: any) => void;
   showSaveButton?: boolean;
+  onFileClick?: (fileUrl: string, entry: any) => void; // Add this
 }
 
 export default function InsightCardContent({ 
@@ -38,7 +40,8 @@ export default function InsightCardContent({
   onEdgesChange,
   onClose,
   onFormDataChange,
-  showSaveButton
+  showSaveButton,
+  onFileClick // Add this
 }: InsightCardContentProps) {
   const [insight, setInsight] = React.useState(cardData?.insight || "");
   const [insightType, setInsightType] = React.useState(cardData?.insightType || "");
@@ -47,8 +50,11 @@ export default function InsightCardContent({
   const [isUploading, setIsUploading] = React.useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
-  // For unsaved cards, store files as File[] objects
+  // For unsaved cards, store files as File objects
   const [pendingFiles, setPendingFiles] = React.useState<File[]>(cardData?.pendingFiles || []);
+
+  // Add tags state
+  const [tags, setTags] = React.useState<string[]>(Array.isArray(cardData?.tags) ? cardData.tags : []);
 
   // Check if card is unsaved
   const isUnsaved = !cardData?.insightId;
@@ -65,12 +71,25 @@ export default function InsightCardContent({
 
   const insightTypeOptions = useCustomOptions("insightType");
 
+  // Get all existing tags from all cards
+  const getAllExistingTags = () => {
+    const allTags = new Set<string>();
+    nodes.forEach(node => {
+      if (node.data?.tags) {
+        const nodeTags = Array.isArray(node.data.tags) ? node.data.tags : [];
+        nodeTags.forEach((tag: string) => allTags.add(tag));
+      }
+    });
+    return Array.from(allTags).sort();
+  };
+
   React.useEffect(() => {
     setInsight(cardData?.insight || "");
     setInsightType(cardData?.insightType || "");
     setFiles(cardData?.files || []);
     setFileEntries(cardData?.fileEntries || []);
     setPendingFiles(cardData?.pendingFiles || []);
+    setTags(Array.isArray(cardData?.tags) ? cardData.tags : []);
   }, [openCard?.id]);
 
   // Update form data for parent component when fields change
@@ -155,18 +174,21 @@ export default function InsightCardContent({
   };
 
   // Save all fields to backend for saved cards
-  const saveAllFields = async (fields?: Partial<{ insight: string; insightType: string }>) => {
+  const saveAllFields = async (additionalFields?: any) => {
     if (!cardData?.insightId) return; // Only for saved cards
 
     const token = localStorage.getItem("token");
     const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
     const insightId = cardData.insightId;
 
-    const payload = {
+    let payload = {
       project_id: cardData.projectId,
-      insight_text: fields?.insight ?? insight,
-      insight_type: fields?.insightType ?? insightType,
+      insight_text: additionalFields?.insight ?? insight,
+      insight_type: additionalFields?.insightType ?? insightType,
+      files: files.join(','),
+      ...additionalFields
     };
+    payload.tags = Array.isArray(payload.tags) ? payload.tags : tags;
 
     const response = await fetch(`${API_URL}/insights/${insightId}`, {
       method: "PUT",
@@ -188,6 +210,7 @@ export default function InsightCardContent({
       onUpdateNodeData(openCard.id, {
         insight: payload.insight_text,
         insightType: payload.insight_type,
+        tags: additionalFields?.tags ?? tags,
       });
     }
   };
@@ -262,6 +285,22 @@ export default function InsightCardContent({
             />
           </div>
           
+          <div>
+            <Label htmlFor="insight-tags" className="block text-sm font-medium text-gray-700 mb-1">Insightful Tags</Label>
+            <MultiCombobox
+              options={getAllExistingTags().map(tag => ({ value: tag, label: tag }))}
+              value={tags}
+              onChange={(newTags) => {
+                setTags(newTags);
+                if (!isUnsaved) {
+                  saveAllFields({ tags: newTags });
+                }
+              }}
+              placeholder="Type a tag and press Enter..."
+              allowCustom={true}
+            />
+          </div>
+
           {/* Use different file upload components based on save status */}
           {isUnsaved ? (
             <UnsavedCardFileUpload
@@ -280,6 +319,7 @@ export default function InsightCardContent({
               fileInputRef={fileInputRef}
               fileEntries={fileEntries}
               cardType="insight"
+              onFileClick={onFileClick}
             />
           )}
 
