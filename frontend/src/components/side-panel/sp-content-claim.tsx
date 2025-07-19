@@ -30,6 +30,7 @@ interface ClaimCardContentProps {
   onFormDataChange?: (data: any) => void;
   showSaveButton?: boolean;
   onFileClick?: (fileUrl: string, entry: any) => void; // Add this
+  projectId?: number; // Add projectId prop
 }
 
 export default function ClaimCardContent({ 
@@ -45,7 +46,8 @@ export default function ClaimCardContent({
   onClose,
   onFormDataChange,
   showSaveButton,
-  onFileClick // Add this
+  onFileClick, // Add this
+  projectId // Add projectId prop
 }: ClaimCardContentProps) {
   const [claim, setClaim] = React.useState(cardData?.claim || "");
   const [claimType, setClaimType] = React.useState(cardData?.claimType || undefined);
@@ -67,7 +69,7 @@ export default function ClaimCardContent({
   const { saveCard, isSaving } = useCardSave({
     cardId: openCard?.id || "",
     cardType: "claim",
-    projectId: cardData?.projectId || 0,
+    projectId: projectId || 0,
     onUpdateNodeData,
     onAddCard,
     onDeleteCard,
@@ -182,7 +184,7 @@ export default function ClaimCardContent({
     const claimId = cardData.claimId;
 
     let payload = {
-      project_id: cardData.projectId,
+      project_id: projectId,
       claim_text: fields?.claim ?? claim,
       claim_type: fields?.claimType ?? claimType,
       files: files.join(','),

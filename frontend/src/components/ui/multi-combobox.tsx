@@ -45,6 +45,7 @@ export const MultiCombobox: React.FC<MultiComboboxProps> = ({
 }) => {
   const [open, setOpen] = React.useState(false);
   const [inputValue, setInputValue] = React.useState("");
+  const [deletingTags, setDeletingTags] = React.useState<Set<string>>(new Set());
 
   React.useEffect(() => {
     if (!open) setInputValue("");
@@ -75,7 +76,18 @@ export const MultiCombobox: React.FC<MultiComboboxProps> = ({
   };
 
   const handleRemove = (tagToRemove: string) => {
-    onChange(value.filter(tag => tag !== tagToRemove));
+    // Start animation
+    setDeletingTags(prev => new Set(prev).add(tagToRemove));
+    
+    // Remove tag after animation completes
+    setTimeout(() => {
+      onChange(value.filter(tag => tag !== tagToRemove));
+      setDeletingTags(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(tagToRemove);
+        return newSet;
+      });
+    }, 200); // Match the CSS transition duration
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -98,13 +110,18 @@ export const MultiCombobox: React.FC<MultiComboboxProps> = ({
             <Badge
               key={tag}
               variant="default"
-              className="flex items-center gap-1 px-2 py-1 bg-primary-200 text-foreground rounded-full"
+              className={cn(
+                "flex items-center gap-1 px-2 py-1 bg-primary-200 text-foreground rounded-full transition-all duration-200 ease-in-out",
+                deletingTags.has(tag) 
+                  ? "opacity-0 scale-75 transform" 
+                  : "opacity-100 scale-100"
+              )}
             >
               {tag}
               <button
                 type="button"
                 onClick={() => handleRemove(tag)}
-                className="ml-1 rounded-full outline-none ring-offset-background focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                className="ml-1 rounded-full outline-none ring-offset-background focus:ring-2 focus:ring-ring focus:ring-offset-2 hover:bg-primary-300/50 transition-colors"
               >
                 <X className="h-3 w-3" />
                 <span className="sr-only">Remove {tag}</span>

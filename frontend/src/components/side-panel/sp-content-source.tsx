@@ -27,6 +27,7 @@ interface SourceCardContentProps {
   onFormDataChange?: (data: any) => void;
   showSaveButton?: boolean;
   onFileClick?: (fileUrl: string, entry: any) => void; // Add this
+  projectId?: number; // Add projectId prop
 }
 
 export default function SourceCardContent({ 
@@ -43,7 +44,8 @@ export default function SourceCardContent({
   onDeleteCard, 
   onFormDataChange,
   showSaveButton,
-  onFileClick // Add this
+  onFileClick, // Add this
+  projectId // Add projectId
 }: SourceCardContentProps) {
   const [notes, setNotes] = useState(cardData?.additionalNotes || "");
   const [isSaving, setIsSaving] = useState(false);
@@ -75,7 +77,7 @@ export default function SourceCardContent({
   const { saveCard, isSaving: isSavingCard } = useCardSave({
     cardId: openCard?.id || "",
     cardType: "source",
-    projectId: cardData?.projectId || 0,
+    projectId: projectId || 0,
     onUpdateNodeData,
     onAddCard,
     onDeleteCard,
@@ -132,6 +134,7 @@ export default function SourceCardContent({
 
   // Save all fields to backend
   const saveAllFields = async () => {
+    
     // Always update local node data first
     if (onUpdateNodeData) {
       onUpdateNodeData(openCard?.id || "", {
@@ -157,23 +160,30 @@ export default function SourceCardContent({
       const token = localStorage.getItem("token");
       const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
       
+      // Save citation if it exists and has changed
+      if (cardData?.citationId) {
+        await saveCitation(sourceCitation, credibility);
+      }
+      
+      const payload = {
+        project_id: cardData.projectId,
+        citation_id: cardData.citationId,
+        content: sourceContent,
+        summary: summary,
+        tags: tags,
+        argument_type: argumentType,
+        function: sourceFunction,
+        files: files.join(','),
+        notes: notes,
+      };
+      
       const response = await fetch(`${API_URL}/source_materials/${cardData.sourceMaterialId}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
           Authorization: token ? `Bearer ${token}` : "",
         },
-        body: JSON.stringify({
-          project_id: cardData.projectId,
-          citation_id: cardData.citationId,
-          content: sourceContent,
-          summary: summary,
-          tags: tags,
-          argument_type: argumentType,
-          function: sourceFunction,
-          files: files.join(','),
-          notes: notes,
-        }),
+        body: JSON.stringify(payload),
       });
       
       if (!response.ok) {
@@ -393,6 +403,11 @@ export default function SourceCardContent({
       const token = localStorage.getItem("token");
       const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
       
+      // Save citation if it exists
+      if (cardData?.citationId) {
+        await saveCitation(sourceCitation, credibilityToSave);
+      }
+      
       const response = await fetch(`${API_URL}/source_materials/${cardData.sourceMaterialId}`, {
         method: "PUT",
         headers: {
@@ -465,6 +480,39 @@ export default function SourceCardContent({
     }
   };
 
+  // Save citation to backend
+  const saveCitation = async (citationText: string, citationCredibility: string) => {
+    if (!cardData?.citationId) return;
+    
+    try {
+      const token = localStorage.getItem("token");
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      
+      const response = await fetch(`${API_URL}/citations/${cardData.citationId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: token ? `Bearer ${token}` : "",
+        },
+        body: JSON.stringify({
+          text: citationText,
+          credibility: citationCredibility,
+          project_id: projectId,
+        }),
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Failed to update citation: ${response.status} ${errorText}`);
+      }
+
+      // Dispatch citation update event to refresh source list
+      window.dispatchEvent(new CustomEvent('citationUpdate'));
+    } catch (error) {
+      console.error("Error saving citation:", error);
+      alert("Failed to save citation: " + (error as Error).message);
+    }
+  };
 
 
   // Handle file upload
@@ -586,6 +634,10 @@ export default function SourceCardContent({
   // Handle field blur (save when user leaves the field, only for saved cards)
   const handleSourceCitationBlur = () => {
     if (!isUnsaved) {
+      // Save citation if it exists
+      if (cardData?.citationId) {
+        saveCitation(sourceCitation, credibility);
+      }
       saveAllFields();
     }
   };

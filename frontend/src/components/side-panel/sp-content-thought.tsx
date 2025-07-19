@@ -23,6 +23,7 @@ interface ThoughtCardContentProps {
   onFormDataChange?: (data: any) => void;
   showSaveButton?: boolean;
   onFileClick?: (fileUrl: string, entry: any) => void; // Add this
+  projectId?: number; // Add projectId prop
 }
 
 export default function ThoughtCardContent({ 
@@ -38,7 +39,8 @@ export default function ThoughtCardContent({
   onClose,
   onFormDataChange,
   showSaveButton,
-  onFileClick // Add this
+  onFileClick,
+  projectId // Add projectId prop
 }: ThoughtCardContentProps) {
   const [thought, setThought] = React.useState(cardData?.thought || "");
   const [files, setFiles] = React.useState<string[]>(cardData?.files || []);
@@ -59,7 +61,7 @@ export default function ThoughtCardContent({
   const { saveCard, isSaving } = useCardSave({
     cardId: openCard?.id || "",
     cardType: "thought",
-    projectId: cardData?.projectId || 0,
+    projectId: projectId || 0,
     onUpdateNodeData,
     onAddCard,
     onDeleteCard,

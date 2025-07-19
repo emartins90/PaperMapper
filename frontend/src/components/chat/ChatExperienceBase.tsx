@@ -64,6 +64,7 @@ const ChatExperienceBase: React.FC<ChatExperienceBaseProps> = ({
   const [chatInputs, setChatInputs] = useState<{ [key: string]: string }>({});
   const [filesByPrompt, setFilesByPrompt] = useState<{ [promptId: string]: File[] }>({});
   const [cardSaved, setCardSaved] = useState(false);
+  const [deletingTags, setDeletingTags] = useState<Set<string>>(new Set());
   const currentPrompt = prompts[chatStep];
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -174,6 +175,8 @@ const ChatExperienceBase: React.FC<ChatExperienceBaseProps> = ({
     }
     setSelectedOptions(prev => ({ ...prev, [optionType]: valueToSave }));
     setChatInputs(prev => ({ ...prev, [optionType]: valueToSave }));
+    // Also update chatAnswers immediately for option selections
+    setChatAnswers(prev => ({ ...prev, [optionType]: valueToSave }));
     setShowCustomInput(prev => ({ ...prev, [optionType]: false }));
   };
 
@@ -203,6 +206,7 @@ const ChatExperienceBase: React.FC<ChatExperienceBaseProps> = ({
   // Chat submit
   const handleChatSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+   
     if (currentPrompt.options && currentPrompt.options.length > 0) {
       const selectedValue = selectedOptions[currentPrompt.id] || "";
       setChatAnswers(prev => ({ ...prev, [currentPrompt.id]: selectedValue }));
@@ -251,7 +255,18 @@ const ChatExperienceBase: React.FC<ChatExperienceBaseProps> = ({
   };
   // Tag handlers (for source chat)
   const handleDeleteTag = (tagToDelete: string) => {
-    setCurrentTags(prev => prev.filter(tag => tag !== tagToDelete));
+    // Start animation
+    setDeletingTags(prev => new Set(prev).add(tagToDelete));
+    
+    // Remove tag after animation completes
+    setTimeout(() => {
+      setCurrentTags(prev => prev.filter(tag => tag !== tagToDelete));
+      setDeletingTags(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(tagToDelete);
+        return newSet;
+      });
+    }, 200); // Match the CSS transition duration
   };
   const handleTagInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
@@ -304,6 +319,8 @@ const ChatExperienceBase: React.FC<ChatExperienceBaseProps> = ({
     }
     // Aggregate all files from filesByPrompt
     const allFiles: File[] = Object.values(filesByPrompt).flat();
+    
+
     
     try {
       await saveCard({
@@ -462,9 +479,8 @@ const ChatExperienceBase: React.FC<ChatExperienceBaseProps> = ({
         {chatStep < prompts.length && (
           <div className="space-y-3">
             {(() => {
-              // DEBUG: Log the current prompt and its options
-              console.log('DEBUG currentPrompt:', currentPrompt);
-              console.log('DEBUG currentPrompt.options:', currentPrompt?.options);
+        
+          
               if (currentPrompt.options && currentPrompt.options.length > 0) {
                 const selectedValue = selectedOptions[currentPrompt.id] || "";
                 // Check for grouped options
@@ -586,7 +602,7 @@ const ChatExperienceBase: React.FC<ChatExperienceBaseProps> = ({
                               {selectedValue && userOptions[currentPrompt.id]?.some(o => o.value === selectedValue) ? selectedValue : "Add your own..."}
                             </Button>
                           </PopoverTrigger>
-                          <PopoverContent className="w-92 min-w-[200px] p-0 z-[10000]">
+                          <PopoverContent className="w-92 min-w-[200px] p-0 z-[110]">
                             <Command>
                               <CommandInput
                                 placeholder={loadingOptions[currentPrompt.id] ? "Loading..." : "Type or select..."}
@@ -763,13 +779,17 @@ const ChatExperienceBase: React.FC<ChatExperienceBaseProps> = ({
                       {currentTags.map((tag, index) => (
                         <span
                           key={index}
-                          className="bg-primary-200 text-foreground px-2 py-1 rounded-full text-sm flex items-center gap-1"
+                          className={`bg-primary-200 text-foreground px-2 py-1 rounded-full text-sm flex items-center gap-1 transition-all duration-200 ease-in-out ${
+                            deletingTags.has(tag) 
+                              ? "opacity-0 scale-75 transform" 
+                              : "opacity-100 scale-100"
+                          }`}
                         >
                           {tag}
                           <button
                             type="button"
                             onClick={() => handleDeleteTag(tag)}
-                            className="text-primary-600 hover:text-primary-800 text-xs font-bold"
+                            className="text-primary-600 hover:text-primary-800 text-xs font-bold hover:bg-primary-300/50 rounded-full transition-colors"
                           >
                             ×
                           </button>
@@ -780,14 +800,14 @@ const ChatExperienceBase: React.FC<ChatExperienceBaseProps> = ({
                     <div className="relative">
                       <input
                         type="text"
-                        value={typeof tagInput === 'string' ? tagInput : ''}
+                        value={tagInput || ''}
                         onChange={handleTagInputChange}
                         onKeyDown={handleTagInputKeyDown}
                         placeholder="Type a tag and press Enter..."
                         className="w-full p-2 border border-gray-300 rounded-md text-sm"
                       />
                       {showTagSuggestions && filteredTagSuggestions.length > 0 && (
-                        <div className="absolute z-50 w-full bg-white border border-gray-300 rounded-md shadow-lg max-h-40 overflow-y-auto"
+                        <div className="absolute z-102 w-full bg-white border border-gray-300 rounded-md shadow-lg max-h-40 overflow-y-auto"
                              style={{ bottom: '100%', marginBottom: '4px' }}>
                           {filteredTagSuggestions.map((suggestion, index) => (
                             <button

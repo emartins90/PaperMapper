@@ -36,22 +36,45 @@ const buttonVariants = cva(
   }
 )
 
+/**
+ * Button component with support for variants and a 'danger' prop.
+ * The 'danger' prop applies red/danger styling to any variant.
+ */
 function Button({
   className,
   variant,
   size,
   asChild = false,
+  danger = false, // New prop
   ...props
 }: React.ComponentProps<"button"> &
   VariantProps<typeof buttonVariants> & {
     asChild?: boolean
+    /**
+     * If true, applies red/danger styling to the button for any variant.
+     */
+    danger?: boolean
   }) {
   const Comp = asChild ? Slot : "button"
+
+  // Danger classes for each variant
+  const dangerClasses =
+    variant === "outline"
+      ? "border-red-500 text-red-600 hover:bg-red-50 hover:border-red-600"
+      : variant === "ghost"
+      ? "text-red-600 hover:bg-red-50"
+      : variant === "link"
+      ? "text-red-600 hover:underline"
+      : "bg-red-600 text-white hover:bg-red-700" // default, filled, etc
 
   return (
     <Comp
       data-slot="button"
-      className={cn(buttonVariants({ variant, size, className }))}
+      className={cn(
+        buttonVariants({ variant, size }),
+        danger && dangerClasses,
+        className
+      )}
       {...props}
     />
   )

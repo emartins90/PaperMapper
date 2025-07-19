@@ -33,6 +33,7 @@
     "reactflow": "^11.11.4",
     "sonner": "^2.0.6",
     "tailwind-merge": "^3.3.1",
+    "tailwind-scrollbar": "^4.0.2",
     "vaul": "^1.1.2",
     "wavesurfer.js": "^7.9.9"
   },

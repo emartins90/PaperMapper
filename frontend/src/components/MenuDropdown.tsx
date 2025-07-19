@@ -1,11 +1,4 @@
 "use client";
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -66,30 +59,14 @@ export default function MenuDropdown({ large = false }: { large?: boolean }) {
 
   return (
     <>
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            variant="outline"
-            className={large ? "font-medium text-lg px-6 py-3" : "font-medium"}
-            style={large ? { minHeight: 48, minWidth: 80 } : {}}
-          >
-            Menu
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent>
-          <DropdownMenuItem onClick={() => setAccountOpen(true)}>My Account</DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem
-            onClick={() => {
-              localStorage.removeItem("token");
-              router.push("/");
-            }}
-            variant="destructive"
-          >
-            Logout
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+      <Button
+        variant="outline"
+        className={large ? "font-medium text-lg px-6 py-3" : "font-medium"}
+        style={large ? { minHeight: 48, minWidth: 80 } : {}}
+        onClick={() => setAccountOpen(true)}
+      >
+        My Account
+      </Button>
       <AccountSettings open={accountOpen} onOpenChange={setAccountOpen} />
     </>
   );

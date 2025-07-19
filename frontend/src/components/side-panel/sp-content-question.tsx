@@ -52,6 +52,7 @@ interface QuestionCardContentProps {
   onFormDataChange?: (data: any) => void;
   showSaveButton?: boolean;
   onFileClick?: (fileUrl: string, entry: any) => void; // Add this
+  projectId?: number; // Add projectId prop
 }
 
 export default function QuestionCardContent({ 
@@ -67,7 +68,8 @@ export default function QuestionCardContent({
   onClose,
   onFormDataChange,
   showSaveButton,
-  onFileClick // Add this
+  onFileClick,
+  projectId // Add projectId prop
 }: QuestionCardContentProps) {
   const [question, setQuestion] = React.useState(cardData?.question || "");
   const [category, setCategory] = React.useState(cardData?.category || "");
@@ -93,7 +95,7 @@ export default function QuestionCardContent({
   const { saveCard, isSaving: isSavingFromHook } = useCardSave({
     cardId: openCard?.id || "",
     cardType: "question",
-    projectId: cardData?.projectId || 0,
+    projectId: projectId || 0,
     onUpdateNodeData,
     onAddCard,
     onDeleteCard,
@@ -163,7 +165,7 @@ export default function QuestionCardContent({
       const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
       
       let payload = {
-        project_id: cardData.projectId,
+        project_id: projectId,
         question_text: question,
         category: category,
         status: status,
@@ -172,7 +174,6 @@ export default function QuestionCardContent({
         ...additionalFields
       };
       payload.tags = Array.isArray(payload.tags) ? payload.tags : tags;
-      console.log('[sp-content-question] PUT payload:', payload, 'tags:', payload.tags, 'tagsType:', typeof payload.tags);
       const response = await fetch(`${API_URL}/questions/${cardData.questionId}`, {
         method: "PUT",
         headers: {

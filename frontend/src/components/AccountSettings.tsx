@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -30,6 +31,7 @@ const TABS = [
 ];
 
 export default function AccountSettings({ open, onOpenChange }: AccountSettingsProps) {
+  const router = useRouter();
   const [customOptions, setCustomOptions] = useState<any[]>([]);
   const [loadingOptions, setLoadingOptions] = useState(false);
   const [deletingId, setDeletingId] = useState<number | null>(null);
@@ -267,6 +269,14 @@ export default function AccountSettings({ open, onOpenChange }: AccountSettingsP
     }
   };
 
+  // Handle logout
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("email");
+    onOpenChange(false);
+    router.push("/");
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent size="lg" className="p-0 overflow-hidden h-[60vh]">
@@ -290,13 +300,22 @@ export default function AccountSettings({ open, onOpenChange }: AccountSettingsP
                   <span className="font-semibold">Email:</span> {email || "Unknown"}
                 </div>
                 {resetStep === "idle" && (
-                  <Button
-                    className="bg-primary text-primary-foreground"
-                    onClick={handleStartReset}
-                    disabled={resetLoading}
-                  >
-                    {resetLoading ? "Sending code..." : "Reset Password"}
-                  </Button>
+                  <div className="flex gap-3">
+                    <Button
+                      variant="outline"
+                      onClick={handleLogout}
+                      danger
+                    >
+                      Logout
+                    </Button>
+                    <Button
+                      className="bg-primary text-primary-foreground"
+                      onClick={handleStartReset}
+                      disabled={resetLoading}
+                    >
+                      {resetLoading ? "Sending code..." : "Reset Password"}
+                    </Button>
+                  </div>
                 )}
                 {resetStep === "code" && (
                   <div className="space-y-4 mt-4 max-w-sm">

@@ -27,10 +27,11 @@ class CitationBase(BaseModel):
     credibility: Optional[str] = None
 
 class CitationCreate(CitationBase):
-    pass
+    project_id: int
 
 class Citation(CitationBase):
     id: int
+    project_id: int
     class Config:
         orm_mode = True
 

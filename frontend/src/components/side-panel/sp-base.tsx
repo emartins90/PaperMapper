@@ -270,6 +270,7 @@ export default function SidePanelBase({
               onFormDataChange={setFormData}
               showSaveButton={false} // Hide individual save button since we have sticky one
               onFileClick={handleFileClick}
+              projectId={projectId}
             />
           )}
           {cardType === 'question' && (
@@ -287,6 +288,7 @@ export default function SidePanelBase({
               onFormDataChange={setFormData}
               showSaveButton={false} // Hide individual save button since we have sticky one
               onFileClick={handleFileClick}
+              projectId={projectId}
             />
           )}
           {cardType === 'insight' && (
@@ -304,6 +306,7 @@ export default function SidePanelBase({
               onFormDataChange={setFormData}
               showSaveButton={false} // Hide individual save button since we have sticky one
               onFileClick={handleFileClick}
+              projectId={projectId}
             />
           )}
           {cardType === 'thought' && (
@@ -321,6 +324,7 @@ export default function SidePanelBase({
               onFormDataChange={setFormData}
               showSaveButton={false} // Hide individual save button since we have sticky one
               onFileClick={handleFileClick}
+              projectId={projectId}
             />
           )}
           {cardType === 'claim' && (
@@ -338,6 +342,7 @@ export default function SidePanelBase({
               onFormDataChange={setFormData}
               showSaveButton={false}
               onFileClick={handleFileClick}
+              projectId={projectId}
             />
           )}
         </>

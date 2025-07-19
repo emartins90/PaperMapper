@@ -6,7 +6,11 @@ import ThoughtCard from "./canvas-cards/ThoughtCard";
 import ClaimCard from "./canvas-cards/ClaimCard";
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
-import { MdClose } from "react-icons/md";
+import { MdClose, MdFilterList } from "react-icons/md";
+import { Popover, PopoverTrigger, PopoverContent } from "./ui/popover";
+import { ToggleGroup, ToggleGroupItem } from "./ui/toggle-group";
+import { Badge } from "./ui/badge";
+import { MdHelpOutline, MdLibraryBooks, MdLightbulbOutline, MdChatBubbleOutline, MdOutlineRecordVoiceOver } from "react-icons/md";
 
 interface CardListPanelProps {
   nodes: any[];
@@ -18,6 +22,33 @@ interface CardListPanelProps {
 export default function CardListPanel({ nodes, onClose, onCardClick, selectedCardId }: CardListPanelProps) {
   // Add search state
   const [searchTerm, setSearchTerm] = useState("");
+  // Tag filter state
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [tagFilterMode, setTagFilterMode] = useState<'any' | 'all'>("any");
+  const [filterPopoverOpen, setFilterPopoverOpen] = useState(false);
+  // Card type filter state
+  const cardTypeOptions = [
+    { value: 'claim', label: 'Claim', icon: MdOutlineRecordVoiceOver, color: 'bg-claim-100', text: 'text-claim-700' },
+    { value: 'question', label: 'Question', icon: MdHelpOutline, color: 'bg-question-100', text: 'text-question-700' },
+    { value: 'source', label: 'Source', icon: MdLibraryBooks, color: 'bg-source-100', text: 'text-source-700' },
+    { value: 'insight', label: 'Insight', icon: MdLightbulbOutline, color: 'bg-insight-100', text: 'text-insight-700' },
+    { value: 'thought', label: 'Thought', icon: MdChatBubbleOutline, color: 'bg-thought-100', text: 'text-thought-700' },
+  ];
+  const [selectedTypes, setSelectedTypes] = useState<string[]>(cardTypeOptions.map(opt => opt.value));
+  const [deletingTags, setDeletingTags] = useState<Set<string>>(new Set());
+
+  // Gather all unique tags from all cards
+  const allTags = useMemo(() => {
+    const tagSet = new Set<string>();
+    nodes.forEach(card => {
+      if (Array.isArray(card.data?.tags)) {
+        card.data.tags.forEach((tag: string) => tagSet.add(tag));
+      } else if (card.data?.tags) {
+        tagSet.add(card.data.tags);
+      }
+    });
+    return Array.from(tagSet).sort();
+  }, [nodes]);
 
   // Group cards by type
   const groupedCards = nodes.reduce((groups, card) => {
@@ -74,12 +105,31 @@ export default function CardListPanel({ nodes, onClose, onCardClick, selectedCar
     return tags.toLowerCase();
   };
 
-  // Filter nodes by search term
+  // Filter nodes by search term and tags
   const filteredNodes = useMemo(() => {
-    if (!searchTerm.trim()) return nodes;
-    const lower = searchTerm.toLowerCase();
-    return nodes.filter(card => getSearchableText(card).includes(lower));
-  }, [nodes, searchTerm]);
+    let filtered = nodes;
+    if (searchTerm.trim()) {
+      const lower = searchTerm.toLowerCase();
+      filtered = filtered.filter(card => getSearchableText(card).includes(lower));
+    }
+    // Filter by card type
+    if (selectedTypes.length > 0) {
+      filtered = filtered.filter(card => selectedTypes.includes(card.type));
+    }
+    if (selectedTags.length > 0) {
+      filtered = filtered.filter(card => {
+        const cardTags = Array.isArray(card.data?.tags) ? card.data.tags : (card.data?.tags ? [card.data.tags] : []);
+        if (tagFilterMode === "any") {
+          // OR logic: at least one tag matches
+          return cardTags.some((tag: string) => selectedTags.includes(tag));
+        } else {
+          // AND logic: all selected tags must be present
+          return selectedTags.every(tag => cardTags.includes(tag));
+        }
+      });
+    }
+    return filtered;
+  }, [nodes, searchTerm, selectedTags, tagFilterMode, selectedTypes]);
 
   // Group filtered cards by type
   const groupedFilteredCards = filteredNodes.reduce((groups, card) => {
@@ -91,10 +141,26 @@ export default function CardListPanel({ nodes, onClose, onCardClick, selectedCar
     return groups;
   }, {} as Record<string, any[]>);
 
+  // Handle tag deletion with animation
+  const handleRemoveTag = (tagToRemove: string) => {
+    // Start animation
+    setDeletingTags(prev => new Set(prev).add(tagToRemove));
+    
+    // Remove tag after animation completes
+    setTimeout(() => {
+      setSelectedTags(sel => sel.filter(t => t !== tagToRemove));
+      setDeletingTags(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(tagToRemove);
+        return newSet;
+      });
+    }, 200); // Match the CSS transition duration
+  };
+
   // Check if there are any cards
   if (filteredNodes.length === 0) {
     return (
-      <div className="fixed left-0 top-0 h-full w-86 bg-white shadow-lg border-r border-gray-200 z-[999] overflow-y-auto">
+      <div className="fixed left-0 top-0 h-full w-86 bg-white shadow-lg border-r border-gray-200 z-[100] overflow-y-auto">
         <div className="sticky top-0 z-10 bg-white p-4 border-b border-gray-200 flex items-center justify-between">
           <h2 className="text-lg font-semibold text-gray-900">Card List</h2>
           <Button variant="ghost" size="sm" onClick={onClose}>
@@ -141,16 +207,16 @@ export default function CardListPanel({ nodes, onClose, onCardClick, selectedCar
   }
 
   return (
-    <div className="fixed left-0 top-0 h-full w-86 bg-white shadow-lg border-r border-gray-200 z-[9999] overflow-y-auto">
+    <div className="fixed left-0 top-0 h-full w-86 bg-white shadow-lg border-r border-gray-200 z-[100] overflow-y-auto">
       <div className="sticky top-0 z-10 bg-white p-4 border-b border-gray-200 flex items-center justify-between">
         <h2 className="text-lg font-semibold text-gray-900">Card List</h2>
         <Button variant="ghost" size="sm" onClick={onClose}>
           <MdClose size={20} />
         </Button>
       </div>
-      {/* Search bar */}
-      <div className="p-4 pb-0 mb-3">
-        <div className="relative">
+      {/* Search bar and filter */}
+      <div className="p-4 pb-0 mb-3 flex items-center gap-2">
+        <div className="relative flex-1">
           <Input
             type="text"
             className="pr-8"
@@ -173,7 +239,132 @@ export default function CardListPanel({ nodes, onClose, onCardClick, selectedCar
             </Button>
           )}
         </div>
+        {/* Filter popover */}
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="outline" size="icon" className="relative" aria-label="Filter by tags">
+              <MdFilterList size={20} />
+              {selectedTags.length > 0 && (
+                <Badge className="absolute -top-2 -right-2 px-1.5 py-0.5 text-xs rounded-full" variant="default">
+                  {selectedTags.length}
+                </Badge>
+              )}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent align="end" className="w-78 shadow-xl">
+           
+            <div className="max-h-180 overflow-y-auto space-y-1">
+            <label className="text-md font-semibold text-foreground">Tags</label>
+              {allTags.length > 0 ? (
+                <>
+                  <div className="flex items-center justify-between gap-14 mb-3">
+      
+                    <ToggleGroup type="single" value={tagFilterMode} onValueChange={val => val && setTagFilterMode(val as 'any' | 'all')} className="w-full">
+                      <ToggleGroupItem value="any" aria-label="Match any" className="flex-1">Match Any</ToggleGroupItem>
+                      <ToggleGroupItem value="all" aria-label="Match all" className="flex-1">Match All</ToggleGroupItem>
+                    </ToggleGroup>
+                  </div>
+                  <div className="max-h-80 overflow-y-scroll scroll-container">
+                    {allTags.map(tag => (
+                      <label key={tag} className="flex items-center gap-2 cursor-pointer px-2 py-1 rounded hover:bg-accent">
+                        <input
+                          type="checkbox"
+                          checked={selectedTags.includes(tag)}
+                          onChange={e => {
+                            setSelectedTags(sel =>
+                              e.target.checked ? [...sel, tag] : sel.filter(t => t !== tag)
+                            );
+                          }}
+                          className="accent-primary"
+                        />
+                        <span className="text-md">{tag}</span>
+                      </label>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <div className="text-xs text-gray-400 my-2">No tags available</div>
+              )}
+              {/* Card type filter below tags */}
+              <div className="flex items-center justify-between mt-6 mb-4">
+                <label className="text-md font-semibold text-foreground block">Card Types</label>
+                <button
+                  type="button"
+                  className="text-xs text-gray-500 hover:text-gray-800 px-2 py-1 rounded focus:outline-none"
+                  onClick={() => setSelectedTypes([])}
+                >
+                  Unselect All
+                </button>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {cardTypeOptions.map(opt => {
+                  const Icon = opt.icon;
+                  const checked = selectedTypes.includes(opt.value);
+                  return (
+                    <label
+                      key={opt.value}
+                      className={`flex items-center gap-1 cursor-pointer px-2 py-1 rounded-full font-medium text-sm transition-colors ${opt.color} ${opt.text} ${checked ? '' : 'opacity-60'} select-none w-28 justify-center`}
+                      style={{ minWidth: '7rem', userSelect: 'none', boxShadow: 'none' }}
+                      onDoubleClick={() => setSelectedTypes([opt.value])}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={e => {
+                          setSelectedTypes(sel =>
+                            e.target.checked ? [...sel, opt.value] : sel.filter(t => t !== opt.value)
+                          );
+                        }}
+                        className="accent-primary mr-1"
+                        style={{ display: 'none' }}
+                      />
+                      <span className={`flex items-center gap-1 ${opt.text}`}>
+                        <Icon size={18} className={`shrink-0 ${opt.text}`} />
+                        <span className={opt.text}>{opt.label}</span>
+                      </span>
+                      {checked && (
+                        <span className={`ml-1 text-xs ${opt.text}`}>✓</span>
+                      )}
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+            {selectedTags.length > 0 && (
+              <div className="mt-3 flex flex-wrap gap-2">
+              
+              </div>
+            )}
+          </PopoverContent>
+        </Popover>
       </div>
+      {/* Selected tags as chips below search bar */}
+      {selectedTags.length > 0 && (
+        <div className="px-4 pt-2 pb-0 flex flex-wrap gap-2">
+          {selectedTags.map(tag => (
+            <Badge 
+              key={tag} 
+              variant="outline" 
+              className={`flex items-center gap-1 px-2 py-2 rounded-full transition-all duration-200 ease-in-out ${
+                deletingTags.has(tag) 
+                  ? "opacity-0 scale-75 transform" 
+                  : "opacity-100 scale-100"
+              }`}
+            >
+              {tag}
+              <button
+                type="button"
+                className="ml-1 text-gray-400 hover:text-gray-700 focus:outline-none hover:bg-gray-100 rounded-full transition-colors"
+                onClick={() => handleRemoveTag(tag)}
+                aria-label={`Remove tag ${tag}`}
+              >
+                <MdClose size={14} />
+              </button>
+            </Badge>
+          ))}
+        </div>
+      )}
+      {/* Card list */}
       <div className="p-4 pt-2 space-y-6">
         {cardTypeOrder.map((cardType) => {
           const cards = groupedFilteredCards[cardType];

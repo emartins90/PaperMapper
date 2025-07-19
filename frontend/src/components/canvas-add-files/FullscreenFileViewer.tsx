@@ -155,17 +155,7 @@ export const FullscreenFileViewer: React.FC<FullscreenFileViewerProps> = ({
     }
   }, [open, fileUrl, fileType]);
 
-  // Debug logs
-  useEffect(() => {
-    if (open) {
-      console.log('[FullscreenFileViewer] fileUrl:', fileUrl);
-      console.log('[FullscreenFileViewer] cardType:', cardType);
-      console.log('[FullscreenFileViewer] cardNode:', cardNode);
-      if (!cardNode) {
-        console.warn('[FullscreenFileViewer] cardNode is undefined for fileUrl:', fileUrl, 'cardType:', cardType);
-      }
-    }
-  }, [open, fileUrl, cardType, cardNode]);
+
 
   // Track window width for responsive hiding of fields
   const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1920);

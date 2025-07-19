@@ -26,6 +26,7 @@ interface InsightCardContentProps {
   onFormDataChange?: (data: any) => void;
   showSaveButton?: boolean;
   onFileClick?: (fileUrl: string, entry: any) => void; // Add this
+  projectId?: number; // Add projectId prop
 }
 
 export default function InsightCardContent({ 
@@ -41,7 +42,8 @@ export default function InsightCardContent({
   onClose,
   onFormDataChange,
   showSaveButton,
-  onFileClick // Add this
+  onFileClick, // Add this
+  projectId // Add this
 }: InsightCardContentProps) {
   const [insight, setInsight] = React.useState(cardData?.insight || "");
   const [insightType, setInsightType] = React.useState(cardData?.insightType || "");
@@ -63,7 +65,7 @@ export default function InsightCardContent({
   const { saveCard, isSaving } = useCardSave({
     cardId: openCard?.id || "",
     cardType: "insight",
-    projectId: cardData?.projectId || 0,
+    projectId: projectId || 0,
     onUpdateNodeData,
     onAddCard,
     onDeleteCard,
@@ -182,7 +184,7 @@ export default function InsightCardContent({
     const insightId = cardData.insightId;
 
     let payload = {
-      project_id: cardData.projectId,
+      project_id: projectId,
       insight_text: additionalFields?.insight ?? insight,
       insight_type: additionalFields?.insightType ?? insightType,
       files: files.join(','),

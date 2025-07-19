@@ -153,12 +153,31 @@ export default function CanvasInner({ projectId }: CanvasProps) {
               });
               if (smRes.ok) {
                 const sourceMaterial = await smRes.json();
+                
+                // If there's a citation ID, fetch the citation text
+                let citationText = "";
+                let citationCredibility = "";
+                if (sourceMaterial.citation_id) {
+                  try {
+                    const citationRes = await fetch(`${API_URL}/citations/${sourceMaterial.citation_id}`, {
+                      credentials: "include", // Send cookies with request
+                    });
+                    if (citationRes.ok) {
+                      const citation = await citationRes.json();
+                      citationText = citation.text || "";
+                      citationCredibility = citation.credibility || "";
+                    }
+                  } catch (err) {
+                    console.error("Failed to load citation:", err);
+                  }
+                }
+                
                 cardData = {
                   tags: Array.isArray(sourceMaterial.tags) ? sourceMaterial.tags : (sourceMaterial.tags ? [sourceMaterial.tags] : []),
                   text: sourceMaterial.content || "",
                   thesisSupport: sourceMaterial.argument_type || "",
-                  source: sourceMaterial.source || sourceMaterial.citation || "",
-                  credibility: sourceMaterial.credibility || "",
+                  source: citationText || sourceMaterial.source || "",
+                  credibility: citationCredibility || sourceMaterial.credibility || "",
                   summary: sourceMaterial.summary,
                   sourceFunction: sourceMaterial.function,
                   additionalNotes: sourceMaterial.notes || "",
@@ -309,7 +328,7 @@ export default function CanvasInner({ projectId }: CanvasProps) {
             target: link.target_card_id.toString(),
             sourceHandle: link.source_handle,
             targetHandle: link.target_handle,
-            type: 'default', // changed from 'default'
+            type: 'default',
           }));
       
           setEdges(loadedEdges);
@@ -827,7 +846,7 @@ export default function CanvasInner({ projectId }: CanvasProps) {
           target: params.target,
           sourceHandle: params.sourceHandle,
           targetHandle: params.targetHandle,
-          type: 'smoothstep', // changed from 'default'
+          type: 'default',
         };
         setEdges((eds) => addEdge(newEdge, eds));
         
@@ -897,9 +916,10 @@ export default function CanvasInner({ projectId }: CanvasProps) {
 
   // Save card to backend after chat
   const handleSaveCard = async ({ cardId, chatAnswers, uploadedFiles }: { cardId: string; chatAnswers: any; uploadedFiles: File[] }) => {
-    
     const node = nodes.find(n => n.id === cardId);
-    if (!node || !projectId) return;
+    if (!node || !projectId) {
+      return;
+    }
     const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
     let backendId: number | undefined;
     let cardPayload: any = {};
@@ -911,6 +931,7 @@ export default function CanvasInner({ projectId }: CanvasProps) {
       const token = localStorage.getItem("token");
       // 1. Create or update the backend record for each card type
       if (cardType === "source") {
+        
         let citationId = node.data.citationId; // Keep existing citationId if updating
         
         // Check if source already exists (has sourceMaterialId) or needs to be created
@@ -953,6 +974,9 @@ export default function CanvasInner({ projectId }: CanvasProps) {
           if (!citationRes.ok) throw new Error("Failed to create citation");
           const savedCitation = await citationRes.json();
           citationId = savedCitation.id; // Set citationId for new source materials
+          
+          // Dispatch citation update event to refresh source list
+          window.dispatchEvent(new CustomEvent('citationUpdate'));
           
           // Create source material
           const sourceMaterialPayload = {
@@ -1276,7 +1300,6 @@ export default function CanvasInner({ projectId }: CanvasProps) {
           id: savedCard.id.toString(),
           data: updatedNodeData,
         };
-        console.log("[handleSaveCard] Updated nodes after save:", [...filtered, updatedNode]);
         return [...filtered, updatedNode];
       });
       setOpenCard({ id: savedCard.id.toString(), type: node.type || "source" });
@@ -1394,6 +1417,9 @@ export default function CanvasInner({ projectId }: CanvasProps) {
           body: JSON.stringify(citationPayload),
         });
         const savedCitation = await citationRes.json();
+        
+        // Dispatch citation update event to refresh source list
+        window.dispatchEvent(new CustomEvent('citationUpdate'));
         
         // Create source material
         const sourceMaterialPayload = {
@@ -1795,7 +1821,6 @@ export default function CanvasInner({ projectId }: CanvasProps) {
       (node.type === "insight" && !node.data.insightId) ||
       (node.type === "thought" && !node.data.thoughtId) ||
       (node.type === "claim" && !node.data.claimId);
-    console.log("[isCardUnsaved] cardId:", cardId, "type:", node.type, "isUUID:", isUUID, "sourceMaterialId:", node.data.sourceMaterialId, "citationId:", node.data.citationId, "questionId:", node.data.questionId, "insightId:", node.data.insightId, "thoughtId:", node.data.thoughtId, "claimId:", node.data.claimId, "hasMissingDataIds:", hasMissingDataIds);
     return isUUID || hasMissingDataIds;
   }, [nodes]);
 
@@ -1848,7 +1873,6 @@ export default function CanvasInner({ projectId }: CanvasProps) {
       };
       
       const result = [...filteredNodes, updatedNode];
-        console.log("[handleUpdateNodeData] Nodes after updateNodeData (ID updated):", result);
         return result;
       } else {
         // Just update the data without changing the ID
@@ -1872,7 +1896,6 @@ export default function CanvasInner({ projectId }: CanvasProps) {
           }
           return n;
         });
-        console.log("[handleUpdateNodeData] Nodes after updateNodeData (data updated):", updated);
         return updated;
       }
     });
@@ -1900,7 +1923,6 @@ export default function CanvasInner({ projectId }: CanvasProps) {
   // Listen for card list clicks from ProjectNav
   useEffect(() => {
     const handleCardListClick = (event: CustomEvent) => {
-      console.log("Canvas received cardListClick:", event.detail);
       const { cardId, cardType } = event.detail;
       handleCardClick(cardId, cardType);
     };

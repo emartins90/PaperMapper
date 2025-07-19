@@ -42,6 +42,8 @@ export const useCardSave = ({
 
       switch (cardType) {
         case "source":
+          // For source cards, we need to create citation first, then source material
+          // This will be handled separately in the source case
           endpoint = "/source_materials/";
           payload = {
             project_id: projectId,
@@ -103,15 +105,74 @@ export const useCardSave = ({
       }
 
       // Create the card in the backend
-      console.log('[useCardSave] Creating card:', { endpoint, payload, tags: payload.tags, tagsType: typeof payload.tags });
-      const response = await fetch(`${API_URL}${endpoint}`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: token ? `Bearer ${token}` : "",
-        },
-        body: JSON.stringify(payload),
-      });
+      let response;
+      
+      if (cardType === "source") {
+        
+        // For source cards, create citation only if there's citation content, then create source material
+        let citationId = null;
+        
+        // Only create citation if there's actual citation content
+        if (chatAnswers.sourceCitation && chatAnswers.sourceCitation.trim()) {
+          const citationPayload = {
+            text: chatAnswers.sourceCitation.trim(),
+            credibility: chatAnswers.sourceCredibility || "",
+            project_id: projectId,
+          };
+          
+          const citationResponse = await fetch(`${API_URL}/citations/`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: token ? `Bearer ${token}` : "",
+            },
+            body: JSON.stringify(citationPayload),
+          });
+          
+          if (!citationResponse.ok) {
+            const errorText = await citationResponse.text();
+            throw new Error(`Failed to create citation: ${citationResponse.status} ${errorText}`);
+          }
+          
+          const savedCitation = await citationResponse.json();
+          citationId = savedCitation.id;
+          
+          // Dispatch citation update event to refresh source list
+          window.dispatchEvent(new CustomEvent('citationUpdate'));
+        }
+        
+        // Create the source material (with or without citation ID)
+        const sourceMaterialPayload = {
+          project_id: projectId,
+          citation_id: citationId,
+          content: chatAnswers.sourceContent || "",
+          summary: chatAnswers.summary || "",
+          tags: chatAnswers.topicalTags || [],
+          argument_type: chatAnswers.argumentType || "",
+          function: chatAnswers.sourceFunction || "",
+          files: "",
+          notes: "",
+        };
+        
+        response = await fetch(`${API_URL}/source_materials/`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: token ? `Bearer ${token}` : "",
+          },
+          body: JSON.stringify(sourceMaterialPayload),
+        });
+      } else {
+        // For other card types, use the standard approach
+        response = await fetch(`${API_URL}${endpoint}`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: token ? `Bearer ${token}` : "",
+          },
+          body: JSON.stringify(payload),
+        });
+      }
 
 
 
@@ -175,6 +236,7 @@ export const useCardSave = ({
       switch (cardType) {
         case "source":
           nodeDataUpdate.sourceMaterialId = createdCard.id;
+          // For source cards, citation ID might be null if no citation was created
           nodeDataUpdate.citationId = createdCard.citation_id || null;
           nodeDataUpdate.source = chatAnswers.sourceCitation || "";
           nodeDataUpdate.summary = chatAnswers.summary || "";

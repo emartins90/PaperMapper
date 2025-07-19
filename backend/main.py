@@ -132,20 +132,27 @@ def get_sync_db():
 # --- Citation Endpoints ---
 @app.post("/citations/", response_model=schemas.Citation)
 async def create_citation(citation: schemas.CitationCreate, db: AsyncSession = Depends(get_db())):
+    print(f"[backend] Creating citation: {citation.dict()}")
     db_citation = models.Citation(**citation.dict())
     db.add(db_citation)
     await db.commit()
     await db.refresh(db_citation)
+    print(f"[backend] Created citation with ID: {db_citation.id}")
     return db_citation
 
 @app.get("/citations/", response_model=List[schemas.Citation])
-async def read_citations(skip: int = 0, limit: int = 100, db: AsyncSession = Depends(get_db())):
-    result = await db.execute(models.Citation.__table__.select().offset(skip).limit(limit))
-    return result.scalars().all()
+async def read_citations(skip: int = 0, limit: int = 100, project_id: int = None, db: AsyncSession = Depends(get_db())):
+    query = select(models.Citation)
+    if project_id is not None:
+        query = query.where(models.Citation.project_id == project_id)
+    query = query.offset(skip).limit(limit)
+    result = await db.execute(query)
+    citations = result.scalars().all()
+    return citations
 
 @app.get("/citations/{citation_id}", response_model=schemas.Citation)
 async def read_citation(citation_id: int, db: AsyncSession = Depends(get_db())):
-    result = await db.execute(models.Citation.__table__.select().where(models.Citation.id == citation_id))
+    result = await db.execute(select(models.Citation).where(models.Citation.id == citation_id))
     citation = result.scalar_one_or_none()
     if not citation:
         raise HTTPException(status_code=404, detail="Citation not found")
@@ -166,7 +173,7 @@ def update_citation(citation_id: int, citation: schemas.CitationCreate, db: Asyn
 
 @app.delete("/citations/{citation_id}")
 async def delete_citation(citation_id: int, db: AsyncSession = Depends(get_db())):
-    result = await db.execute(models.Citation.__table__.select().where(models.Citation.id == citation_id))
+    result = await db.execute(select(models.Citation).where(models.Citation.id == citation_id))
     db_citation = result.scalar_one_or_none()
     if not db_citation:
         raise HTTPException(status_code=404, detail="Citation not found")
@@ -177,16 +184,23 @@ async def delete_citation(citation_id: int, db: AsyncSession = Depends(get_db())
 # --- SourceMaterial Endpoints ---
 @app.post("/source_materials/", response_model=schemas.SourceMaterial)
 async def create_source_material(sm: schemas.SourceMaterialCreate, db: AsyncSession = Depends(get_db())):
+    print(f"[backend] Creating source material: {sm.dict()}")
     db_sm = models.SourceMaterial(**sm.dict())
     db.add(db_sm)
     await db.commit()
     await db.refresh(db_sm)
+    print(f"[backend] Created source material with ID: {db_sm.id}, citation_id: {db_sm.citation_id}")
     return db_sm
 
 @app.get("/source_materials/", response_model=List[schemas.SourceMaterial])
-async def read_source_materials(skip: int = 0, limit: int = 100, db: AsyncSession = Depends(get_db())):
-    result = await db.execute(select(models.SourceMaterial).offset(skip).limit(limit))
-    return result.scalars().all()
+async def read_source_materials(skip: int = 0, limit: int = 100, project_id: int = None, db: AsyncSession = Depends(get_db())):
+    query = select(models.SourceMaterial)
+    if project_id is not None:
+        query = query.where(models.SourceMaterial.project_id == project_id)
+    query = query.offset(skip).limit(limit)
+    result = await db.execute(query)
+    source_materials = result.scalars().all()
+    return source_materials
 
 @app.get("/source_materials/{sm_id}", response_model=schemas.SourceMaterial)
 async def read_source_material(sm_id: int, db: AsyncSession = Depends(get_db())):
@@ -284,8 +298,6 @@ async def read_question(question_id: int, db: AsyncSession = Depends(get_db())):
 
 @app.put("/questions/{question_id}", response_model=schemas.Question)
 async def update_question(question_id: int, question: schemas.QuestionUpdate, db: AsyncSession = Depends(get_db())):
-    print(f"[backend] /questions/{{question_id}} PUT body: {question.dict()}")
-    print(f"[backend] /questions/{{question_id}} tags: {question.tags} type: {type(question.tags)}")
     query = select(models.Question).where(models.Question.id == question_id)
     result = await db.execute(query)
     db_question = result.scalar_one_or_none()

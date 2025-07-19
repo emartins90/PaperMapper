@@ -41,7 +41,6 @@ export default function ProjectLayout({ children }: { children: React.ReactNode 
 
   // Handler for card clicks from the ProjectNav
   const handleCardClick = (cardId: string, cardType: string) => {
-    console.log("Layout handleCardClick:", cardId, cardType);
     // Dispatch a custom event that the Canvas can listen to
     const event = new CustomEvent('cardListClick', {
       detail: { cardId, cardType }
@@ -76,7 +75,7 @@ export default function ProjectLayout({ children }: { children: React.ReactNode 
       </div>
       
       {/* Project Navigation with Card List */}
-      <ProjectNav nodes={[]} onCardClick={handleCardClick} />
+      <ProjectNav nodes={[]} onCardClick={handleCardClick} projectId={projectId} />
       
       {children}
     </>
