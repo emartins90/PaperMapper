@@ -159,7 +159,8 @@ export default function SidePanelBase({
     
     switch (cardType) {
       case "source":
-        return formData.sourceContent?.trim();
+        // Source cards can be saved without requiring detailed content
+        return true;
       case "question":
         return formData.questionText?.trim();
       case "insight":

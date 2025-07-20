@@ -154,10 +154,11 @@ export default function LinkedCardsTab({ openCard, nodes, edges, onEdgesChange, 
       <div className="border-t pt-4">
         <h4 className="text-sm font-medium text-gray-700 mb-2">Connection Tips</h4>
         <ul className="text-xs text-gray-600 space-y-1">
-          <li>• Drag from connection points on any card to create links</li>
-          <li>• Click the Unlink button to remove a connection</li>
-          <li>• Click on any card on the canvas to view its details</li>
-          <li>• Connections are automatically saved and will persist after refresh</li>
+          <li className="font-medium">To create a connection:</li>
+          <li className="pb-2">• Drag from connection points on any card to create links</li>
+          <li className="font-medium">To delete a connection: </li>
+          <li>• Click "unlink" on a card above </li>
+          <li>• Or select the connection on the canvas and press backspace/delete on your keyboard.</li>
         </ul>
       </div>
     </div>

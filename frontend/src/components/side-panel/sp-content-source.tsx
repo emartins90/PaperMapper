@@ -359,6 +359,9 @@ export default function SourceCardContent({
         const errorText = await response.text();
         throw new Error(`Failed to save changes: ${response.status} ${errorText}`);
       }
+
+      // Dispatch source material update event to refresh source list
+      window.dispatchEvent(new CustomEvent('sourceMaterialUpdate'));
     } catch (error) {
       console.error("Error saving changes:", error);
       alert("Failed to save changes: " + (error as Error).message);
@@ -418,6 +421,9 @@ export default function SourceCardContent({
         const errorText = await response.text();
         throw new Error(`Failed to save changes: ${response.status} ${errorText}`);
       }
+
+      // Dispatch source material update event to refresh source list
+      window.dispatchEvent(new CustomEvent('sourceMaterialUpdate'));
     } catch (error) {
       console.error("Error saving changes:", error);
       alert("Failed to save changes: " + (error as Error).message);
@@ -477,6 +483,9 @@ export default function SourceCardContent({
         const errorText = await response.text();
         throw new Error(`Failed to save changes: ${response.status} ${errorText}`);
       }
+
+      // Dispatch source material update event to refresh source list
+      window.dispatchEvent(new CustomEvent('sourceMaterialUpdate'));
     } catch (error) {
       console.error("Error saving changes:", error);
       alert("Failed to save changes: " + (error as Error).message);
@@ -536,6 +545,9 @@ export default function SourceCardContent({
         const errorText = await response.text();
         throw new Error(`Failed to save changes: ${response.status} ${errorText}`);
       }
+
+      // Dispatch source material update event to refresh source list
+      window.dispatchEvent(new CustomEvent('sourceMaterialUpdate'));
     } catch (error) {
       console.error("Error saving changes:", error);
       alert("Failed to save changes: " + (error as Error).message);
@@ -824,7 +836,7 @@ export default function SourceCardContent({
   };
 
   const handleSaveSource = async () => {
-    if (!openCard || !sourceContent.trim()) return;
+    if (!openCard) return;
 
     try {
       await saveCard({
@@ -1230,7 +1242,7 @@ export default function SourceCardContent({
             <div className="pt-4">
               <button
                 onClick={handleSaveSource}
-                disabled={isSavingCard || !sourceContent.trim()}
+                disabled={isSavingCard}
                 className="w-full bg-primary text-primary-foreground py-2 px-4 rounded-lg font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isSavingCard ? "Saving..." : "Save Source"}
@@ -1501,7 +1513,7 @@ export default function SourceCardContent({
             <div className="pt-4">
               <button
                 onClick={handleSaveSource}
-                disabled={isSavingCard || !sourceContent.trim()}
+                disabled={isSavingCard}
                 className="w-full bg-primary text-primary-foreground py-2 px-4 rounded-lg font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isSavingCard ? "Saving..." : "Save Source"}

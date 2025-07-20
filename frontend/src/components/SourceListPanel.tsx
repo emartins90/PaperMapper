@@ -791,7 +791,7 @@ export default function SourceListPanel({ projectId, onClose, onSourceCardClick,
                 {/* Linked source cards */}
                 {sourceMaterialsForCitation.length > 0 && (
                   <div>
-                    <p className="text-xs text-gray-600 mb-2">Linked Sources:</p>
+                    <p className="text-xs text-gray-600 mb-2">Associated Source Cards:</p>
                     <div className="space-y-2">
                       {sourceMaterialsForCitation.map(sm => (
                         <Badge
