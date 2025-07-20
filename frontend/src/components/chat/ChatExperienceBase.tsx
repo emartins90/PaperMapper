@@ -2,13 +2,19 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from "@/components/ui/command";
-import { Check } from "lucide-react";
+import { Check, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { FileListDisplay } from "../canvas-add-files/FileListDisplay";
-import { uploadFilesForCardType, CardType } from "../../components/useFileUploadHandler";
+import { CardType } from "../../components/useFileUploadHandler";
 import FileChip from "../canvas-add-files/FileChip";
 import { useCardSave } from "../shared/useCardSave";
+
+interface Citation {
+  id: number;
+  text: string;
+  credibility: string | null;
+  project_id: number;
+}
 
 interface ChatExperienceBaseProps {
   cardId: string;
@@ -65,7 +71,19 @@ const ChatExperienceBase: React.FC<ChatExperienceBaseProps> = ({
   const [filesByPrompt, setFilesByPrompt] = useState<{ [promptId: string]: File[] }>({});
   const [cardSaved, setCardSaved] = useState(false);
   const [deletingTags, setDeletingTags] = useState<Set<string>>(new Set());
+  
+  // Citation selection state
+  const [selectedCitation, setSelectedCitation] = useState<Citation | null>(null);
+  const [citations, setCitations] = useState<Citation[]>([]);
+  const [citationSelectorOpen, setCitationSelectorOpen] = useState(false);
+  const [citationSearchValue, setCitationSearchValue] = useState("");
+
   const currentPrompt = prompts[chatStep];
+  console.log('=== CURRENT PROMPT CALCULATION DEBUG ===');
+  console.log('chatStep:', chatStep);
+  console.log('prompts.length:', prompts.length);
+  console.log('currentPrompt:', currentPrompt);
+  console.log('prompts array:', prompts.map((p: any, i: number) => ({ index: i, id: p.id })));
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Get the node position for the current card
@@ -105,6 +123,7 @@ const ChatExperienceBase: React.FC<ChatExperienceBaseProps> = ({
     setChatHistory([{ role: "system", text: prompts[0].prompt }]);
     setFilesByPrompt({}); // Reset filesByPrompt on cardId change
     setCardSaved(false); // Reset saved state
+    setSelectedCitation(null); // Reset selected citation
   }, [cardId]);
 
   // Fetch custom options from backend
@@ -141,7 +160,7 @@ const ChatExperienceBase: React.FC<ChatExperienceBaseProps> = ({
         fetchCustomOptions(prompt.id);
       }
     });
-  }, [prompts, fetchCustomOptions]);
+  }, [prompts]); // Remove fetchCustomOptions from dependencies since it's stable
 
   // Fetch existing tags from backend (for all card types)
   const fetchExistingTags = async () => {
@@ -166,6 +185,97 @@ const ChatExperienceBase: React.FC<ChatExperienceBaseProps> = ({
   };
   useEffect(() => { if (projectId) fetchExistingTags(); }, [projectId]);
 
+  // Fetch existing citations
+  const fetchCitations = async () => {
+    if (!projectId) return;
+    try {
+      const response = await fetch(`${API_URL}/citations/?project_id=${projectId}`);
+      if (response.ok) {
+        const data = await response.json();
+        setCitations(data);
+      }
+    } catch (error) {
+      console.error("Failed to fetch citations:", error);
+    }
+  };
+
+  // Load citations on mount
+  useEffect(() => {
+    if (chatType === 'source') {
+      fetchCitations();
+    }
+  }, [projectId, chatType]);
+
+  // Listen for citation updates
+  useEffect(() => {
+    if (chatType !== 'source') return;
+    
+    const handleCitationUpdate = () => {
+      fetchCitations();
+    };
+    window.addEventListener('citationUpdate', handleCitationUpdate);
+    return () => window.removeEventListener('citationUpdate', handleCitationUpdate);
+  }, [projectId, chatType]);
+
+  // Note: Removed auto-advance useEffect to prevent navigation conflicts
+  // Citation selection now handles advancement directly in handleCitationSelect
+
+  // Filter citations for search
+  const filteredCitations = citations.filter((citation: Citation) =>
+    citation.text.toLowerCase().includes(citationSearchValue.toLowerCase()) ||
+    (citation.credibility && citation.credibility.toLowerCase().includes(citationSearchValue.toLowerCase()))
+  );
+
+  // Handle citation selection
+  const handleCitationSelect = (citation: Citation) => {
+    console.log('=== CITATION SELECTION DEBUG (WORKING VERSION) ===');
+    console.log('Selected citation:', citation);
+    console.log('Current prompt ID:', currentPrompt.id);
+    console.log('Current chatStep:', chatStep);
+    console.log('Total prompts:', prompts.length);
+    
+    setSelectedCitation(citation);
+    setCitationSelectorOpen(false);
+    setCitationSearchValue("");
+    
+    // Update chat answers with citation data
+    setChatAnswers(prev => ({
+      ...prev,
+      sourceCitation: citation.text,
+      sourceCredibility: citation.credibility || "",
+      selectedCitationId: citation.id.toString(),
+    }));
+    
+    // Update chat inputs
+    setChatInputs(prev => ({
+      ...prev,
+      sourceCitation: citation.text,
+      sourceCredibility: citation.credibility || "",
+    }));
+    
+    // REMOVED: Auto-advancement logic - let user click Continue to proceed
+  };
+
+  // Handle citation removal
+  const handleCitationRemove = () => {
+    setSelectedCitation(null);
+    
+    // Clear citation data from chat answers
+    setChatAnswers(prev => ({
+      ...prev,
+      sourceCitation: "",
+      sourceCredibility: "",
+      selectedCitationId: "",
+    }));
+    
+    // Clear citation data from chat inputs
+    setChatInputs(prev => ({
+      ...prev,
+      sourceCitation: "",
+      sourceCredibility: "",
+    }));
+  };
+
   // Option selection
   const handleOptionSelect = (optionType: string, option: string) => {
     let valueToSave = option;
@@ -182,9 +292,28 @@ const ChatExperienceBase: React.FC<ChatExperienceBaseProps> = ({
 
   // Back button handler
   const handleBack = () => {
+    console.log('=== BACK BUTTON DEBUG ===');
+    console.log('Current chatStep:', chatStep);
+    console.log('Current selectedCitation:', selectedCitation);
+    console.log('Current chatAnswers:', chatAnswers);
+    
     if (chatStep > 0) {
-      const newStep = chatStep - 1;
+      let newStep = chatStep - 1;
+      console.log('Initial new step will be:', newStep);
+      
+      // Handle special case: if we're going back and would land on credibility step
+      // but we have a selected citation, skip to citation step instead
+      if (newStep >= 0 && newStep < prompts.length && prompts[newStep].id === 'sourceCredibility' && selectedCitation) {
+        console.log('Skipping credibility step when going back (have selected citation)');
+        newStep = newStep - 1; // Go back one more step to citation
+      }
+      
+      // Ensure we don't go below 0
+      if (newStep < 0) newStep = 0;
+      
+      console.log('Final new step will be:', newStep);
       setChatStep(newStep);
+      
       // Rebuild chat history up to the new step
       const newHistory: ChatMessage[] = [];
       for (let i = 0; i <= newStep; i++) {
@@ -195,6 +324,35 @@ const ChatExperienceBase: React.FC<ChatExperienceBaseProps> = ({
           if (Array.isArray(answer)) {
             answer = answer.join(", ");
           }
+          console.log(`Adding answer for prompt ${prompts[i-1].id}:`, answer);
+          newHistory.push({ role: "user" as const, text: answer === "" ? "Skipped" : answer });
+          newHistory.push({ role: "system" as const, text: prompts[i].prompt });
+        }
+      }
+      setChatHistory(newHistory);
+    } else if (chatStep >= prompts.length) {
+      // Handle going back from summary screen
+      console.log('Going back from summary screen');
+      let newStep = prompts.length - 1;
+      
+      // If we have a selected citation and the last prompt is credibility, go back to citation
+      if (selectedCitation && prompts[newStep]?.id === 'sourceCredibility') {
+        newStep = newStep - 1;
+      }
+      
+      setChatStep(newStep);
+      
+      // Rebuild chat history up to the new step
+      const newHistory: ChatMessage[] = [];
+      for (let i = 0; i <= newStep; i++) {
+        if (i === 0) {
+          newHistory.push({ role: "system" as const, text: prompts[i].prompt });
+        } else {
+          let answer = chatAnswers[prompts[i-1].id] || "";
+          if (Array.isArray(answer)) {
+            answer = answer.join(", ");
+          }
+          console.log(`Adding answer for prompt ${prompts[i-1].id}:`, answer);
           newHistory.push({ role: "user" as const, text: answer === "" ? "Skipped" : answer });
           newHistory.push({ role: "system" as const, text: prompts[i].prompt });
         }
@@ -216,9 +374,22 @@ const ChatExperienceBase: React.FC<ChatExperienceBaseProps> = ({
       setUploadedFiles([]);
       uploadedFilesRef.current = [];
       if (chatStep < prompts.length - 1) {
-        const nextStep = chatStep + 1;
-        setChatStep(nextStep);
-        setChatHistory(prev => [...prev, { role: "system", text: prompts[nextStep].prompt }]);
+        let nextStep = chatStep + 1;
+        
+        // If we're on sourceCitation step and have a selected citation, skip the credibility step
+        if (currentPrompt.id === 'sourceCitation' && selectedCitation) {
+          nextStep = chatStep + 2; // Skip credibility prompt
+        }
+        
+        if (nextStep <= prompts.length) {
+          if (nextStep < prompts.length) {
+            setChatStep(nextStep);
+            setChatHistory(prev => [...prev, { role: "system", text: prompts[nextStep].prompt }]);
+          } else {
+            // We've reached the end, go to summary
+            setChatStep(prompts.length);
+          }
+        }
       }
     } else {
       const answerText = chatInputs[currentPrompt.id]?.trim() || "";
@@ -229,9 +400,22 @@ const ChatExperienceBase: React.FC<ChatExperienceBaseProps> = ({
       setUploadedFiles([]);
       uploadedFilesRef.current = [];
       if (chatStep < prompts.length - 1) {
-        const nextStep = chatStep + 1;
-        setChatStep(nextStep);
-        setChatHistory(prev => [...prev, { role: "system", text: prompts[nextStep].prompt }]);
+        let nextStep = chatStep + 1;
+        
+        // If we're on sourceCitation step and have a selected citation, skip the credibility step
+        if (currentPrompt.id === 'sourceCitation' && selectedCitation) {
+          nextStep = chatStep + 2; // Skip credibility prompt
+        }
+        
+        if (nextStep <= prompts.length) {
+          if (nextStep < prompts.length) {
+            setChatStep(nextStep);
+            setChatHistory(prev => [...prev, { role: "system", text: prompts[nextStep].prompt }]);
+          } else {
+            // We've reached the end, go to summary
+            setChatStep(prompts.length);
+          }
+        }
       }
     }
   };
@@ -476,9 +660,20 @@ const ChatExperienceBase: React.FC<ChatExperienceBaseProps> = ({
             );
           })}
         </div>
-        {chatStep < prompts.length && (
+        {chatStep < prompts.length && currentPrompt && (
           <div className="space-y-3">
             {(() => {
+              console.log('=== RENDERING CURRENT PROMPT DEBUG ===');
+              console.log('Current prompt ID:', currentPrompt.id);
+              console.log('Current prompt options:', currentPrompt.options);
+              console.log('Selected citation:', selectedCitation);
+              console.log('Chat answers:', chatAnswers);
+              
+              // If we're on the credibility step and we have a selected citation, skip it
+              if (currentPrompt.id === 'sourceCredibility' && selectedCitation) {
+                console.log('Skipping credibility prompt because we have a selected citation');
+                return null;
+              }
         
           
               if (currentPrompt.options && currentPrompt.options.length > 0) {
@@ -828,12 +1023,94 @@ const ChatExperienceBase: React.FC<ChatExperienceBaseProps> = ({
                 // Textarea for all other text input prompts
                 return (
                   <div className="space-y-2">
+                    {/* Citation selection for sourceCitation prompt */}
+                    {currentPrompt.id === 'sourceCitation' && chatType === 'source' && (
+                      <div className="space-y-3">
+                        {/* Show selected citation or citation selection button */}
+                        {selectedCitation ? (
+                          <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border">
+                            <div className="flex-1">
+                              <p className="text-sm font-medium text-gray-900">{selectedCitation.text}</p>
+                              {selectedCitation.credibility && (
+                                <p className="text-xs text-gray-600 mt-1">Credibility: {selectedCitation.credibility}</p>
+                              )}
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={handleCitationRemove}
+                              className="p-1 h-8 w-8 text-red-600 hover:text-red-700"
+                            >
+                              <X className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        ) : (
+                          citations.length > 0 && (
+                            <Popover open={citationSelectorOpen} onOpenChange={setCitationSelectorOpen}>
+                              <PopoverTrigger asChild>
+                                <Button variant="outline" className="w-full">
+                                  Add Existing Citation
+                                </Button>
+                              </PopoverTrigger>
+                            <PopoverContent className="w-96 p-0" align="start">
+                              <Command>
+                                <CommandInput
+                                  placeholder="Search citations..."
+                                  value={citationSearchValue}
+                                  onValueChange={setCitationSearchValue}
+                                />
+                                <CommandList className="max-h-[500px]">
+                                  <CommandEmpty>No citations found.</CommandEmpty>
+                                  <CommandGroup>
+                                    {filteredCitations.map((citation: Citation, index: number) => (
+                                      <React.Fragment key={citation.id}>
+                                        <CommandItem
+                                          value={citation.text}
+                                          onSelect={() => handleCitationSelect(citation)}
+                                          className="py-3"
+                                        >
+                                          <div className="flex-1">
+                                            <p className="text-sm font-medium">{citation.text}</p>
+                                            {citation.credibility && (
+                                              <p className="text-xs text-gray-600">Credibility: {citation.credibility}</p>
+                                            )}
+                                          </div>
+                                          <Check className={cn("ml-2 h-4 w-4", selectedCitation ? (selectedCitation.id === citation.id ? "opacity-100" : "opacity-0") : "opacity-0")} />
+                                        </CommandItem>
+                                        {index < filteredCitations.length - 1 && (
+                                          <div className="h-px bg-gray-200 mx-2" />
+                                        )}
+                                      </React.Fragment>
+                                    ))}
+                                  </CommandGroup>
+                                </CommandList>
+                              </Command>
+                            </PopoverContent>
+                          </Popover>
+                        )
+                        )}
+                        
+                        {/* Citation textarea - only show if no citation is selected */}
+                        {!selectedCitation && (
                     <textarea
                       value={chatInputs[currentPrompt.id] || ""}
                       onChange={e => setChatInputs(prev => ({ ...prev, [currentPrompt.id]: e.target.value }))}
                       placeholder={`Enter your ${promptTitles[currentPrompt.id] || currentPrompt.id.toLowerCase()}...`}
                       className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 min-h-[80px] resize-y"
                     />
+                        )}
+                      </div>
+                    )}
+                    
+                    {/* Regular textarea for other prompts */}
+                    {currentPrompt.id !== 'sourceCitation' && (
+                      <textarea
+                        value={chatInputs[currentPrompt.id] || ""}
+                        onChange={e => setChatInputs(prev => ({ ...prev, [currentPrompt.id]: e.target.value }))}
+                        placeholder={`Enter your ${promptTitles[currentPrompt.id] || currentPrompt.id.toLowerCase()}...`}
+                        className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 min-h-[80px] resize-y"
+                      />
+                    )}
                   </div>
                 );
               }
@@ -920,7 +1197,9 @@ const ChatExperienceBase: React.FC<ChatExperienceBaseProps> = ({
               handleSaveCard();
               return; // Prevent form submission from continuing
             } else if (chatType === 'source' && chatStep === prompts.length - 1) {
+              // For source cards, advance to summary screen
               setChatStep(chatStep + 1);
+              // Don't add any additional system message - just show the summary
             } else {
               handleChatSubmit(e);
             }
@@ -949,7 +1228,7 @@ const ChatExperienceBase: React.FC<ChatExperienceBaseProps> = ({
       )}
       {chatType === 'source' && chatStep >= prompts.length && (
         <div className="sticky bottom-0 left-0 right-0 bg-white pt-2 z-10 border-t flex gap-3 p-4">
-          <Button type="button" variant="secondary" onClick={() => setChatStep(chatStep - 1)} className="flex-1">
+          <Button type="button" variant="secondary" onClick={handleBack} className="flex-1">
             Back
           </Button>
           <Button type="button" onClick={handleFinalSubmit} disabled={isSaving} className="flex-1">

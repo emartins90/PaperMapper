@@ -109,11 +109,15 @@ export const useCardSave = ({
       
       if (cardType === "source") {
         
-        // For source cards, create citation only if there's citation content, then create source material
+        // For source cards, handle citation (either create new or use existing)
         let citationId = null;
         
-        // Only create citation if there's actual citation content
-        if (chatAnswers.sourceCitation && chatAnswers.sourceCitation.trim()) {
+        // If user selected an existing citation, use that ID
+        if (chatAnswers.selectedCitationId) {
+          citationId = parseInt(chatAnswers.selectedCitationId as string);
+        }
+        // Otherwise, create new citation if there's citation content
+        else if (chatAnswers.sourceCitation && chatAnswers.sourceCitation.trim()) {
           const citationPayload = {
             text: chatAnswers.sourceCitation.trim(),
             credibility: chatAnswers.sourceCredibility || "",
@@ -162,6 +166,10 @@ export const useCardSave = ({
           },
           body: JSON.stringify(sourceMaterialPayload),
         });
+        
+        // Dispatch source material update event to refresh source list
+        console.log('useCardSave: Dispatching sourceMaterialUpdate event');
+        window.dispatchEvent(new CustomEvent('sourceMaterialUpdate'));
       } else {
         // For other card types, use the standard approach
         response = await fetch(`${API_URL}${endpoint}`, {

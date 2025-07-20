@@ -159,8 +159,7 @@ async def read_citation(citation_id: int, db: AsyncSession = Depends(get_db())):
     return citation
 
 @app.put("/citations/{citation_id}", response_model=schemas.Citation)
-def update_citation(citation_id: int, citation: schemas.CitationCreate, db: AsyncSession = Depends(get_db())):
-    async def _update_citation():
+async def update_citation(citation_id: int, citation: schemas.CitationCreate, db: AsyncSession = Depends(get_db())):
         db_citation = await db.get(models.Citation, citation_id)
         if not db_citation:
             raise HTTPException(status_code=404, detail="Citation not found")
@@ -169,7 +168,6 @@ def update_citation(citation_id: int, citation: schemas.CitationCreate, db: Asyn
         await db.commit()
         await db.refresh(db_citation)
         return db_citation
-    return _update_citation()
 
 @app.delete("/citations/{citation_id}")
 async def delete_citation(citation_id: int, db: AsyncSession = Depends(get_db())):

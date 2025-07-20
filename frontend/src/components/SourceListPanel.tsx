@@ -8,6 +8,9 @@ import { Badge } from "./ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "./ui/dialog";
 import { Textarea } from "./ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
+import { Label } from "./ui/label";
+import { Combobox, useCustomOptions } from "./ui/combobox";
+import SourceMaterialCard from "./canvas-cards/SourceMaterialCard";
 
 interface Citation {
   id: number;
@@ -43,6 +46,9 @@ export default function SourceListPanel({ projectId, onClose, onSourceCardClick,
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Custom options hook for credibility
+  const sourceCredibilityOptions = useCustomOptions("sourceCredibility");
+
   // Search and filter state
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
@@ -61,6 +67,12 @@ export default function SourceListPanel({ projectId, onClose, onSourceCardClick,
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [citationToDelete, setCitationToDelete] = useState<Citation | null>(null);
   const [deleteMode, setDeleteMode] = useState<'citation_only' | 'citation_and_sources'>('citation_only');
+
+  // Add citation state
+  const [showAddCitationModal, setShowAddCitationModal] = useState(false);
+  const [newCitationText, setNewCitationText] = useState("");
+  const [newCitationCredibility, setNewCitationCredibility] = useState("");
+  const [isCreatingCitation, setIsCreatingCitation] = useState(false);
 
   // Load citations and source materials
   useEffect(() => {
@@ -89,10 +101,11 @@ export default function SourceListPanel({ projectId, onClose, onSourceCardClick,
     loadData();
   }, [projectId]);
 
-  // Listen for citation updates to refresh the list
+  // Listen for citation and source material updates to refresh the list
   useEffect(() => {
-    const handleCitationUpdate = () => {
-      // Refresh the data when citations are updated
+    const handleDataUpdate = (event: Event) => {
+      console.log('SourceListPanel: Received event:', event.type);
+      // Refresh the data when citations or source materials are updated
       const loadData = async () => {
         try {
           setLoading(true);
@@ -118,12 +131,43 @@ export default function SourceListPanel({ projectId, onClose, onSourceCardClick,
       loadData();
     };
 
-    // Listen for citation update events
-    window.addEventListener('citationUpdate', handleCitationUpdate);
+    // Listen for citation and source material update events
+    window.addEventListener('citationUpdate', handleDataUpdate);
+    window.addEventListener('sourceMaterialUpdate', handleDataUpdate);
     
     return () => {
-      window.removeEventListener('citationUpdate', handleCitationUpdate);
+      window.removeEventListener('citationUpdate', handleDataUpdate);
+      window.removeEventListener('sourceMaterialUpdate', handleDataUpdate);
     };
+  }, [projectId]);
+
+  // Check for pending updates when component mounts
+  useEffect(() => {
+    // Check if there were any recent updates that we missed
+    const checkForUpdates = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        // Load citations for this project
+        const citationsRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/citations/?project_id=${projectId}`);
+        if (!citationsRes.ok) throw new Error("Failed to load citations");
+        const citationsData = await citationsRes.json();
+        setCitations(citationsData);
+
+        // Load source materials for this project
+        const sourceMaterialsRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/source_materials/?project_id=${projectId}`);
+        if (!sourceMaterialsRes.ok) throw new Error("Failed to load source materials");
+        const sourceMaterialsData = await sourceMaterialsRes.json();
+        setSourceMaterials(sourceMaterialsData);
+        console.log('SourceListPanel: Initial load, source materials count:', sourceMaterialsData.length);
+      } catch (err) {
+        setError((err as Error).message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    checkForUpdates();
   }, [projectId]);
 
   // Gather all unique tags and credibilities from source materials
@@ -255,7 +299,7 @@ export default function SourceListPanel({ projectId, onClose, onSourceCardClick,
   const handleEditCitation = (citation: Citation) => {
     setEditingCitation(citation);
     setEditText(citation.text);
-    setEditCredibility(citation.credibility || "");
+    setEditCredibility(citation.credibility || "none");
   };
 
   const handleSaveCitation = async () => {
@@ -274,7 +318,8 @@ export default function SourceListPanel({ projectId, onClose, onSourceCardClick,
         },
         body: JSON.stringify({
           text: editText,
-          credibility: editCredibility || null,
+          credibility: editCredibility === "none" ? null : editCredibility,
+          project_id: projectId,
         }),
       });
 
@@ -292,7 +337,7 @@ export default function SourceListPanel({ projectId, onClose, onSourceCardClick,
 
       setEditingCitation(null);
       setEditText("");
-      setEditCredibility("");
+      setEditCredibility("none");
     } catch (err) {
       alert("Failed to update citation: " + (err as Error).message);
     } finally {
@@ -314,15 +359,32 @@ export default function SourceListPanel({ projectId, onClose, onSourceCardClick,
       const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
       if (deleteMode === 'citation_and_sources') {
-        // Delete all associated source materials first
+        // Delete all associated source materials and their cards
         const sourceMaterialsToDelete = getSourceMaterialsForCitation(citationToDelete.id);
         for (const sm of sourceMaterialsToDelete) {
+          // Find the corresponding card
+          const cardNode = nodes.find(node => 
+            node.type === "source" && 
+            node.data?.sourceMaterialId === sm.id
+          );
+          
+          if (cardNode) {
+            // Delete the card (this will also delete the source material)
+            await fetch(`${API_URL}/cards/${cardNode.id}`, {
+              method: "DELETE",
+              headers: {
+                Authorization: token ? `Bearer ${token}` : "",
+              },
+            });
+          } else {
+            // Fallback: delete just the source material if no card found
           await fetch(`${API_URL}/source_materials/${sm.id}`, {
             method: "DELETE",
             headers: {
               Authorization: token ? `Bearer ${token}` : "",
             },
           });
+          }
         }
       }
 
@@ -341,6 +403,19 @@ export default function SourceListPanel({ projectId, onClose, onSourceCardClick,
       if (deleteMode === 'citation_and_sources') {
         const sourceMaterialsToDelete = getSourceMaterialsForCitation(citationToDelete.id);
         setSourceMaterials(prev => prev.filter(sm => !sourceMaterialsToDelete.some(smd => smd.id === sm.id)));
+        
+        // Dispatch event to notify Canvas to remove the deleted cards
+        sourceMaterialsToDelete.forEach(sm => {
+          const cardNode = nodes.find(node => 
+            node.type === "source" && 
+            node.data?.sourceMaterialId === sm.id
+          );
+          if (cardNode) {
+            window.dispatchEvent(new CustomEvent('deleteCard', { 
+              detail: { cardId: cardNode.id } 
+            }));
+          }
+        });
       }
 
       // Dispatch citation update event to refresh source list
@@ -365,6 +440,48 @@ export default function SourceListPanel({ projectId, onClose, onSourceCardClick,
       onSourceCardClick(cardNode.id, "source");
     } else {
       console.warn(`Could not find card for source material ${sourceMaterial.id}`);
+    }
+  };
+
+  // Handle creating new citation
+  const handleCreateNewCitation = async () => {
+    if (!newCitationText.trim()) return;
+    
+    setIsCreatingCitation(true);
+    try {
+      const token = localStorage.getItem("token");
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      
+      const response = await fetch(`${API_URL}/citations/`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: token ? `Bearer ${token}` : "",
+        },
+        body: JSON.stringify({
+          text: newCitationText.trim(),
+          credibility: newCitationCredibility || null,
+          project_id: projectId,
+        }),
+      });
+      
+      if (!response.ok) throw new Error("Failed to create citation");
+      
+      const newCitation = await response.json();
+      
+      // Update local state
+      setCitations(prev => [...prev, newCitation]);
+      setShowAddCitationModal(false);
+      setNewCitationText("");
+      setNewCitationCredibility("");
+      
+      // Dispatch citation update event
+      window.dispatchEvent(new CustomEvent('citationUpdate'));
+    } catch (error) {
+      console.error("Failed to create citation:", error);
+      alert("Failed to create citation: " + (error as Error).message);
+    } finally {
+      setIsCreatingCitation(false);
     }
   };
 
@@ -459,18 +576,32 @@ export default function SourceListPanel({ projectId, onClose, onSourceCardClick,
       <div className="fixed left-0 top-0 h-full w-86 bg-white shadow-lg border-r border-gray-200 z-[100] overflow-y-auto">
         <div className="sticky top-0 z-10 bg-white p-4 border-b border-gray-200 flex items-center justify-between">
           <h2 className="text-lg font-semibold text-gray-900">Source List</h2>
-          <Button variant="ghost" size="sm" onClick={onClose}>
-            <MdClose size={20} />
+          <div className="flex gap-2">
+          
+            <Button variant="ghost" size="sm" onClick={onClose}>
+              <MdClose size={20} />
+            </Button>
+          </div>
+        </div>
+
+        {/* Add Citation button */}
+        <div className="px-4 my-3">
+          <Button 
+            onClick={() => setShowAddCitationModal(true)}
+            className="w-full"
+            variant="outline"
+          >
+            Add Citation
           </Button>
         </div>
 
         {/* Search and filter bar */}
-        <div className="p-4 pb-0 mb-3 flex items-center gap-2">
+        <div className="px-4 pb-0 mb-3 flex items-center gap-2">
           <div className="relative flex-1">
             <Input
               type="text"
               className="pr-8"
-              placeholder="Search citations, sources, tags, credibility..."
+              placeholder="Search citations, sources, or tags"
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
               autoFocus
@@ -637,32 +768,13 @@ export default function SourceListPanel({ projectId, onClose, onSourceCardClick,
 
             return (
               <div key={citation.id} className="border border-gray-200 rounded-lg p-4 space-y-3">
-                {/* Citation text and actions */}
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-900 mb-1">{citation.text}</p>
-                    {citation.credibility && (
-                      <p className="text-xs text-gray-600">Credibility: {citation.credibility}</p>
+                {/* Citation text */}
+                <div>
+                  {citation.credibility && (
+                    <p className="text-sm font-medium text-foreground mb-2">{citation.credibility}</p>
                     )}
-                  </div>
-                  <div className="flex gap-1">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleEditCitation(citation)}
-                      className="p-1 h-8 w-8"
-                    >
-                      <MdEdit size={16} />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleDeleteCitation(citation)}
-                      className="p-1 h-8 w-8 text-red-600 hover:text-red-700"
-                    >
-                      <MdDelete size={16} />
-                    </Button>
-                  </div>
+                  <p className="text-sm text-gray-900 mb-2">{citation.text}</p>
+                 
                 </div>
 
                 {/* Tags */}
@@ -680,12 +792,12 @@ export default function SourceListPanel({ projectId, onClose, onSourceCardClick,
                 {sourceMaterialsForCitation.length > 0 && (
                   <div>
                     <p className="text-xs text-gray-600 mb-2">Linked Sources:</p>
-                    <div className="flex flex-wrap gap-1">
+                    <div className="space-y-2">
                       {sourceMaterialsForCitation.map(sm => (
                         <Badge
                           key={sm.id}
                           variant="outline"
-                          className="text-xs cursor-pointer hover:bg-gray-100"
+                          className="w-full border-source-300 text-sm text-source-700 cursor-pointer hover:bg-gray-100 py-1 px-3 justify-start"
                           onClick={() => handleSourceCardClick(sm)}
                         >
                           {sm.function || "Source"}
@@ -694,6 +806,29 @@ export default function SourceListPanel({ projectId, onClose, onSourceCardClick,
                     </div>
                   </div>
                 )}
+
+                {/* Edit and Delete buttons */}
+                <div className="flex gap-2 pt-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleEditCitation(citation)}
+                    className="flex-1"
+                  >
+                    <MdEdit size={16} className="mr-1" />
+                    Edit
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    danger
+                    onClick={() => handleDeleteCitation(citation)}
+                    className="flex-1"
+                  >
+                    <MdDelete size={16} className="mr-1" />
+                    Delete
+                  </Button>
+                </div>
               </div>
             );
           })}
@@ -705,59 +840,177 @@ export default function SourceListPanel({ projectId, onClose, onSourceCardClick,
             <h3 className="text-sm font-semibold text-gray-700 border-t pt-4">
               Uncited Sources ({filteredUncitedSourceMaterials.length})
             </h3>
-            {filteredUncitedSourceMaterials.map((sourceMaterial) => {
-              const tags = sourceMaterial.tags || [];
-
-              return (
-                <div key={sourceMaterial.id} className="border border-gray-200 rounded-lg p-4 space-y-3">
-                  {/* Source content */}
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-gray-900 mb-1">
-                        {sourceMaterial.content || sourceMaterial.summary || "No content"}
-                      </p>
-                      {sourceMaterial.function && (
-                        <p className="text-xs text-gray-600">Function: {sourceMaterial.function}</p>
+            <div className="space-y-3">
+              {filteredUncitedSourceMaterials.map((sourceMaterial) => {
+                // Find the corresponding card node
+                const cardNode = nodes.find(node => 
+                  node.type === "source" && 
+                  node.data?.sourceMaterialId === sourceMaterial.id
+                );
+                
+                if (!cardNode) {
+                  // Fallback to simple display if card not found
+                  const tags = sourceMaterial.tags || [];
+                  return (
+                    <div key={sourceMaterial.id} className="border border-gray-200 rounded-lg p-4 space-y-3">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-gray-900 mb-1">
+                            {sourceMaterial.content || sourceMaterial.summary || "No content"}
+                          </p>
+                          {sourceMaterial.function && (
+                            <p className="text-xs text-gray-600">Function: {sourceMaterial.function}</p>
+                          )}
+                        </div>
+                        <div className="flex gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleSourceCardClick(sourceMaterial)}
+                            className="p-1 h-8 w-8"
+                          >
+                            <MdOpenInNew size={16} />
+                          </Button>
+                        </div>
+                      </div>
+                      {tags.length > 0 && (
+                        <div className="flex flex-wrap gap-1">
+                          {tags.map(tag => (
+                            <Badge key={tag} variant="secondary" className="text-xs">
+                              {tag}
+                            </Badge>
+                          ))}
+                        </div>
                       )}
                     </div>
-                    <div className="flex gap-1">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleSourceCardClick(sourceMaterial)}
-                        className="p-1 h-8 w-8"
-                      >
-                        <MdOpenInNew size={16} />
-                      </Button>
-                    </div>
-                  </div>
+                  );
+                }
 
-                  {/* Tags */}
-                  {tags.length > 0 && (
-                    <div className="flex flex-wrap gap-1">
-                      {tags.map(tag => (
-                        <Badge key={tag} variant="secondary" className="text-xs">
-                          {tag}
-                        </Badge>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+                // Create props for the SourceMaterialCard component
+                const cardProps = {
+                  id: cardNode.id,
+                  data: {
+                    ...cardNode.data,
+                    onOpen: () => {
+                      onSourceCardClick(cardNode.id, "source");
+                    },
+                    onFileClick: undefined // Disable file clicking in the panel
+                  }
+                };
+                
+                return (
+                  <div 
+                    key={sourceMaterial.id} 
+                    className="relative cursor-pointer hover:shadow-lg transition-shadow rounded-xl w-full"
+                    onClick={() => onSourceCardClick(cardNode.id, "source")}
+                  >
+                    {/* Import and render SourceMaterialCard */}
+                    <SourceMaterialCard {...cardProps} showHandles={false} width="w-full" />
+                  </div>
+                );
+              })}
+            </div>
           </div>
         )}
       </div>
 
-      {/* Edit citation dialog */}
-      {editingCitation && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-[200] flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md space-y-4">
-            <h3 className="text-lg font-semibold">Edit Citation</h3>
-            
+      {/* Add Citation Modal */}
+      <Dialog open={showAddCitationModal} onOpenChange={setShowAddCitationModal}>
+        <DialogContent className="sm:max-w-md p-6">
+          <DialogHeader className="pb-4">
+            <DialogTitle>Add New Citation</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Citation Text</label>
+              <Label htmlFor="new-citation-text" className="block text-sm font-medium text-gray-700 mb-1">Citation Text</Label>
               <Textarea
+                id="new-citation-text"
+                placeholder="Author, Title, Publication, Date, URL..."
+                rows={3}
+                value={newCitationText}
+                onChange={(e) => setNewCitationText(e.target.value)}
+              />
+            </div>
+            <div>
+              <Label htmlFor="new-citation-credibility" className="block text-sm font-medium text-gray-700 mb-1">Credibility</Label>
+              <Combobox
+                options={[
+                  { value: "Peer-reviewed study", label: "Peer-reviewed study" },
+                  { value: "News article (reputable)", label: "News article (reputable)" },
+                  { value: "News article (biased)", label: "News article (biased)" },
+                  { value: "Expert opinion", label: "Expert opinion" },
+                  { value: "Institutional report", label: "Institutional report" },
+                  { value: "Personal experience", label: "Personal experience" },
+                  { value: "Blog or opinion piece", label: "Blog or opinion piece" },
+                  { value: "Speculative claim", label: "Speculative claim" },
+                  { value: "Social media post", label: "Social media post" },
+                  { value: "Unclear origin", label: "Unclear origin" },
+                  ...((sourceCredibilityOptions?.options as { value: string; label: string }[]) || []).filter(
+                    (o: { value: string; label: string }) => ![
+                      "Peer-reviewed study",
+                      "News article (reputable)",
+                      "News article (biased)",
+                      "Expert opinion",
+                      "Institutional report",
+                      "Personal experience",
+                      "Blog or opinion piece",
+                      "Speculative claim",
+                      "Social media post",
+                      "Unclear origin"
+                    ].includes(o.value)
+                  ),
+                ]}
+                value={newCitationCredibility || ""}
+                onChange={async (value) => {
+                  setNewCitationCredibility(value);
+                  // If it's a new custom option, persist it
+                  if (
+                    value &&
+                    ![
+                      "Peer-reviewed study",
+                      "News article (reputable)",
+                      "News article (biased)",
+                      "Expert opinion",
+                      "Institutional report",
+                      "Personal experience",
+                      "Blog or opinion piece",
+                      "Speculative claim",
+                      "Social media post",
+                      "Unclear origin"
+                    ].includes(value) &&
+                    sourceCredibilityOptions?.options &&
+                    !sourceCredibilityOptions.options.some(o => o.value === value)
+                  ) {
+                    await sourceCredibilityOptions.addOption(value);
+                  }
+                }}
+                placeholder="Select or type credibility level..."
+                allowCustom={true}
+              />
+            </div>
+          </div>
+          <DialogFooter className="pt-4">
+            <Button variant="outline" onClick={() => setShowAddCitationModal(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleCreateNewCitation} disabled={isCreatingCitation || !newCitationText.trim()}>
+              {isCreatingCitation ? "Creating..." : "Create Citation"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit citation dialog */}
+      <Dialog open={!!editingCitation} onOpenChange={(open) => !open && setEditingCitation(null)}>
+        <DialogContent className="sm:max-w-md p-6">
+          <DialogHeader className="pb-4">
+            <DialogTitle>Edit Citation</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-6">
+            <div>
+              <Label htmlFor="edit-citation-text" className="block text-sm font-medium text-gray-700 mb-1">Citation Text</Label>
+              <Textarea
+                id="edit-citation-text"
                 value={editText}
                 onChange={(e) => setEditText(e.target.value)}
                 rows={3}
@@ -766,40 +1019,78 @@ export default function SourceListPanel({ projectId, onClose, onSourceCardClick,
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Credibility</label>
-              <Select value={editCredibility} onValueChange={setEditCredibility}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select credibility..." />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">None</SelectItem>
-                  <SelectItem value="Peer-reviewed study">Peer-reviewed study</SelectItem>
-                  <SelectItem value="News article">News article</SelectItem>
-                  <SelectItem value="Blog post">Blog post</SelectItem>
-                  <SelectItem value="Government report">Government report</SelectItem>
-                  <SelectItem value="Industry report">Industry report</SelectItem>
-                  <SelectItem value="Book">Book</SelectItem>
-                  <SelectItem value="Other">Other</SelectItem>
-                </SelectContent>
-              </Select>
+              <Label htmlFor="edit-citation-credibility" className="block text-sm font-medium text-gray-700 mb-1">Credibility</Label>
+              <Combobox
+                options={[
+                  { value: "Peer-reviewed study", label: "Peer-reviewed study" },
+                  { value: "News article (reputable)", label: "News article (reputable)" },
+                  { value: "News article (biased)", label: "News article (biased)" },
+                  { value: "Expert opinion", label: "Expert opinion" },
+                  { value: "Institutional report", label: "Institutional report" },
+                  { value: "Personal experience", label: "Personal experience" },
+                  { value: "Blog or opinion piece", label: "Blog or opinion piece" },
+                  { value: "Speculative claim", label: "Speculative claim" },
+                  { value: "Social media post", label: "Social media post" },
+                  { value: "Unclear origin", label: "Unclear origin" },
+                  ...(sourceCredibilityOptions?.options || []).filter(
+                    (o: { value: string; label: string }) => ![
+                      "Peer-reviewed study",
+                      "News article (reputable)",
+                      "News article (biased)",
+                      "Expert opinion",
+                      "Institutional report",
+                      "Personal experience",
+                      "Blog or opinion piece",
+                      "Speculative claim",
+                      "Social media post",
+                      "Unclear origin"
+                    ].includes(o.value)
+                  ),
+                ]}
+                value={editCredibility === "none" ? "" : editCredibility}
+                onChange={async (value) => {
+                  setEditCredibility(value || "none");
+                  // If it's a new custom option, persist it
+                  if (
+                    value &&
+                    ![
+                      "Peer-reviewed study",
+                      "News article (reputable)",
+                      "News article (biased)",
+                      "Expert opinion",
+                      "Institutional report",
+                      "Personal experience",
+                      "Blog or opinion piece",
+                      "Speculative claim",
+                      "Social media post",
+                      "Unclear origin"
+                    ].includes(value) &&
+                    sourceCredibilityOptions?.options &&
+                    !sourceCredibilityOptions.options.some(o => o.value === value)
+                  ) {
+                    await sourceCredibilityOptions.addOption(value);
+                  }
+                }}
+                placeholder="Select or type credibility level..."
+                allowCustom={true}
+              />
             </div>
-
-            <div className="flex gap-2 justify-end">
+          </div>
+          <DialogFooter className="pt-4">
               <Button variant="outline" onClick={() => setEditingCitation(null)}>
                 Cancel
               </Button>
               <Button onClick={handleSaveCitation} disabled={isSaving || !editText.trim()}>
                 {isSaving ? "Saving..." : "Save"}
               </Button>
-            </div>
-          </div>
-        </div>
-      )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Delete confirmation dialog */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
+        <DialogContent className="sm:max-w-md p-6">
+          <DialogHeader className="pb-4">
             <DialogTitle>Delete Citation?</DialogTitle>
             <DialogDescription>
               This citation is linked to {citationToDelete ? getSourceMaterialsForCitation(citationToDelete.id).length : 0} source cards.
@@ -815,8 +1106,11 @@ export default function SourceListPanel({ projectId, onClose, onSourceCardClick,
                 value="citation_only"
                 checked={deleteMode === 'citation_only'}
                 onChange={(e) => setDeleteMode(e.target.value as 'citation_only' | 'citation_and_sources')}
+                className="h-4 w-4 text-primary border-gray-300 focus:ring-primary"
               />
-              <label htmlFor="citation_only">Delete citation only</label>
+              <label htmlFor="citation_only" className="text-sm font-medium text-gray-700">
+                Delete citation only
+              </label>
             </div>
             
             <div className="flex items-center space-x-2">
@@ -827,14 +1121,15 @@ export default function SourceListPanel({ projectId, onClose, onSourceCardClick,
                 value="citation_and_sources"
                 checked={deleteMode === 'citation_and_sources'}
                 onChange={(e) => setDeleteMode(e.target.value as 'citation_only' | 'citation_and_sources')}
+                className="h-4 w-4 text-primary border-gray-300 focus:ring-primary"
               />
-              <label htmlFor="citation_and_sources">
+              <label htmlFor="citation_and_sources" className="text-sm font-medium text-gray-700">
                 Delete citation and all associated source cards ({citationToDelete ? getSourceMaterialsForCitation(citationToDelete.id).length : 0})
               </label>
             </div>
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="pt-4">
             <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
               Cancel
             </Button>

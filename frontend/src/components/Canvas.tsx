@@ -1001,6 +1001,10 @@ export default function CanvasInner({ projectId }: CanvasProps) {
           if (!smRes.ok) throw new Error("Failed to save source material");
           const savedSM = await smRes.json();
           backendId = savedSM.id;
+          
+          // Dispatch source material update event to refresh source list
+          console.log('Canvas handleSaveCard: Dispatching sourceMaterialUpdate event');
+          window.dispatchEvent(new CustomEvent('sourceMaterialUpdate'));
         }
         
         updatedNodeData = {
@@ -1442,6 +1446,10 @@ export default function CanvasInner({ projectId }: CanvasProps) {
           body: JSON.stringify(sourceMaterialPayload),
         });
         const savedSM = await smRes.json();
+        
+        // Dispatch source material update event to refresh source list
+        console.log('Canvas handleAddCard: Dispatching sourceMaterialUpdate event');
+        window.dispatchEvent(new CustomEvent('sourceMaterialUpdate'));
         
         // Create card
         const cardPayload = {
@@ -1933,6 +1941,20 @@ export default function CanvasInner({ projectId }: CanvasProps) {
       window.removeEventListener('cardListClick', handleCardListClick as EventListener);
     };
   }, [handleCardClick]);
+
+  // Listen for delete card events from SourceListPanel
+  useEffect(() => {
+    const handleDeleteCardEvent = (event: CustomEvent) => {
+      const { cardId } = event.detail;
+      handleDeleteCard(cardId);
+    };
+
+    window.addEventListener('deleteCard', handleDeleteCardEvent as EventListener);
+    
+    return () => {
+      window.removeEventListener('deleteCard', handleDeleteCardEvent as EventListener);
+    };
+  }, [handleDeleteCard]);
 
   // Dispatch nodes updates to ProjectNav
   useEffect(() => {

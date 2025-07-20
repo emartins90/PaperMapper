@@ -11,6 +11,19 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { MultiCombobox } from "@/components/ui/multi-combobox";
 import { Combobox, useCustomOptions } from "@/components/ui/combobox";
+import { Button } from "@/components/ui/button";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from "@/components/ui/command";
+import { Check, X } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+
+interface Citation {
+  id: number;
+  text: string;
+  credibility: string | null;
+  project_id: number;
+}
 
 interface SourceCardContentProps {
   cardType: string | undefined;
@@ -65,6 +78,42 @@ export default function SourceCardContent({
   const [sourceFunction, setSourceFunction] = useState(cardData?.sourceFunction || "");
   const [credibility, setCredibility] = useState(cardData?.credibility || "");
 
+  // Citation selection state
+  const [selectedCitation, setSelectedCitation] = useState<Citation | null>(null);
+  const [citations, setCitations] = useState<Citation[]>([]);
+  const [citationSelectorOpen, setCitationSelectorOpen] = useState(false);
+  const [citationSearchValue, setCitationSearchValue] = useState("");
+  const [showNewCitationModal, setShowNewCitationModal] = useState(false);
+  const [newCitationText, setNewCitationText] = useState("");
+  const [newCitationCredibility, setNewCitationCredibility] = useState("");
+  
+  // Edit citation modal state
+  const [editingCitation, setEditingCitation] = useState<Citation | null>(null);
+  const [editText, setEditText] = useState("");
+  const [editCredibility, setEditCredibility] = useState("");
+  const [isSavingCitation, setIsSavingCitation] = useState(false);
+  
+  // Track local citation state to handle immediate UI updates
+  const [localCitationId, setLocalCitationId] = useState<number | null>(cardData?.citationId || null);
+  
+  // Track if we're in the middle of removing a citation
+  const isRemovingRef = useRef(false);
+  
+  // Track when we last removed a citation to prevent useEffect from re-setting it
+  const lastRemovalTimeRef = useRef<number>(0);
+  
+  // Track the last card ID to reset timestamp when switching cards
+  const lastCardIdRef = useRef<string | undefined>(undefined);
+  
+  // Track if we've explicitly removed a citation for the current card
+  const removedCitationForCardRef = useRef<Set<string>>(new Set());
+  
+  // Track if we need to refresh citation data from database
+  const [shouldRefreshCitation, setShouldRefreshCitation] = useState(false);
+  
+  // Track if we're making a citation-only update to prevent field resets
+  const isCitationOnlyUpdateRef = useRef(false);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const sourceFunctionOptions = useCustomOptions("sourceFunction");
@@ -95,10 +144,107 @@ export default function SourceCardContent({
     return Array.from(allTags).sort();
   };
 
+  // Fetch existing citations
+  const fetchCitations = async () => {
+    if (!projectId) return;
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/citations/?project_id=${projectId}`);
+      if (response.ok) {
+        const data = await response.json();
+        setCitations(data);
+      }
+    } catch (error) {
+      console.error("Failed to fetch citations:", error);
+    }
+  };
 
+  // Fetch citation data for saved cards
+  const fetchCardCitationData = async () => {
+    if (!cardData?.sourceMaterialId || !projectId) return;
+    
+    try {
+      const token = localStorage.getItem("token");
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      
+      const response = await fetch(`${API_URL}/source_materials/${cardData.sourceMaterialId}`, {
+        headers: {
+          Authorization: token ? `Bearer ${token}` : "",
+        },
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Fetched citation data from database:', data);
+        
+        // Update citation state based on database data
+        if (data.citation_id && citations.length > 0) {
+          const citation = citations.find(c => c.id === data.citation_id);
+          if (citation) {
+            setSelectedCitation(citation);
+            setLocalCitationId(data.citation_id);
+            setSourceCitation(citation.text);
+            setCredibility(citation.credibility || "");
+          }
+        } else {
+          // No citation in database
+          setSelectedCitation(null);
+          setLocalCitationId(null);
+          setSourceCitation("");
+          setCredibility("");
+        }
+      }
+    } catch (error) {
+      console.error("Failed to fetch card citation data:", error);
+    }
+  };
+
+  // Load citations on mount
+  useEffect(() => {
+    fetchCitations();
+  }, [projectId]);
+
+  // Listen for citation updates
+  useEffect(() => {
+    const handleCitationUpdate = () => {
+      fetchCitations();
+    };
+    window.addEventListener('citationUpdate', handleCitationUpdate);
+    return () => window.removeEventListener('citationUpdate', handleCitationUpdate);
+  }, [projectId]);
 
   // Update all fields when component mounts or card changes
   useEffect(() => {
+    console.log('=== useEffect triggered ===');
+    console.log('openCard?.id:', openCard?.id);
+    console.log('cardData?.sourceMaterialId:', cardData?.sourceMaterialId);
+    console.log('isUnsaved:', isUnsaved);
+    console.log('citations.length:', citations.length);
+    console.log('isCitationOnlyUpdateRef.current:', isCitationOnlyUpdateRef.current);
+    
+    // Skip field resets if we're making a citation-only update for unsaved cards
+    if (isCitationOnlyUpdateRef.current && isUnsaved) {
+      console.log('Skipping field resets - citation-only update for unsaved card');
+      console.log('cardData?.citationId:', cardData?.citationId);
+      isCitationOnlyUpdateRef.current = false;
+      
+      // Only handle citation state, don't reset other fields
+      if (cardData?.citationId && citations.length > 0) {
+        const citation = citations.find(c => c.id === cardData.citationId);
+        console.log('Found citation to set:', citation);
+        if (citation) {
+          setSelectedCitation(citation);
+          setLocalCitationId(cardData.citationId);
+          setSourceCitation(citation.text);
+          setCredibility(citation.credibility || "");
+        }
+      } else {
+        console.log('No citation to set, clearing citation state');
+        setSelectedCitation(null);
+        setLocalCitationId(null);
+      }
+      return;
+    }
+    
     setNotes(cardData?.additionalNotes || "");
     setSourceCitation(cardData?.source || "");
     setSummary(cardData?.summary || "");
@@ -108,7 +254,29 @@ export default function SourceCardContent({
     setSourceFunction(cardData?.sourceFunction || "");
     setCredibility(cardData?.credibility || "");
     setPendingFiles(cardData?.pendingFiles || []);
-  }, [openCard?.id]);
+    
+    // Handle citation state based on whether card is saved or unsaved
+    if (isUnsaved) {
+      // For unsaved cards, use local state from cardData
+      console.log('Card is unsaved, using local citation state');
+      if (cardData?.citationId && citations.length > 0) {
+        const citation = citations.find(c => c.id === cardData.citationId);
+        if (citation) {
+          setSelectedCitation(citation);
+          setLocalCitationId(cardData.citationId);
+          setSourceCitation(citation.text);
+          setCredibility(citation.credibility || "");
+        }
+      } else {
+        setSelectedCitation(null);
+        setLocalCitationId(null);
+      }
+    } else {
+      // For saved cards, fetch from database
+      console.log('Card is saved, fetching citation data from database');
+      fetchCardCitationData();
+    }
+  }, [openCard?.id, cardData, citations, isUnsaved, shouldRefreshCitation]);
 
   // Update form data for parent component when fields change
   useEffect(() => {
@@ -119,12 +287,13 @@ export default function SourceCardContent({
         topicalTags: tags,
         argumentType: argumentType,
         sourceFunction: sourceFunction,
-        sourceCredibility: credibility,
-        sourceCitation: sourceCitation,
+        sourceCredibility: selectedCitation?.credibility || credibility,
+        sourceCitation: selectedCitation?.text || sourceCitation,
+        selectedCitationId: selectedCitation?.id || null,
         uploadedFiles: pendingFiles,
       });
     }
-  }, [sourceContent, summary, tags, argumentType, sourceFunction, credibility, sourceCitation, pendingFiles, onFormDataChange]); // Only run when the card ID changes, not when cardData changes
+  }, [sourceContent, summary, tags, argumentType, sourceFunction, credibility, sourceCitation, selectedCitation, pendingFiles, onFormDataChange]);
 
   // Update files when cardData changes
   useEffect(() => {
@@ -677,6 +846,325 @@ export default function SourceCardContent({
     }
   };
 
+  // Handle citation selection
+  const handleCitationSelect = async (citation: Citation) => {
+    // Immediately update all citation-related state
+    setSelectedCitation(citation);
+    setLocalCitationId(citation.id);
+    setSourceCitation(citation.text);
+    setCredibility(citation.credibility || "");
+    setCitationSelectorOpen(false);
+    setCitationSearchValue("");
+    
+    if (isUnsaved) {
+      // For unsaved cards, update node data with citation-only flag to prevent field resets
+      if (onUpdateNodeData && openCard) {
+        isCitationOnlyUpdateRef.current = true;
+        onUpdateNodeData(openCard.id, {
+          citationId: citation.id,
+          source: citation.text,
+          credibility: citation.credibility || "",
+        });
+      }
+    } else {
+      // For saved cards, update node data and save to database
+      if (onUpdateNodeData && openCard) {
+        onUpdateNodeData(openCard.id, {
+          source: citation.text,
+          credibility: citation.credibility || "",
+          citationId: citation.id,
+        });
+      }
+
+      // Save citation association to database for saved cards
+      if (cardData?.sourceMaterialId) {
+        try {
+          const token = localStorage.getItem("token");
+          const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+          
+          const payload = {
+            project_id: cardData.projectId,
+            citation_id: citation.id, // Associate the citation
+            content: sourceContent,
+            summary: summary,
+            tags: tags,
+            argument_type: argumentType,
+            function: sourceFunction,
+            files: files.join(','),
+            notes: notes,
+          };
+          
+          const response = await fetch(`${API_URL}/source_materials/${cardData.sourceMaterialId}`, {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: token ? `Bearer ${token}` : "",
+            },
+            body: JSON.stringify(payload),
+          });
+          
+          if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Failed to associate citation: ${response.status} ${errorText}`);
+          }
+
+          // Dispatch source material update event to refresh source list
+          window.dispatchEvent(new CustomEvent('sourceMaterialUpdate'));
+          
+          // Trigger a refresh of citation data from database
+          setShouldRefreshCitation(prev => !prev);
+          
+        } catch (error) {
+          console.error("Failed to associate citation:", error);
+          alert("Failed to associate citation: " + (error as Error).message);
+        }
+      }
+    }
+  };
+
+  // Handle citation removal
+  const handleCitationRemove = async () => {
+    console.log('=== Starting citation removal ===');
+    console.log('isUnsaved:', isUnsaved);
+    console.log('selectedCitation:', selectedCitation);
+    console.log('openCard?.id:', openCard?.id);
+    
+    // Clear all citation-related state immediately
+    setSelectedCitation(null);
+    setSourceCitation("");
+    setCredibility("");
+    setLocalCitationId(null);
+    
+    if (isUnsaved) {
+      // For unsaved cards, update node data with citation-only flag to prevent field resets
+      if (onUpdateNodeData && openCard) {
+        isCitationOnlyUpdateRef.current = true;
+        onUpdateNodeData(openCard.id, {
+          citationId: null,
+          source: "",
+          credibility: "",
+        });
+      }
+    } else {
+      // For saved cards, update node data and save to database
+      if (onUpdateNodeData && openCard) {
+        onUpdateNodeData(openCard.id, {
+          ...cardData,
+          source: "",
+          credibility: "",
+          citationId: null,
+        });
+      }
+
+      // Save to backend if we have a source material ID
+      if (cardData?.sourceMaterialId) {
+        try {
+          const token = localStorage.getItem("token");
+          const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+          
+          const payload = {
+            project_id: cardData.projectId,
+            citation_id: null, // Remove the citation reference
+            content: sourceContent,
+            summary: summary,
+            tags: tags,
+            argument_type: argumentType,
+            function: sourceFunction,
+            files: files.join(','),
+            notes: notes,
+          };
+          
+          const response = await fetch(`${API_URL}/source_materials/${cardData.sourceMaterialId}`, {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: token ? `Bearer ${token}` : "",
+            },
+            body: JSON.stringify(payload),
+          });
+          
+          if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Failed to remove citation: ${response.status} ${errorText}`);
+          }
+
+          console.log('Citation removed from database successfully');
+          
+          // Dispatch source material update event to refresh source list
+          window.dispatchEvent(new CustomEvent('sourceMaterialUpdate'));
+          
+          // Trigger a refresh of citation data from database
+          setShouldRefreshCitation(prev => !prev);
+          
+        } catch (error) {
+          console.error("Failed to remove citation:", error);
+          alert("Failed to remove citation: " + (error as Error).message);
+          
+          // If the database update failed, revert the UI state
+          if (cardData?.citationId && citations.length > 0) {
+            const citation = citations.find(c => c.id === cardData.citationId);
+            if (citation) {
+              setSelectedCitation(citation);
+              setLocalCitationId(cardData.citationId);
+              setSourceCitation(citation.text);
+              setCredibility(citation.credibility || "");
+            }
+          }
+        }
+      }
+    }
+  };
+
+  // Handle new citation creation
+  const handleCreateNewCitation = async () => {
+    if (!newCitationText.trim() || !projectId) return;
+    
+    try {
+      const token = localStorage.getItem("token");
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      
+      const response = await fetch(`${API_URL}/citations/`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: token ? `Bearer ${token}` : "",
+        },
+        body: JSON.stringify({
+          text: newCitationText.trim(),
+          credibility: newCitationCredibility || null,
+          project_id: projectId,
+        }),
+      });
+      
+      if (!response.ok) throw new Error("Failed to create citation");
+      
+      const newCitation = await response.json();
+      
+      // Update local state
+      setCitations(prev => [...prev, newCitation]);
+      setSelectedCitation(newCitation);
+      setShowNewCitationModal(false);
+      setNewCitationText("");
+      setNewCitationCredibility("");
+      
+      // Update node data
+      if (onUpdateNodeData && openCard) {
+        onUpdateNodeData(openCard.id, {
+          source: newCitation.text,
+          credibility: newCitation.credibility || "",
+          citationId: newCitation.id,
+        });
+      }
+
+      // Save citation association to database for saved cards
+      if (cardData?.sourceMaterialId) {
+        const payload = {
+          project_id: cardData.projectId,
+          citation_id: newCitation.id, // Associate the new citation
+          content: sourceContent,
+          summary: summary,
+          tags: tags,
+          argument_type: argumentType,
+          function: sourceFunction,
+          files: files.join(','),
+          notes: notes,
+        };
+        
+        const sourceMaterialResponse = await fetch(`${API_URL}/source_materials/${cardData.sourceMaterialId}`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: token ? `Bearer ${token}` : "",
+          },
+          body: JSON.stringify(payload),
+        });
+        
+        if (!sourceMaterialResponse.ok) {
+          const errorText = await sourceMaterialResponse.text();
+          throw new Error(`Failed to associate citation: ${sourceMaterialResponse.status} ${errorText}`);
+        }
+
+        // Dispatch source material update event to refresh source list
+        window.dispatchEvent(new CustomEvent('sourceMaterialUpdate'));
+      }
+      
+      // Dispatch citation update event
+      window.dispatchEvent(new CustomEvent('citationUpdate'));
+    } catch (error) {
+      console.error("Failed to create citation:", error);
+      alert("Failed to create citation: " + (error as Error).message);
+    }
+  };
+
+  // Handle edit citation
+  const handleEditCitation = (citation: Citation) => {
+    setEditingCitation(citation);
+    setEditText(citation.text);
+    setEditCredibility(citation.credibility || "none");
+  };
+
+  // Handle save edited citation
+  const handleSaveEditedCitation = async () => {
+    if (!editingCitation || !editText.trim()) return;
+    
+    setIsSavingCitation(true);
+    try {
+      const token = localStorage.getItem("token");
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      
+      const response = await fetch(`${API_URL}/citations/${editingCitation.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: token ? `Bearer ${token}` : "",
+        },
+        body: JSON.stringify({
+          text: editText.trim(),
+          credibility: editCredibility === "none" ? null : editCredibility,
+          project_id: projectId,
+        }),
+      });
+      
+      if (!response.ok) throw new Error("Failed to update citation");
+      
+      const updatedCitation = await response.json();
+      
+      // Update local state
+      setCitations(prev => prev.map(c => c.id === editingCitation.id ? updatedCitation : c));
+      
+      // Update selected citation if it's the one being edited
+      if (selectedCitation && selectedCitation.id === editingCitation.id) {
+        setSelectedCitation(updatedCitation);
+        
+        // Update node data
+        if (onUpdateNodeData && openCard) {
+          onUpdateNodeData(openCard.id, {
+            source: updatedCitation.text,
+            credibility: updatedCitation.credibility || "",
+          });
+        }
+      }
+      
+      setEditingCitation(null);
+      setEditText("");
+      setEditCredibility("");
+      
+      // Dispatch citation update event
+      window.dispatchEvent(new CustomEvent('citationUpdate'));
+    } catch (error) {
+      console.error("Failed to update citation:", error);
+      alert("Failed to update citation: " + (error as Error).message);
+    } finally {
+      setIsSavingCitation(false);
+    }
+  };
+
+  // Filter citations for search
+  const filteredCitations = citations.filter(citation =>
+    citation.text.toLowerCase().includes(citationSearchValue.toLowerCase()) ||
+    (citation.credibility && citation.credibility.toLowerCase().includes(citationSearchValue.toLowerCase()))
+  );
+
   if (!cardType || cardType !== "source") {
     return (
       <div className="flex-1 p-6 overflow-y-auto">
@@ -838,19 +1326,212 @@ export default function SourceCardContent({
           <div className="border-t border-gray-200 pt-4">
             <div>
               <Label htmlFor="source-citation" className="block text-sm font-medium text-gray-700 mb-1">Source Citation</Label>
-              <Textarea 
-                id="source-citation"
+              
+              {/* Show selected citation or citation input fields */}
+              {selectedCitation ? (
+                <div className="space-y-2">
+                  <div className="flex items-start justify-between p-3 bg-gray-50 rounded-lg border">
+                    <div className="flex-1 min-w-0 pr-3">
+                      {selectedCitation.credibility && (
+                        <p className="text-sm font-medium text-foreground mb-1">{selectedCitation.credibility}</p>
+                      )}
+                      <p className="text-sm text-gray-900 break-words">{selectedCitation.text}</p>
+                    </div>
+                    <div className="flex gap-1 flex-shrink-0">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleEditCitation(selectedCitation)}
+                        className="p-1 h-8 w-8 flex-shrink-0"
+                        title="Edit citation (changes will apply to all source cards using this citation)"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          console.log('Remove citation button clicked!');
+                          handleCitationRemove();
+                        }}
+                        className="p-1 h-8 w-8 text-red-600 hover:text-red-700 flex-shrink-0"
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {/* Citation selection buttons */}
+                  <div className="flex gap-2">
+                    {citations.length > 0 && (
+                      <Popover open={citationSelectorOpen} onOpenChange={setCitationSelectorOpen}>
+                        <PopoverTrigger asChild>
+                          <Button variant="outline" className="flex-1">
+                            Add Existing Citation
+                          </Button>
+                        </PopoverTrigger>
+                      <PopoverContent className="w-96 p-0" align="start">
+                        <Command>
+                          <CommandInput
+                            placeholder="Search citations..."
+                            value={citationSearchValue}
+                            onValueChange={setCitationSearchValue}
+                          />
+                          <CommandList className="max-h-96">
+                            <CommandEmpty>No citations found.</CommandEmpty>
+                            <CommandGroup>
+                              {filteredCitations.map((citation: Citation) => (
+                                <CommandItem
+                                  key={citation.id}
+                                  value={citation.text}
+                                  onSelect={() => handleCitationSelect(citation)}
+                                >
+                                  <div className="flex-1">
+                                    <p className="text-sm font-medium">{citation.text}</p>
+                                    {citation.credibility && (
+                                      <p className="text-xs text-gray-600">Credibility: {citation.credibility}</p>
+                                    )}
+                                  </div>
+                                  <Check className={cn("ml-2 h-4 w-4", (selectedCitation && selectedCitation.id === citation.id) ? "opacity-100" : "opacity-0")} />
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                    )}
+                    
+                    {!isUnsaved && (
+                      <Button 
+                        variant="outline" 
+                        className="flex-1"
+                        onClick={() => setShowNewCitationModal(true)}
+                      >
+                        Add New Citation
+                      </Button>
+                    )}
+                  </div>
+                  
+                  {/* Citation input fields - only show for unsaved cards */}
+                  {isUnsaved && (
+                    <div className="space-y-3">
+                      <Textarea 
+                        id="source-citation"
+                        placeholder="Author, Title, Publication, Date, URL..."
+                        rows={3}
+                        value={sourceCitation}
+                        onChange={handleSourceCitationChange}
+                        onBlur={handleSourceCitationBlur}
+                      />
+                      <p className="text-xs text-gray-500">Include all available citation details. We'll help format this properly later.</p>
+              
+                      <div>
+                        <Label htmlFor="source-credibility" className="block text-sm font-medium text-gray-700 mb-1">Source Credibility</Label>
+                        <Combobox
+                          options={[
+                            { value: "Peer-reviewed study", label: "Peer-reviewed study" },
+                            { value: "News article (reputable)", label: "News article (reputable)" },
+                            { value: "News article (biased)", label: "News article (biased)" },
+                            { value: "Expert opinion", label: "Expert opinion" },
+                            { value: "Institutional report", label: "Institutional report" },
+                            { value: "Personal experience", label: "Personal experience" },
+                            { value: "Blog or opinion piece", label: "Blog or opinion piece" },
+                            { value: "Speculative claim", label: "Speculative claim" },
+                            { value: "Social media post", label: "Social media post" },
+                            { value: "Unclear origin", label: "Unclear origin" },
+                            ...(sourceCredibilityOptions.options || []).filter(
+                              (o: { value: string; label: string }) => ![
+                                "Peer-reviewed study",
+                                "News article (reputable)",
+                                "News article (biased)",
+                                "Expert opinion",
+                                "Institutional report",
+                                "Personal experience",
+                                "Blog or opinion piece",
+                                "Speculative claim",
+                                "Social media post",
+                                "Unclear origin"
+                              ].includes(o.value)
+                            ),
+                          ]}
+                          value={credibility || ""}
+                          onChange={async (value) => {
+                            setCredibility(value);
+                            if (!isUnsaved) {
+                              saveAllFieldsWithCredibility(value);
+                            }
+                            // If it's a new custom option, persist it
+                            if (
+                              value &&
+                              ![
+                                "Peer-reviewed study",
+                                "News article (reputable)",
+                                "News article (biased)",
+                                "Expert opinion",
+                                "Institutional report",
+                                "Personal experience",
+                                "Blog or opinion piece",
+                                "Speculative claim",
+                                "Social media post",
+                                "Unclear origin"
+                              ].includes(value) &&
+                              !sourceCredibilityOptions.options.some(o => o.value === value)
+                            ) {
+                              await sourceCredibilityOptions.addOption(value);
+                            }
+                          }}
+                          placeholder="Select or type credibility level..."
+                          allowCustom={true}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Save button for unsaved cards - only show if showSaveButton is true */}
+          {isUnsaved && showSaveButton && (
+            <div className="pt-4">
+              <button
+                onClick={handleSaveSource}
+                disabled={isSavingCard || !sourceContent.trim()}
+                className="w-full bg-primary text-primary-foreground py-2 px-4 rounded-lg font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isSavingCard ? "Saving..." : "Save Source"}
+              </button>
+            </div>
+          )}
+        </div>
+      ) : sourceTab === "linked" ? (
+        <LinkedCardsTab openCard={openCard} nodes={nodes} edges={edges} onEdgesChange={onEdgesChange} onClose={onClose} />
+      ) : null}
+
+      {/* New Citation Modal */}
+      <Dialog open={showNewCitationModal} onOpenChange={setShowNewCitationModal}>
+        <DialogContent className="sm:max-w-md p-6">
+          <DialogHeader className="pb-4">
+            <DialogTitle>Add New Citation</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-6">
+            <div>
+              <Label htmlFor="new-citation-text" className="block text-sm font-medium text-gray-700 mb-1">Citation Text</Label>
+              <Textarea
+                id="new-citation-text"
                 placeholder="Author, Title, Publication, Date, URL..."
                 rows={3}
-                value={sourceCitation}
-                onChange={handleSourceCitationChange}
-                onBlur={handleSourceCitationBlur}
+                value={newCitationText}
+                onChange={(e) => setNewCitationText(e.target.value)}
               />
-              <p className="text-xs text-gray-500 mt-1">Include all available citation details. We'll help format this properly later.</p>
             </div>
-            
-            <div className="mt-4">
-              <Label htmlFor="source-credibility" className="block text-sm font-medium text-gray-700 mb-1">Source Credibility</Label>
+            <div>
+              <Label htmlFor="new-citation-credibility" className="block text-sm font-medium text-gray-700 mb-1">Credibility</Label>
               <Combobox
                 options={[
                   { value: "Peer-reviewed study", label: "Peer-reviewed study" },
@@ -863,8 +1544,8 @@ export default function SourceCardContent({
                   { value: "Speculative claim", label: "Speculative claim" },
                   { value: "Social media post", label: "Social media post" },
                   { value: "Unclear origin", label: "Unclear origin" },
-                  ...sourceCredibilityOptions.options.filter(
-                    o => ![
+                  ...((sourceCredibilityOptions.options as { value: string; label: string }[]) || []).filter(
+                    (o: { value: string; label: string }) => ![
                       "Peer-reviewed study",
                       "News article (reputable)",
                       "News article (biased)",
@@ -878,12 +1559,9 @@ export default function SourceCardContent({
                     ].includes(o.value)
                   ),
                 ]}
-                value={credibility || ""}
+                value={newCitationCredibility || ""}
                 onChange={async (value) => {
-                  setCredibility(value);
-                  if (!isUnsaved) {
-                    saveAllFieldsWithCredibility(value);
-                  }
+                  setNewCitationCredibility(value);
                   // If it's a new custom option, persist it
                   if (
                     value &&
@@ -909,23 +1587,105 @@ export default function SourceCardContent({
               />
             </div>
           </div>
+          <DialogFooter className="pt-4">
+            <Button variant="outline" onClick={() => setShowNewCitationModal(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleCreateNewCitation} disabled={!newCitationText.trim()}>
+              Create Citation
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
-          {/* Save button for unsaved cards - only show if showSaveButton is true */}
-          {isUnsaved && showSaveButton && (
-            <div className="pt-4">
-              <button
-                onClick={handleSaveSource}
-                disabled={isSavingCard || !sourceContent.trim()}
-                className="w-full bg-primary text-primary-foreground py-2 px-4 rounded-lg font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isSavingCard ? "Saving..." : "Save Source"}
-              </button>
+      {/* Edit Citation Modal */}
+      <Dialog open={!!editingCitation} onOpenChange={(open) => !open && setEditingCitation(null)}>
+        <DialogContent className="sm:max-w-md p-6">
+          <DialogHeader className="pb-2">
+            <DialogTitle>Edit Citation</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-6">
+            <div>
+              <Label htmlFor="edit-citation-text" className="block text-sm font-medium text-gray-700 mb-1">Citation Text</Label>
+              <Textarea
+                id="edit-citation-text"
+                value={editText}
+                onChange={(e) => setEditText(e.target.value)}
+                rows={3}
+                className="w-full"
+              />
             </div>
-          )}
-        </div>
-      ) : sourceTab === "linked" ? (
-        <LinkedCardsTab openCard={openCard} nodes={nodes} edges={edges} onEdgesChange={onEdgesChange} onClose={onClose} />
-      ) : null}
+
+            <div>
+              <Label htmlFor="edit-citation-credibility" className="block text-sm font-medium text-gray-700 mb-1">Credibility</Label>
+              <Combobox
+                options={[
+                  { value: "Peer-reviewed study", label: "Peer-reviewed study" },
+                  { value: "News article (reputable)", label: "News article (reputable)" },
+                  { value: "News article (biased)", label: "News article (biased)" },
+                  { value: "Expert opinion", label: "Expert opinion" },
+                  { value: "Institutional report", label: "Institutional report" },
+                  { value: "Personal experience", label: "Personal experience" },
+                  { value: "Blog or opinion piece", label: "Blog or opinion piece" },
+                  { value: "Speculative claim", label: "Speculative claim" },
+                  { value: "Social media post", label: "Social media post" },
+                  { value: "Unclear origin", label: "Unclear origin" },
+                  ...(sourceCredibilityOptions.options || []).filter(
+                    (o: { value: string; label: string }) => ![
+                      "Peer-reviewed study",
+                      "News article (reputable)",
+                      "News article (biased)",
+                      "Expert opinion",
+                      "Institutional report",
+                      "Personal experience",
+                      "Blog or opinion piece",
+                      "Speculative claim",
+                      "Social media post",
+                      "Unclear origin"
+                    ].includes(o.value)
+                  ),
+                ]}
+                value={editCredibility === "none" ? "" : editCredibility}
+                onChange={async (value) => {
+                  setEditCredibility(value || "none");
+                  // If it's a new custom option, persist it
+                  if (
+                    value &&
+                    ![
+                      "Peer-reviewed study",
+                      "News article (reputable)",
+                      "News article (biased)",
+                      "Expert opinion",
+                      "Institutional report",
+                      "Personal experience",
+                      "Blog or opinion piece",
+                      "Speculative claim",
+                      "Social media post",
+                      "Unclear origin"
+                    ].includes(value) &&
+                    !sourceCredibilityOptions.options.some(o => o.value === value)
+                  ) {
+                    await sourceCredibilityOptions.addOption(value);
+                  }
+                }}
+                placeholder="Select or type credibility level..."
+                allowCustom={true}
+              />
+            </div>
+            <p className="text-sm text-gray-600">
+              This citation is shared across multiple source cards. Changes will apply to all cards using this citation.
+            </p>
+          </div>
+          <DialogFooter className="pt-4">
+            <Button variant="outline" onClick={() => setEditingCitation(null)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveEditedCitation} disabled={isSavingCitation || !editText.trim()}>
+              {isSavingCitation ? "Saving..." : "Save"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 } 

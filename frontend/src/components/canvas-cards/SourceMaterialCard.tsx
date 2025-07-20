@@ -63,11 +63,13 @@ export default function SourceMaterialCard({ data, showHandles = true, width = '
       )}
       
       <div className="flex items-center justify-between mb-2">
-        <div className="text-source-700 truncate-block flex items-center gap-1">
-          <MdLibraryBooks className="text-source-400" size={22} />
-          <span className="font-bold">Source Material</span>{data.sourceFunction ? <span className="font-normal"> : {data.sourceFunction}</span> : ''}
+        <div className="text-source-700 flex items-center gap-1 min-w-0 flex-1">
+          <MdLibraryBooks className="text-source-400 flex-shrink-0" size={22} />
+          <div className="truncate">
+            <span className="font-bold">Source Material</span>{data.sourceFunction ? <span className="font-normal"> : {data.sourceFunction}</span> : ''}
+          </div>
         </div>
-        <button onClick={data.onOpen} aria-label="Open card">
+        <button onClick={data.onOpen} aria-label="Open card" className="flex-shrink-0 ml-2">
           <span className="text-source-400 text-xl">↗</span>
         </button>
       </div>
