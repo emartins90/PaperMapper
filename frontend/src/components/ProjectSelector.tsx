@@ -35,6 +35,7 @@ import { FullscreenFileViewer } from "./canvas-add-files/FullscreenFileViewer";
 import { useRef } from "react";
 import { FileListDisplay } from "./canvas-add-files/FileListDisplay";
 import FileChip from "./canvas-add-files/FileChip";
+import ProjectInfoModal from "./ProjectInfoModal";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -259,13 +260,6 @@ export default function ProjectSelector({ token }: { token: string }) {
 
   function handleEdit(project: Project) {
     setEditingProject(project);
-    setFormData({
-      name: project.name,
-      class_subject: project.class_subject || "",
-      paper_type: project.paper_type || "",
-      due_date: project.due_date ? project.due_date.split('T')[0] : "",
-      assignment_file: undefined, // Reset file input for edit
-    });
     setIsEditDialogOpen(true);
   }
 
@@ -695,99 +689,18 @@ export default function ProjectSelector({ token }: { token: string }) {
       </div>
 
       {/* Edit Dialog */}
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="sm:max-w-[425px] p-6">
-          <DialogHeader>
-            <DialogTitle>Edit Project</DialogTitle>
-          </DialogHeader>
-          <form onSubmit={handleUpdate} className="space-y-4">
-            <div>
-              <Label htmlFor="edit-name">Project Name *</Label>
-              <Input
-                id="edit-name"
-                value={formData.name}
-                onChange={(e) => setFormData({...formData, name: e.target.value})}
-                required
-              />
-            </div>
-            <div>
-              <Label htmlFor="edit-class_subject">Class/Subject</Label>
-              <Input
-                id="edit-class_subject"
-                value={formData.class_subject}
-                onChange={(e) => setFormData({...formData, class_subject: e.target.value})}
-              />
-            </div>
-            <div>
-              <Label htmlFor="edit-paper_type">Paper Type</Label>
-              <Input
-                id="edit-paper_type"
-                value={formData.paper_type}
-                onChange={(e) => setFormData({...formData, paper_type: e.target.value})}
-              />
-            </div>
-            <div>
-              <Label htmlFor="edit-due_date">Due Date</Label>
-              <Input
-                id="edit-due_date"
-                type="date"
-                value={formData.due_date}
-                onChange={(e) => setFormData({...formData, due_date: e.target.value})}
-              />
-            </div>
-            <div>
-              <Label htmlFor="edit-assignment_file">Assignment File (Optional)</Label>
-              <ProjectFileUpload
-                file={formData.assignment_file}
-                currentFile={editingProject?.assignment_file}
-                currentFilename={editingProject?.assignment_filename}
-                onFileChange={(file) => setFormData({...formData, assignment_file: file})}
-                onFileRemove={() => setFormData({...formData, assignment_file: undefined})}
-                onCurrentFileRemove={async () => {
-                  if (editingProject?.id) {
-                    try {
-                      console.log("Attempting to delete assignment file for project:", editingProject.id);
-                      
-                      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/projects/delete_assignment/?project_id=${editingProject.id}`, {
-                        method: "POST",
-                        headers: {
-                          "Content-Type": "application/json",
-                        },
-                        credentials: "include",
-                      });
-                      
-                      console.log("Response status:", response.status);
-                      
-                      if (response.ok) {
-                        console.log("Successfully deleted assignment file");
-                        // Update the editing project to remove the assignment file
-                        setEditingProject({...editingProject, assignment_file: undefined, assignment_filename: undefined});
-                      } else {
-                        const errorText = await response.text();
-                        console.error("Failed to delete assignment file:", response.status, response.statusText, errorText);
-                      }
-                    } catch (error) {
-                      console.error("Failed to delete assignment file:", error);
-                    }
-                  }
-                }}
-              />
-            </div>
-            <div className="flex justify-end space-x-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setIsEditDialogOpen(false)}
-              >
-                Cancel
-              </Button>
-              <Button type="submit" disabled={loading || !formData.name}>
-                Update Project
-              </Button>
-            </div>
-          </form>
-        </DialogContent>
-      </Dialog>
+      {isEditDialogOpen && editingProject && (
+        <ProjectInfoModal 
+          projectId={editingProject.id}
+          onClose={() => {
+            setIsEditDialogOpen(false);
+            setEditingProject(null);
+            setFormData({ name: "", class_subject: "", paper_type: "", due_date: "", assignment_file: undefined });
+            // Refresh projects list to get updated data
+            fetchProjects();
+          }}
+        />
+      )}
 
       {/* Account Settings Modal */}
       <AccountSettings 

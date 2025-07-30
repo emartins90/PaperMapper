@@ -1,10 +1,11 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { MdDelete, MdUpload } from "react-icons/md";
 import FileChip from "./canvas-add-files/FileChip";
 import { FullscreenFileViewer } from "./canvas-add-files/FullscreenFileViewer";
@@ -45,6 +46,9 @@ export default function ProjectInfoModal({ projectId, onClose }: ProjectInfoModa
   const [viewerOpen, setViewerOpen] = useState(false);
   const [viewerFile, setViewerFile] = useState<string | null>(null);
   const [viewerType, setViewerType] = useState<'image' | 'pdf' | 'other' | 'audio'>('other');
+
+  // Ref for auto-focusing the name input
+  const nameInputRef = useRef<HTMLInputElement>(null);
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -104,6 +108,17 @@ export default function ProjectInfoModal({ projectId, onClose }: ProjectInfoModa
 
     fetchProject();
   }, [projectId]);
+
+  useEffect(() => {
+    // Focus the name input after a small delay to ensure modal is fully rendered
+    const timer = setTimeout(() => {
+      if (nameInputRef.current) {
+        nameInputRef.current.focus();
+      }
+    }, 100);
+    
+    return () => clearTimeout(timer);
+  }, []);
 
   const handleSave = async () => {
     if (!project) return;
@@ -226,17 +241,18 @@ export default function ProjectInfoModal({ projectId, onClose }: ProjectInfoModa
         </DialogHeader>
         
         <div className="space-y-4">
-          <div>
+          <div className="space-y-2">
             <Label htmlFor="name">Project Name</Label>
             <Input
               id="name"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               placeholder="Enter project name"
+              ref={nameInputRef}
             />
           </div>
 
-          <div>
+          <div className="space-y-2">
             <Label htmlFor="class_subject">Class/Subject</Label>
             <Input
               id="class_subject"
@@ -246,7 +262,7 @@ export default function ProjectInfoModal({ projectId, onClose }: ProjectInfoModa
             />
           </div>
 
-          <div>
+          <div className="space-y-2">
             <Label htmlFor="paper_type">Paper Type</Label>
             <Input
               id="paper_type"
@@ -256,7 +272,7 @@ export default function ProjectInfoModal({ projectId, onClose }: ProjectInfoModa
             />
           </div>
 
-          <div>
+          <div className="space-y-2">
             <Label htmlFor="due_date">Due Date</Label>
             <Input
               id="due_date"
@@ -266,19 +282,19 @@ export default function ProjectInfoModal({ projectId, onClose }: ProjectInfoModa
             />
           </div>
 
-          <div>
+          <div className="space-y-2">
             <Label htmlFor="status">Status</Label>
-            <select
-              id="status"
-              value={formData.status}
-              onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="not_started">Not Started</option>
-              <option value="in_progress">In Progress</option>
-              <option value="ready_to_write">Ready to Write</option>
-              <option value="complete">Complete</option>
-            </select>
+            <Select onValueChange={(value) => setFormData({ ...formData, status: value })} value={formData.status}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select a status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="not_started">Not Started</SelectItem>
+                <SelectItem value="in_progress">In Progress</SelectItem>
+                <SelectItem value="ready_to_write">Ready to Write</SelectItem>
+                <SelectItem value="complete">Complete</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <div>
