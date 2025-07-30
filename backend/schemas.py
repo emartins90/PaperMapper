@@ -1,6 +1,7 @@
 from pydantic import BaseModel
 from typing import Optional, List
 from fastapi_users import schemas as fa_schemas
+from datetime import date, datetime
 
 class UserRead(fa_schemas.BaseUser[int]):
     pass
@@ -13,12 +14,28 @@ class UserUpdate(fa_schemas.BaseUserUpdate):
 
 class ProjectBase(BaseModel):
     name: str
+    class_subject: Optional[str] = None
+    paper_type: Optional[str] = None
+    due_date: Optional[date] = None
+    status: Optional[str] = None
+    assignment_file: Optional[str] = None
+    assignment_filename: Optional[str] = None
 
 class ProjectCreate(ProjectBase):
     pass
 
+class ProjectUpdate(BaseModel):
+    name: Optional[str] = None
+    class_subject: Optional[str] = None
+    paper_type: Optional[str] = None
+    due_date: Optional[date] = None
+    status: Optional[str] = None
+    assignment_file: Optional[str] = None
+    assignment_filename: Optional[str] = None
+
 class Project(ProjectBase):
     id: int
+    last_edited_date: Optional[datetime] = None
     class Config:
         orm_mode = True
 

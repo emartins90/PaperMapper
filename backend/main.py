@@ -586,6 +586,14 @@ async def create_card(card: schemas.CardCreate, db: AsyncSession = Depends(get_d
     db.add(db_card)
     await db.commit()
     await db.refresh(db_card)
+    
+    # Update project status to "in_progress" if this is the first card
+    project_result = await db.execute(select(models.Project).where(models.Project.id == card.project_id))
+    project = project_result.scalar_one_or_none()
+    if project and project.status == "not_started":
+        project.status = "in_progress"
+        await db.commit()
+    
     return db_card
 
 @app.get("/cards/", response_model=List[schemas.Card])
@@ -704,12 +712,26 @@ async def delete_card(card_id: int, db: AsyncSession = Depends(get_db())):
                     await db.delete(db_claim)
 
         # Manually delete related CardLink rows
+        # Store project_id before deleting the card
+        project_id = db_card.project_id
+        
         await db.execute(sa_delete(models.CardLink).where(
             (models.CardLink.source_card_id == card_id) | (models.CardLink.target_card_id == card_id)
         ))
 
         await db.delete(db_card)
         await db.commit()
+        
+        # Check if this was the last card in the project
+        remaining_cards = await db.execute(select(models.Card).where(models.Card.project_id == project_id))
+        if not remaining_cards.scalars().first():
+            # No cards left, update project status to "not_started"
+            project_result = await db.execute(select(models.Project).where(models.Project.id == project_id))
+            project = project_result.scalar_one_or_none()
+            if project:
+                project.status = "not_started"
+                await db.commit()
+        
         return {"ok": True}
     except StaleDataError:
         await db.rollback()
@@ -805,7 +827,15 @@ async def delete_card_link(link_id: int, db: AsyncSession = Depends(get_db())):
 # --- Project Endpoints ---
 @app.post("/projects/", response_model=ProjectSchema, status_code=status.HTTP_201_CREATED)
 async def create_project(project: ProjectCreate, db: Session = Depends(get_sync_db), current_user: User = Depends(get_current_user)):
-    db_project = Project(name=project.name, user_id=current_user.id)
+    db_project = Project(
+        name=project.name,
+        class_subject=project.class_subject,
+        paper_type=project.paper_type,
+        due_date=project.due_date,
+        status=project.status or "not_started",
+        assignment_file=project.assignment_file,
+        user_id=current_user.id
+    )
     db.add(db_project)
     db.commit()
     db.refresh(db_project)
@@ -822,6 +852,24 @@ async def read_project(project_id: int, db: AsyncSession = Depends(get_db())):
     project = result.scalar_one_or_none()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
+    return project
+
+@app.put("/projects/{project_id}", response_model=schemas.Project)
+async def update_project(project_id: int, project_update: schemas.ProjectUpdate, db: Session = Depends(get_sync_db), current_user: User = Depends(get_current_user)):
+    # Find the project and verify ownership
+    result = db.execute(select(Project).where(Project.id == project_id, Project.user_id == current_user.id))
+    project = result.scalar_one_or_none()
+    
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found or you don't have permission to update it")
+    
+    # Update only the fields that are provided
+    update_data = project_update.dict(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(project, field, value)
+    
+    db.commit()
+    db.refresh(project)
     return project
 
 @app.delete("/projects/{project_id}")
@@ -890,6 +938,77 @@ async def delete_file(filename: str):
             return {"message": "File deleted successfully"}
         else:
             raise HTTPException(status_code=404, detail="File not found")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"File deletion failed: {str(e)}")
+
+# --- Project Assignment File Upload/Deletion Endpoints ---
+@app.post("/projects/upload_assignment/")
+async def upload_project_assignment(
+    project_id: int = Form(...),
+    file: UploadFile = File(...),
+    db: Session = Depends(get_sync_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    """Upload an assignment file for a project"""
+    try:
+        # Find the project and verify ownership
+        result = db.execute(select(Project).where(Project.id == project_id, Project.user_id == current_user.id))
+        project = result.scalar_one_or_none()
+        
+        if not project:
+            raise HTTPException(status_code=404, detail="Project not found or you don't have permission to update it")
+        
+        # Upload file to R2
+        result = await r2_storage.upload_file(file, folder="assignments")
+        
+        # Update project with the file URL and original filename
+        project.assignment_file = result["file_url"]
+        project.assignment_filename = result["filename"]
+        db.commit()
+        db.refresh(project)
+        
+        return {
+            "filename": result["filename"], 
+            "file_url": result["file_url"], 
+            "key": result["key"],
+            "project": project
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"File upload failed: {str(e)}")
+
+@app.post("/projects/delete_assignment/")
+async def delete_project_assignment(
+    project_id: int,
+    db: Session = Depends(get_sync_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    """Delete the assignment file for a project"""
+    try:
+        # Find the project and verify ownership
+        result = db.execute(select(Project).where(Project.id == project_id, Project.user_id == current_user.id))
+        project = result.scalar_one_or_none()
+        
+        if not project:
+            raise HTTPException(status_code=404, detail="Project not found or you don't have permission to update it")
+        
+        if not project.assignment_file:
+            raise HTTPException(status_code=404, detail="No assignment file found for this project")
+        
+        # Extract key from URL for deletion
+        file_url = project.assignment_file
+        key = r2_storage.extract_key_from_url(file_url)
+        
+        # Delete from R2
+        if key:
+            await r2_storage.delete_file(key)
+        
+        # Clear the assignment_file field
+        project.assignment_file = None
+        project.assignment_filename = None
+        db.commit()
+        db.refresh(project)
+        
+        return {"message": "Assignment file deleted successfully", "project": project}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"File deletion failed: {str(e)}")
 

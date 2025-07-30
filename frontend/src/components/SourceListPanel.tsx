@@ -808,25 +808,23 @@ export default function SourceListPanel({ projectId, onClose, onSourceCardClick,
                 )}
 
                 {/* Edit and Delete buttons */}
-                <div className="flex gap-2 pt-2">
+                <div className="flex justify-end gap-2">
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => handleEditCitation(citation)}
-                    className="flex-1"
+                    className="h-8 w-8 p-0"
                   >
-                    <MdEdit size={16} className="mr-1" />
-                    Edit
+                    <MdEdit size={16} />
                   </Button>
                   <Button
                     variant="outline"
                     size="sm"
                     danger
                     onClick={() => handleDeleteCitation(citation)}
-                    className="flex-1"
+                    className="h-8 w-8 p-0 hover:bg-red-50 hover:text-red-600 hover:border-red-200"
                   >
-                    <MdDelete size={16} className="mr-1" />
-                    Delete
+                    <MdDelete size={16} />
                   </Button>
                 </div>
               </div>

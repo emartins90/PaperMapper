@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import TabSwitcher from "@/components/ui/TabSwitcher";
 import CardListPanel from "./CardListPanel";
 import SourceListPanel from "./SourceListPanel";
+import ProjectInfoModal from "./ProjectInfoModal";
 
 interface ProjectNavProps {
   nodes: any[];
@@ -18,6 +19,7 @@ export default function ProjectNav({ nodes: initialNodes, onCardClick, projectId
   const [activeTab, setActiveTab] = useState<"gather" | "outline">("gather");
   const [showCardList, setShowCardList] = useState(false);
   const [showSourceList, setShowSourceList] = useState(false);
+  const [showProjectInfo, setShowProjectInfo] = useState(false);
   const [nodes, setNodes] = useState<any[]>(initialNodes);
   const [selectedCardId, setSelectedCardId] = useState<string | undefined>();
 
@@ -37,11 +39,19 @@ export default function ProjectNav({ nodes: initialNodes, onCardClick, projectId
   const handleCardListClick = () => {
     setShowCardList(true);
     setShowSourceList(false); // Close source list if open
+    setShowProjectInfo(false); // Close project info if open
   };
 
   const handleSourceListClick = () => {
     setShowSourceList(true);
     setShowCardList(false); // Close card list if open
+    setShowProjectInfo(false); // Close project info if open
+  };
+
+  const handleProjectInfoClick = () => {
+    setShowProjectInfo(true);
+    setShowCardList(false); // Close card list if open
+    setShowSourceList(false); // Close source list if open
   };
 
   const handleCardClick = (cardId: string, cardType: string) => {
@@ -56,7 +66,18 @@ export default function ProjectNav({ nodes: initialNodes, onCardClick, projectId
       >
         
         <div className="flex gap-0">
-          <Button variant="ghost" className="text-foreground [&>svg]:text-foreground hover:bg-gray-100"><MdSettings size={16} />Project Settings</Button>
+          <Button 
+            variant="ghost" 
+            className="text-foreground [&>svg]:text-foreground hover:bg-gray-100"
+            onMouseDown={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              handleProjectInfoClick();
+            }}
+            style={{ position: 'relative', zIndex: 9999 }}
+          >
+            <MdSettings size={16} />Project Info
+          </Button>
           <Button 
             variant="ghost" 
             className="text-foreground [&>svg]:text-foreground hover:bg-gray-100" 
@@ -101,6 +122,13 @@ export default function ProjectNav({ nodes: initialNodes, onCardClick, projectId
           onClose={() => setShowSourceList(false)} 
           onSourceCardClick={handleCardClick}
           nodes={nodes}
+        />
+      )}
+
+      {showProjectInfo && projectId && (
+        <ProjectInfoModal 
+          projectId={projectId}
+          onClose={() => setShowProjectInfo(false)}
         />
       )}
     </>
