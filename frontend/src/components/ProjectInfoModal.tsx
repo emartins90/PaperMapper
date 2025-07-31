@@ -297,6 +297,7 @@ export default function ProjectInfoModal({ projectId, mode, onClose }: ProjectIn
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               placeholder="Enter project name"
               ref={nameInputRef}
+              autoComplete="off"
             />
           </div>
 
@@ -327,20 +328,22 @@ export default function ProjectInfoModal({ projectId, mode, onClose }: ProjectIn
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="status">Status</Label>
-            <Select onValueChange={(value) => setFormData({ ...formData, status: value })} value={formData.status}>
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select a status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="not_started">Not Started</SelectItem>
-                <SelectItem value="in_progress">In Progress</SelectItem>
-                <SelectItem value="ready_to_write">Ready to Write</SelectItem>
-                <SelectItem value="complete">Complete</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          {mode === 'edit' && (
+            <div className="space-y-2">
+              <Label htmlFor="status">Status</Label>
+              <Select onValueChange={(value) => setFormData({ ...formData, status: value })} value={formData.status}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select a status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="not_started">Not Started</SelectItem>
+                  <SelectItem value="in_progress">In Progress</SelectItem>
+                  <SelectItem value="ready_to_write">Ready to Write</SelectItem>
+                  <SelectItem value="complete">Complete</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           <div>
             <Label>Assignment File</Label>
@@ -402,7 +405,7 @@ export default function ProjectInfoModal({ projectId, mode, onClose }: ProjectIn
           <Button variant="outline" onClick={onClose}>
             Cancel
           </Button>
-          <Button onClick={handleSave} disabled={saving}>
+          <Button onClick={handleSave} disabled={saving || !formData.name.trim()}>
             {saving ? "Saving..." : mode === 'create' ? "Create Project" : "Save Changes"}
           </Button>
         </div>

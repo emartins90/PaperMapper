@@ -190,6 +190,19 @@ export default function ProjectSelector({ token }: { token: string }) {
     return "border-blue-300 bg-blue-50"; // Normal
   }
 
+  function hasUpcomingDueDate(dueDate?: string, status?: string): boolean {
+    if (status === "complete") return false;
+    if (!dueDate) return false;
+    
+    const today = new Date();
+    const due = new Date(dueDate);
+    const diffTime = due.getTime() - today.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    // Return true if due date is within 7 days and not past due (same as red chip logic)
+    return diffDays >= 0 && diffDays <= 7;
+  }
+
   function formatDate(dateString?: string): string {
     if (!dateString) return "";
     const date = new Date(dateString);
@@ -445,6 +458,13 @@ export default function ProjectSelector({ token }: { token: string }) {
           <div className="lg:col-span-1">
             <div className="bg-white h-full rounded-lg p-6 border border-gray-200">
               <h2 className="text-lg font-bold text-gray-900 mb-4">Resources</h2>
+              <p className="text-md font-semibold text-foreground mb-2">Using Paper Mapper</p>
+              <p className="text-md font-semibold text-foreground mb-2">Writing Process & Structure</p>
+              <p className="text-md font-semibold text-foreground mb-2">Thesis, Hypothesis, & Argument Support</p>
+              <p className="text-md font-semibold text-foreground mb-2">Critical Thinking & Questioning</p>
+              <p className="text-md font-semibold text-foreground mb-2">Source Evaluation & Credibility</p>
+              <p className="text-md font-semibold text-foreground mb-2">Citations & Bibliographies</p>
+            
               {/* Add resource content here */}
             </div>
           </div>
@@ -601,7 +621,11 @@ export default function ProjectSelector({ token }: { token: string }) {
                         className="relative group cursor-pointer"
                         onClick={() => handleSelect(project.id)}
                       >
-                        <div className="p-4 bg-white rounded-lg border border-gray-200 hover:border-gray-300 hover:shadow-sm transition-all duration-200 h-64">
+                        <div className={`p-4 bg-white rounded-lg border transition-all duration-200 h-64 flex flex-col ${
+                          hasUpcomingDueDate(project.due_date, project.status) 
+                            ? 'border-error-300 hover:border-error-300' 
+                            : 'border-gray-200 hover:border-gray-300'
+                        } hover:shadow-sm`}>
                           <div className="flex justify-between items-start mb-4">
                             <div className="flex items-center gap-2">
                               {project.status === 'ready_to_write' && (
@@ -612,10 +636,15 @@ export default function ProjectSelector({ token }: { token: string }) {
                             <LuArrowRight className="w-5 h-5 text-gray-400 group-hover:text-gray-600 transition-colors" />
                           </div>
                           
-                          <div className="space-y-3">
-                            {project.class_subject && project.paper_type && (
+                          <div className="space-y-3 flex-1">
+                            {project.class_subject && (
                               <p className="text-sm text-gray-600">
-                                {project.class_subject}: {project.paper_type}
+                                {project.class_subject}
+                              </p>
+                            )}
+                            {project.paper_type && (
+                              <p className="text-sm text-gray-600">
+                                {project.paper_type}
                               </p>
                             )}
                             
@@ -650,57 +679,60 @@ export default function ProjectSelector({ token }: { token: string }) {
                                 <span>Due: {formatDate(project.due_date)}</span>
                               </div>
                             )}
-                            
+                          </div>
+
+                          {/* Bottom section with last edited and ellipses */}
+                          <div className="flex justify-between items-center mt-auto pt-4">
                             {project.last_edited_date && (
                               <p className="text-xs text-gray-500">
                                 Last Edited: {formatDate(project.last_edited_date)}
                               </p>
                             )}
+                            
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 w-8 p-0"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <LuEllipsis className="w-4 h-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleEdit(project); }}>
+                                  <LuPencil className="w-4 h-4 mr-2" />
+                                  Edit Info
+                                </DropdownMenuItem>
+                                {project.status !== "ready_to_write" && project.status !== "complete" && (
+                                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleStatusUpdate(project.id, "ready_to_write"); }}>
+                                    <LuNotebookPen className="w-4 h-4 mr-2" />
+                                    Mark as Ready to Write
+                                  </DropdownMenuItem>
+                                )}
+                                {project.status === "ready_to_write" && (
+                                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleStatusUpdate(project.id, "in_progress"); }}>
+                                    <LuX className="w-4 h-4 mr-2" />
+                                    Remove Ready to Write
+                                  </DropdownMenuItem>
+                                )}
+                                {project.status !== "complete" && (
+                                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleStatusUpdate(project.id, "complete"); }}>
+                                    <LuCircleCheck className="w-4 h-4 mr-2" />
+                                    Mark as Complete
+                                  </DropdownMenuItem>
+                                )}
+                                <DropdownMenuItem 
+                                  onClick={(e) => { e.stopPropagation(); handleDelete(project.id); }}
+                                  className="text-red-600"
+                                >
+                                  <LuTrash2 className="w-4 h-4 mr-2" />
+                                  Delete
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                           </div>
-
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="absolute bottom-4 right-4 h-8 w-8 p-0"
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                <LuEllipsis className="w-4 h-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleEdit(project); }}>
-                                <LuPencil className="w-4 h-4 mr-2" />
-                                Edit Info
-                              </DropdownMenuItem>
-                              {project.status !== "ready_to_write" && project.status !== "complete" && (
-                                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleStatusUpdate(project.id, "ready_to_write"); }}>
-                                  <LuNotebookPen className="w-4 h-4 mr-2" />
-                                  Mark as Ready to Write
-                                </DropdownMenuItem>
-                              )}
-                              {project.status === "ready_to_write" && (
-                                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleStatusUpdate(project.id, "in_progress"); }}>
-                                  <LuX className="w-4 h-4 mr-2" />
-                                  Remove Ready to Write
-                                </DropdownMenuItem>
-                              )}
-                              {project.status !== "complete" && (
-                                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleStatusUpdate(project.id, "complete"); }}>
-                                  <LuCircleCheck className="w-4 h-4 mr-2" />
-                                  Mark as Complete
-                                </DropdownMenuItem>
-                              )}
-                              <DropdownMenuItem 
-                                onClick={(e) => { e.stopPropagation(); handleDelete(project.id); }}
-                                className="text-red-600"
-                              >
-                                <LuTrash2 className="w-4 h-4 mr-2" />
-                                Delete
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
                         </div>
                       </div>
                     ))}
