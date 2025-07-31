@@ -2,7 +2,7 @@ import React from "react";
 import Tag from "@/components/Tag";
 import { Handle, Position } from "reactflow";
 import { FileListDisplay } from "../canvas-add-files/FileListDisplay";
-import { MdHelpOutline } from "react-icons/md";
+import { LuCircleHelp } from "react-icons/lu";
 
 type QuestionCardProps = {
   data: {
@@ -14,6 +14,7 @@ type QuestionCardProps = {
     tags?: string[] | string;
     onOpen?: () => void;
     files?: string[];
+    fileEntries?: Array<{ url: string; filename: string; type: string }>;
     onFileClick?: (fileUrl: string, fileType: 'image' | 'pdf' | 'other' | 'audio') => void;
   };
   showHandles?: boolean;
@@ -112,7 +113,7 @@ export default function QuestionCard({ data, showHandles = true, width = 'w-96' 
               {getPriorityIndicator(data.priority)?.text}
             </span>
           )}
-          <MdHelpOutline className="text-question-400" size={22} />
+          <LuCircleHelp className="text-question-400" size={22} />
           <div className="truncate block">
             <span className="font-bold">Question</span>{data.category ? <span className="font-normal"> : {data.category}</span> : ''}
           </div>
@@ -133,7 +134,7 @@ export default function QuestionCard({ data, showHandles = true, width = 'w-96' 
       
       {/* Render uploaded files (images as thumbnails, others as file names) */}
       {data.files && data.files.length > 0 && (
-        <FileListDisplay files={data.files} onFileClick={data.onFileClick} showFilesLabel={true} cardType="question" />
+        <FileListDisplay files={data.files} fileEntries={data.fileEntries} onFileClick={data.onFileClick} showFilesLabel={true} cardType="question" />
       )}
       
       <div className="flex flex-wrap gap-2 mt-4">

@@ -1,7 +1,7 @@
 "use client";
 
 // frontend/src/app/TopBar.tsx
-import { MdSettings, MdList, MdOutlineSource } from "react-icons/md";
+import { LuSettings, LuList, LuBookOpen } from "react-icons/lu";
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import TabSwitcher from "@/components/ui/TabSwitcher";
@@ -76,7 +76,7 @@ export default function ProjectNav({ nodes: initialNodes, onCardClick, projectId
             }}
             style={{ position: 'relative', zIndex: 9999 }}
           >
-            <MdSettings size={16} />Project Info
+            <LuSettings size={16} />Project Info
           </Button>
           <Button 
             variant="ghost" 
@@ -88,7 +88,7 @@ export default function ProjectNav({ nodes: initialNodes, onCardClick, projectId
             }}
             style={{ position: 'relative', zIndex: 9999 }}
           >
-            <MdOutlineSource size={16} />Source List
+            <LuBookOpen size={16} />Source List
           </Button>
           <Button 
             variant="ghost" 
@@ -100,7 +100,7 @@ export default function ProjectNav({ nodes: initialNodes, onCardClick, projectId
             }}
             style={{ position: 'relative', zIndex: 9999 }}
           >
-            <MdList size={16} />Card List
+            <LuList size={16} />Card List
           </Button>
         </div>
         <div className="self-stretch w-px bg-gray-200 mx-4" />
@@ -128,6 +128,7 @@ export default function ProjectNav({ nodes: initialNodes, onCardClick, projectId
       {showProjectInfo && projectId && (
         <ProjectInfoModal 
           projectId={projectId}
+          mode="edit"
           onClose={() => setShowProjectInfo(false)}
         />
       )}

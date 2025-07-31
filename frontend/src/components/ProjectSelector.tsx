@@ -3,39 +3,42 @@ import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { useRouter } from "next/navigation";
 import { 
-  Search, 
-  Filter, 
-  MoreVertical, 
-  ArrowRight, 
-  FileText, 
-  Edit3, 
-  CheckCircle, 
-  PenTool, 
-  Trash2,
-  User
-} from "lucide-react";
-import { MdPictureAsPdf, MdDescription, MdAudiotrack, MdInsertDriveFile } from "react-icons/md";
+  LuSearch, 
+  LuListFilter, 
+  LuEllipsis, 
+  LuArrowRight, 
+  LuFileText, 
+  LuPencil, 
+  LuCircleCheck, 
+  LuPlus, 
+  LuTrash2, 
+  LuUser,
+  LuChevronUp,
+  LuChevronDown,
+  LuNotebookPen,
+  LuX
+} from "react-icons/lu";
+import { 
+  FaFilePdf, 
+  FaFileWord, 
+  FaFileAudio, 
+  FaFile, 
+  FaCircleCheck
+} from "react-icons/fa6";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "./ui/dialog";
-import { Label } from "./ui/label";
-import { Textarea } from "./ui/textarea";
+
 import AccountSettings from "./AccountSettings";
 import { FullscreenFileViewer } from "./canvas-add-files/FullscreenFileViewer";
 import { useRef } from "react";
-import { FileListDisplay } from "./canvas-add-files/FileListDisplay";
 import FileChip from "./canvas-add-files/FileChip";
 import ProjectInfoModal from "./ProjectInfoModal";
+import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
+import { Badge } from "./ui/badge";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -79,6 +82,12 @@ export default function ProjectSelector({ token }: { token: string }) {
   const [viewerOpen, setViewerOpen] = useState(false);
   const [viewerFile, setViewerFile] = useState<string | null>(null);
   const [viewerType, setViewerType] = useState<'image' | 'pdf' | 'other' | 'audio'>('other');
+  
+  // Sorting and filtering state
+  const [sortBy, setSortBy] = useState<'due_date' | 'last_edited' | 'name'>('due_date');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [statusFilter, setStatusFilter] = useState<string[]>([]);
+  
   const router = useRouter();
 
   useEffect(() => {
@@ -86,14 +95,11 @@ export default function ProjectSelector({ token }: { token: string }) {
   }, []);
 
   useEffect(() => {
-    // Filter projects based on search term
-    const filtered = projects.filter(project =>
-      project.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      project.class_subject?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      project.paper_type?.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-    setFilteredProjects(filtered);
-  }, [projects, searchTerm]);
+    // Filter and sort projects
+    const filtered = filterProjects(projects);
+    const sorted = sortProjects(filtered);
+    setFilteredProjects(sorted);
+  }, [projects, searchTerm, sortBy, sortOrder, statusFilter]);
 
   async function fetchProjects() {
     setLoading(true);
@@ -112,109 +118,8 @@ export default function ProjectSelector({ token }: { token: string }) {
     }
   }
 
-  async function handleCreate(e: React.FormEvent) {
-    e.preventDefault();
-    setLoading(true);
-    setError("");
-    try {
-      // First create the project
-      const res = await fetch(`${API_URL}/projects/`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
-        body: JSON.stringify({
-          name: formData.name,
-          class_subject: formData.class_subject || undefined,
-          paper_type: formData.paper_type || undefined,
-          due_date: formData.due_date || undefined,
-        }),
-      });
-      if (!res.ok) throw new Error("Failed to create project");
-      const project = await res.json();
-      
-      // If there's an assignment file, upload it
-      if (formData.assignment_file) {
-        const formDataFile = new FormData();
-        formDataFile.append("project_id", project.id.toString());
-        formDataFile.append("file", formData.assignment_file);
-        
-        const uploadRes = await fetch(`${API_URL}/projects/upload_assignment/`, {
-          method: "POST",
-          credentials: "include",
-          body: formDataFile,
-        });
-        
-        if (uploadRes.ok) {
-          const uploadResult = await uploadRes.json();
-          project.assignment_file = uploadResult.file_url;
-          project.assignment_filename = formData.assignment_file.name;
-        }
-      }
-      
-      setProjects([...projects, project]);
-      setFormData({ name: "", class_subject: "", paper_type: "", due_date: "", assignment_file: undefined });
-      setIsCreateDialogOpen(false);
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function handleUpdate(e: React.FormEvent) {
-    e.preventDefault();
-    if (!editingProject) return;
-    
-    setLoading(true);
-    setError("");
-    try {
-      // First update the project data
-      const res = await fetch(`${API_URL}/projects/${editingProject.id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
-        body: JSON.stringify({
-          name: formData.name,
-          class_subject: formData.class_subject || undefined,
-          paper_type: formData.paper_type || undefined,
-          due_date: formData.due_date || undefined,
-        }),
-      });
-      if (!res.ok) throw new Error("Failed to update project");
-      const updatedProject = await res.json();
-      
-      // If there's a new assignment file, upload it
-      if (formData.assignment_file) {
-        const formDataFile = new FormData();
-        formDataFile.append("project_id", editingProject.id.toString());
-        formDataFile.append("file", formData.assignment_file);
-        
-        const uploadRes = await fetch(`${API_URL}/projects/upload_assignment/`, {
-          method: "POST",
-          credentials: "include",
-          body: formDataFile,
-        });
-        
-        if (uploadRes.ok) {
-          const uploadResult = await uploadRes.json();
-          updatedProject.assignment_file = uploadResult.file_url;
-          updatedProject.assignment_filename = formData.assignment_file.name;
-        }
-      }
-      
-      setProjects(projects.map(p => p.id === updatedProject.id ? updatedProject : p));
-      setEditingProject(null);
-      setFormData({ name: "", class_subject: "", paper_type: "", due_date: "", assignment_file: undefined });
-      setIsEditDialogOpen(false);
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
+  function handleCreate() {
+    setIsCreateDialogOpen(true);
   }
 
   async function handleStatusUpdate(projectId: number, status: string) {
@@ -308,10 +213,10 @@ export default function ProjectSelector({ token }: { token: string }) {
   // Helper to get file icon and color by file type
   function getFileIcon(filename: string) {
     const ext = filename.split('.').pop()?.toLowerCase();
-    if (ext === "pdf") return { icon: <MdPictureAsPdf className="text-red-500 w-4 h-4" />, color: "bg-red-100" };
-    if (["doc", "docx"].includes(ext || "")) return { icon: <MdDescription className="text-blue-700 w-4 h-4" />, color: "bg-blue-100" };
-    if (["mp3", "wav", "m4a", "ogg"].includes(ext || "")) return { icon: <MdAudiotrack className="text-purple-500 w-4 h-4" />, color: "bg-purple-100" };
-    return { icon: <MdInsertDriveFile className="text-gray-500 w-4 h-4" />, color: "bg-gray-100" };
+    if (ext === "pdf") return { icon: <FaFilePdf className="text-red-500 w-4 h-4" />, color: "bg-red-100" };
+    if (["doc", "docx"].includes(ext || "")) return { icon: <FaFileWord className="text-blue-700 w-4 h-4" />, color: "bg-blue-100" };
+    if (["mp3", "wav", "m4a", "ogg"].includes(ext || "")) return { icon: <FaFileAudio className="text-purple-500 w-4 h-4" />, color: "bg-purple-100" };
+    return { icon: <FaFile className="text-gray-500 w-4 h-4" />, color: "bg-gray-100" };
   }
 
   // Helper to check if file is an image
@@ -340,6 +245,72 @@ export default function ProjectSelector({ token }: { token: string }) {
     setViewerFile(secureUrl);
     setViewerType(getFileType(filename));
     setViewerOpen(true);
+  }
+
+  // Sort projects function
+  function sortProjects(projectsToSort: Project[]): Project[] {
+    return [...projectsToSort].sort((a, b) => {
+      // Always put completed projects at the bottom
+      if (a.status === 'complete' && b.status !== 'complete') {
+        return 1; // a goes after b
+      }
+      if (a.status !== 'complete' && b.status === 'complete') {
+        return -1; // a goes before b
+      }
+      if (a.status === 'complete' && b.status === 'complete') {
+        // Both are complete, sort them normally
+      }
+
+      let aValue: any;
+      let bValue: any;
+
+      switch (sortBy) {
+        case 'due_date':
+          // For due date: projects without due dates go to the end
+          aValue = a.due_date ? new Date(a.due_date).getTime() : Number.MAX_SAFE_INTEGER;
+          bValue = b.due_date ? new Date(b.due_date).getTime() : Number.MAX_SAFE_INTEGER;
+          break;
+        case 'last_edited':
+          // For last edited: most recent first by default
+          aValue = a.last_edited_date ? new Date(a.last_edited_date).getTime() : 0;
+          bValue = b.last_edited_date ? new Date(b.last_edited_date).getTime() : 0;
+          break;
+        case 'name':
+          aValue = a.name.toLowerCase();
+          bValue = b.name.toLowerCase();
+          break;
+        default:
+          return 0;
+      }
+
+      if (sortOrder === 'asc') {
+        return aValue > bValue ? 1 : aValue < bValue ? -1 : 0;
+      } else {
+        return aValue < bValue ? 1 : aValue > bValue ? -1 : 0;
+      }
+    });
+  }
+
+  // Filter projects function
+  function filterProjects(projectsToFilter: Project[]): Project[] {
+    return projectsToFilter.filter(project => {
+      // Status filter
+      if (statusFilter.length > 0 && !statusFilter.includes(project.status || '')) {
+        return false;
+      }
+
+      // Search filter
+      if (searchTerm) {
+        const searchLower = searchTerm.toLowerCase();
+        return (
+          project.name.toLowerCase().includes(searchLower) ||
+          project.class_subject?.toLowerCase().includes(searchLower) ||
+          project.paper_type?.toLowerCase().includes(searchLower)
+        );
+      }
+
+      return true;
+    });
   }
 
   // Custom file upload component for project modals
@@ -451,7 +422,7 @@ export default function ProjectSelector({ token }: { token: string }) {
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-2">
               <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-                <FileText className="w-5 h-5 text-white" />
+                <LuFileText className="w-5 h-5 text-white" />
               </div>
               <h1 className="text-xl font-semibold text-gray-900">Paper Mapper</h1>
             </div>
@@ -461,7 +432,7 @@ export default function ProjectSelector({ token }: { token: string }) {
               size="sm"
               className="flex items-center space-x-2"
             >
-              <User className="w-4 h-4" />
+              <LuUser className="w-4 h-4" />
               <span>My Account</span>
             </Button>
           </div>
@@ -486,7 +457,7 @@ export default function ProjectSelector({ token }: { token: string }) {
                   <h2 className="text-2xl font-bold text-gray-900">My Projects</h2>
                   <div className="flex items-center justify-center space-x-4">
                     <div className="relative">
-                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                      <LuSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                       <Input
                         placeholder="Search Projects"
                         value={searchTerm}
@@ -494,80 +465,119 @@ export default function ProjectSelector({ token }: { token: string }) {
                         className="pl-10 w-64"
                       />
                     </div>
-                    <Button variant="outline" size="sm">
-                      <Filter className="w-4 h-4" />
-                    </Button>
+                    
+                    {/* Filter popover */}
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" size="icon" className="relative" aria-label="Filter and sort projects">
+                          <LuListFilter className="w-4 h-4" />
+                          {(statusFilter.length > 0 || sortBy !== 'due_date') && (
+                            <Badge className="absolute -top-2 -right-2 px-1.5 py-0.5 text-xs rounded-full" variant="default">
+                              {statusFilter.length + (sortBy !== 'due_date' ? 1 : 0)}
+                            </Badge>
+                          )}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent align="end" className="w-78 shadow-xl">
+                        <div className="max-h-180 overflow-y-auto space-y-1">
+                          {/* Sort By */}
+                          <label className="text-md font-semibold text-foreground">Sort By</label>
+                          <div className="space-y-2 mb-4 mt-2">
+                            {[
+                              { value: 'due_date', label: 'Due Date' },
+                              { value: 'last_edited', label: 'Last Edited' },
+                              { value: 'name', label: 'Name' }
+                            ].map(option => (
+                              <div key={option.value} className="flex items-center justify-between px-2 py-1 rounded hover:bg-accent">
+                                <label className="flex items-center gap-2 cursor-pointer flex-1">
+                                  <input
+                                    type="radio"
+                                    name="sortBy"
+                                    value={option.value}
+                                    checked={sortBy === option.value}
+                                    onChange={(e) => setSortBy(e.target.value as any)}
+                                    className="accent-primary"
+                                  />
+                                  <span className="text-md">{option.label}</span>
+                                </label>
+                                {sortBy === option.value && (
+                                  <div className="flex items-center gap-1">
+                                    <button
+                                      type="button"
+                                      onClick={() => setSortOrder('asc')}
+                                      className={`p-1 rounded-full ${sortOrder === 'asc' ? 'bg-gray-200' : ''}`}
+                                      aria-label="Sort ascending"
+                                    >
+                                      <LuChevronUp className="w-4 h-4 text-gray-500" />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => setSortOrder('desc')}
+                                      className={`p-1 rounded-full ${sortOrder === 'desc' ? 'bg-gray-200' : ''}`}
+                                      aria-label="Sort descending"
+                                    >
+                                      <LuChevronDown className="w-4 h-4 text-gray-500" />
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+
+                          {/* Status Filter */}
+                          <label className="text-md font-semibold text-foreground">Status</label>
+                          <div className="space-y-2 mb-4 mt-2">
+                            {[
+                              { value: 'not_started', label: 'Not Started' },
+                              { value: 'in_progress', label: 'In Progress' },
+                              { value: 'ready_to_write', label: 'Ready to Write' },
+                              { value: 'complete', label: 'Complete' }
+                            ].map(option => (
+                              <label key={option.value} className="flex items-center gap-2 cursor-pointer px-2 py-1 rounded hover:bg-accent">
+                                <input
+                                  type="checkbox"
+                                  value={option.value}
+                                  checked={statusFilter.includes(option.value)}
+                                  onChange={(e) => {
+                                    const newStatusFilter = [...statusFilter];
+                                    if (e.target.checked) {
+                                      newStatusFilter.push(option.value);
+                                    } else {
+                                      newStatusFilter.splice(newStatusFilter.indexOf(option.value), 1);
+                                    }
+                                    setStatusFilter(newStatusFilter);
+                                  }}
+                                  className="accent-primary"
+                                />
+                                <span className="text-md">{option.label}</span>
+                              </label>
+                            ))}
+                          </div>
+
+                          {/* Clear all filters */}
+                          {(statusFilter.length > 0 || sortBy !== 'due_date') && (
+                            <div className="mt-4 pt-4 border-t">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  setStatusFilter([]);
+                                  setSortBy('due_date');
+                                }}
+                                className="w-full"
+                              >
+                                Clear all filters
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      </PopoverContent>
+                    </Popover>
                   </div>
                   <div className="flex justify-end">
-                    <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-                      <DialogTrigger asChild>
-                        <Button className="bg-gray-800 hover:bg-gray-900">
-                          + New Project
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent className="sm:max-w-[425px] p-6">
-                        <DialogHeader>
-                          <DialogTitle>Create New Project</DialogTitle>
-                        </DialogHeader>
-                        <form onSubmit={handleCreate} className="space-y-4">
-                          <div>
-                            <Label htmlFor="name">Project Name *</Label>
-                            <Input
-                              id="name"
-                              value={formData.name}
-                              onChange={(e) => setFormData({...formData, name: e.target.value})}
-                              required
-                            />
-                          </div>
-                          <div>
-                            <Label htmlFor="class_subject">Class/Subject</Label>
-                            <Input
-                              id="class_subject"
-                              value={formData.class_subject}
-                              onChange={(e) => setFormData({...formData, class_subject: e.target.value})}
-                            />
-                          </div>
-                          <div>
-                            <Label htmlFor="paper_type">Paper Type</Label>
-                            <Input
-                              id="paper_type"
-                              value={formData.paper_type}
-                              onChange={(e) => setFormData({...formData, paper_type: e.target.value})}
-                            />
-                          </div>
-                          <div>
-                            <Label htmlFor="due_date">Due Date</Label>
-                            <Input
-                              id="due_date"
-                              type="date"
-                              value={formData.due_date}
-                              onChange={(e) => setFormData({...formData, due_date: e.target.value})}
-                            />
-                          </div>
-                                      <div>
-              <Label htmlFor="assignment_file">Assignment File (Optional)</Label>
-              <ProjectFileUpload
-                file={formData.assignment_file}
-                onFileChange={(file) => setFormData({...formData, assignment_file: file})}
-                onFileRemove={() => setFormData({...formData, assignment_file: undefined})}
-                onCurrentFileRemove={() => {}}
-              />
-            </div>
-                          <div className="flex justify-end space-x-2">
-                            <Button
-                              type="button"
-                              variant="outline"
-                              onClick={() => setIsCreateDialogOpen(false)}
-                            >
-                              Cancel
-                            </Button>
-                            <Button type="submit" disabled={loading || !formData.name}>
-                              Create Project
-                            </Button>
-                          </div>
-                        </form>
-                      </DialogContent>
-                    </Dialog>
+                    <Button onClick={handleCreate} className="bg-gray-800 hover:bg-gray-900">
+                      <LuPlus className="w-4 h-4 mr-2" /> New Project
+                    </Button>
                   </div>
                 </div>
               </div>
@@ -593,8 +603,13 @@ export default function ProjectSelector({ token }: { token: string }) {
                       >
                         <div className="p-4 bg-white rounded-lg border border-gray-200 hover:border-gray-300 hover:shadow-sm transition-all duration-200 h-64">
                           <div className="flex justify-between items-start mb-4">
-                            <h3 className="font-bold text-gray-900 text-lg">{project.name}</h3>
-                            <ArrowRight className="w-5 h-5 text-gray-400 group-hover:text-gray-600 transition-colors" />
+                            <div className="flex items-center gap-2">
+                              {project.status === 'ready_to_write' && (
+                                <LuNotebookPen className="w-5 h-5 text-blue-600" />
+                              )}
+                              <h3 className="font-bold text-gray-900 text-lg">{project.name}</h3>
+                            </div>
+                            <LuArrowRight className="w-5 h-5 text-gray-400 group-hover:text-gray-600 transition-colors" />
                           </div>
                           
                           <div className="space-y-3">
@@ -623,13 +638,16 @@ export default function ProjectSelector({ token }: { token: string }) {
                             )}
                             
                             {project.due_date && (
-                              <div className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${
+                              <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium ${
                                 getDueDateColor(project.due_date, project.status).includes('red') ? 'bg-red-100 text-red-700' :
                                 getDueDateColor(project.due_date, project.status).includes('yellow') ? 'bg-yellow-100 text-yellow-700' :
                                 getDueDateColor(project.due_date, project.status).includes('gray') ? 'bg-gray-100 text-gray-700' :
                                 'bg-blue-100 text-blue-700'
                               }`}>
-                                Due: {formatDate(project.due_date)}
+                                {project.status === 'complete' && (
+                                  <FaCircleCheck className="w-4 h-4 text-green-600" />
+                                )}
+                                <span>Due: {formatDate(project.due_date)}</span>
                               </div>
                             )}
                             
@@ -648,23 +666,29 @@ export default function ProjectSelector({ token }: { token: string }) {
                                 className="absolute bottom-4 right-4 h-8 w-8 p-0"
                                 onClick={(e) => e.stopPropagation()}
                               >
-                                <MoreVertical className="w-4 h-4" />
+                                <LuEllipsis className="w-4 h-4" />
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
                               <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleEdit(project); }}>
-                                <Edit3 className="w-4 h-4 mr-2" />
+                                <LuPencil className="w-4 h-4 mr-2" />
                                 Edit Info
                               </DropdownMenuItem>
-                              {project.status !== "ready_to_write" && (
+                              {project.status !== "ready_to_write" && project.status !== "complete" && (
                                 <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleStatusUpdate(project.id, "ready_to_write"); }}>
-                                  <PenTool className="w-4 h-4 mr-2" />
+                                  <LuNotebookPen className="w-4 h-4 mr-2" />
                                   Mark as Ready to Write
+                                </DropdownMenuItem>
+                              )}
+                              {project.status === "ready_to_write" && (
+                                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleStatusUpdate(project.id, "in_progress"); }}>
+                                  <LuX className="w-4 h-4 mr-2" />
+                                  Remove Ready to Write
                                 </DropdownMenuItem>
                               )}
                               {project.status !== "complete" && (
                                 <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleStatusUpdate(project.id, "complete"); }}>
-                                  <CheckCircle className="w-4 h-4 mr-2" />
+                                  <LuCircleCheck className="w-4 h-4 mr-2" />
                                   Mark as Complete
                                 </DropdownMenuItem>
                               )}
@@ -672,7 +696,7 @@ export default function ProjectSelector({ token }: { token: string }) {
                                 onClick={(e) => { e.stopPropagation(); handleDelete(project.id); }}
                                 className="text-red-600"
                               >
-                                <Trash2 className="w-4 h-4 mr-2" />
+                                <LuTrash2 className="w-4 h-4 mr-2" />
                                 Delete
                               </DropdownMenuItem>
                             </DropdownMenuContent>
@@ -692,10 +716,22 @@ export default function ProjectSelector({ token }: { token: string }) {
       {isEditDialogOpen && editingProject && (
         <ProjectInfoModal 
           projectId={editingProject.id}
+          mode="edit"
           onClose={() => {
             setIsEditDialogOpen(false);
             setEditingProject(null);
-            setFormData({ name: "", class_subject: "", paper_type: "", due_date: "", assignment_file: undefined });
+            // Refresh projects list to get updated data
+            fetchProjects();
+          }}
+        />
+      )}
+
+      {/* Create Dialog */}
+      {isCreateDialogOpen && (
+        <ProjectInfoModal 
+          mode="create"
+          onClose={() => {
+            setIsCreateDialogOpen(false);
             // Refresh projects list to get updated data
             fetchProjects();
           }}

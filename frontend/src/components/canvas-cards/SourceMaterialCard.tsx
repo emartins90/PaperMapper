@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import Tag from "@/components/Tag";
 import { Handle, Position } from "reactflow";
 import { FileListDisplay } from "../canvas-add-files/FileListDisplay";
-import { MdLibraryBooks } from "react-icons/md";
+import { LuBookOpen } from "react-icons/lu";
 
 type SourceMaterialCardProps = {
   data: {
@@ -15,6 +15,7 @@ type SourceMaterialCardProps = {
     sourceFunction?: string;
     onOpen?: () => void;
     files?: string[];
+    fileEntries?: Array<{ url: string; filename: string; type: string }>;
     onFileClick?: (fileUrl: string, fileType: 'image' | 'pdf' | 'other' | 'audio') => void;
   };
   showHandles?: boolean;
@@ -64,7 +65,7 @@ export default function SourceMaterialCard({ data, showHandles = true, width = '
       
       <div className="flex items-center justify-between mb-2">
         <div className="text-source-700 flex items-center gap-1 min-w-0 flex-1">
-          <MdLibraryBooks className="text-source-400 flex-shrink-0" size={22} />
+          <LuBookOpen className="text-source-400 flex-shrink-0" size={22} />
           <div className="truncate">
             <span className="font-bold">Source Material</span>{data.sourceFunction ? <span className="font-normal"> : {data.sourceFunction}</span> : ''}
           </div>
@@ -94,7 +95,7 @@ export default function SourceMaterialCard({ data, showHandles = true, width = '
 
       {/* Render uploaded files (images as thumbnails, others as file names) */}
       {Array.isArray((data as any).files) && (data as any).files.length > 0 && (
-        <FileListDisplay files={data.files ?? []} onFileClick={onFileClick} showFilesLabel={true} cardType="source" />
+        <FileListDisplay files={data.files ?? []} fileEntries={data.fileEntries} onFileClick={onFileClick} showFilesLabel={true} cardType="source" />
       )}
 
       {/* Only show argument type chip if one is selected and not '(skipped)' */}

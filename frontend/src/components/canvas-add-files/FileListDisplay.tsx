@@ -5,6 +5,7 @@ export type FileType = 'image' | 'pdf' | 'audio' | 'other';
 
 interface FileListDisplayProps {
   files: string[];
+  fileEntries?: Array<{ url: string; filename: string; type: string }>;
   onFileClick?: (fileUrl: string, fileType: FileType) => void;
   maxImages?: number;
   showFilesLabel?: boolean;
@@ -18,12 +19,19 @@ function getFileType(fileUrl: string): FileType {
   return 'other';
 }
 
-function getFileName(fileUrl: string) {
+function getFileName(fileUrl: string, fileEntries: Array<{ url: string; filename: string; type: string }> = []) {
+  // Try to find the original filename from fileEntries
+  const entry = fileEntries.find(entry => entry.url === fileUrl);
+  if (entry) {
+    return entry.filename;
+  }
+  // Fallback to extracting from URL
   return fileUrl.split('/').pop() || 'file';
 }
 
 export const FileListDisplay: React.FC<FileListDisplayProps> = ({ 
   files, 
+  fileEntries = [],
   onFileClick, 
   maxImages = 4, 
   showFilesLabel = true,
@@ -81,7 +89,7 @@ export const FileListDisplay: React.FC<FileListDisplayProps> = ({
             >
               <img
                 src={fullUrl(fileUrl)}
-                alt={getFileName(fileUrl)}
+                alt={getFileName(fileUrl, fileEntries)}
                 className="w-full object-contain rounded"
                 style={{ maxHeight: '500px', height: 'auto' }}
               />
@@ -100,7 +108,7 @@ export const FileListDisplay: React.FC<FileListDisplayProps> = ({
           <div className="flex flex-col w-full">
             {[...pdfFiles, ...audioFiles, ...otherFiles].map((fileUrl, idx, arr) => {
               const fileLink = fullUrl(fileUrl);
-              const name = getFileName(fileUrl);
+              const name = getFileName(fileUrl, fileEntries);
               return (
                 <span key={idx} className={`block w-full${idx !== arr.length - 1 ? ' mb-2' : ''}`}>
                   {onFileClick ? (

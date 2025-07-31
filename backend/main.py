@@ -258,14 +258,25 @@ async def upload_source_material_files(
     # Upload files to R2
     upload_results = await r2_storage.upload_multiple_files(files, folder="source-materials")
     uploaded_urls = [result["file_url"] for result in upload_results]
+    uploaded_filenames = [result["filename"] for result in upload_results]
 
     # Update the files field (append new files)
     existing_files = db_sm.files.split(",") if db_sm.files else []
     all_files = existing_files + uploaded_urls
     db_sm.files = ",".join([f.strip() for f in all_files if f.strip()])
+    
+    # Update the file_filenames field (append new filenames)
+    existing_filenames = db_sm.file_filenames.split(",") if db_sm.file_filenames else []
+    all_filenames = existing_filenames + uploaded_filenames
+    db_sm.file_filenames = ",".join([f.strip() for f in all_filenames if f.strip()])
+    
     await db.commit()
     await db.refresh(db_sm)
-    return {"file_urls": uploaded_urls, "all_files": all_files}
+    return {
+        "file_urls": uploaded_urls, 
+        "file_filenames": uploaded_filenames,
+        "all_files": all_files
+    }
 
 # --- Question Endpoints ---
 @app.post("/questions/", response_model=schemas.Question)
@@ -352,14 +363,21 @@ async def upload_question_files(
     # Upload files to R2
     upload_results = await r2_storage.upload_multiple_files(files, folder="questions")
     uploaded_urls = [result["file_url"] for result in upload_results]
+    uploaded_filenames = [result["filename"] for result in upload_results]
 
     # Update the files field (append new files)
     existing_files = db_question.files.split(",") if db_question.files else []
     all_files = existing_files + uploaded_urls
     db_question.files = ",".join([f.strip() for f in all_files if f.strip()])
+    
+    # Update the file_filenames field (append new filenames)
+    existing_filenames = db_question.file_filenames.split(",") if db_question.file_filenames else []
+    all_filenames = existing_filenames + uploaded_filenames
+    db_question.file_filenames = ",".join([f.strip() for f in all_filenames if f.strip()])
+    
     await db.commit()
     await db.refresh(db_question)
-    return {"file_urls": uploaded_urls, "all_files": all_files}
+    return {"file_urls": uploaded_urls, "file_filenames": uploaded_filenames, "all_files": all_files}
 
 @app.post("/questions/delete_file/")
 async def delete_question_file(
@@ -378,10 +396,23 @@ async def delete_question_file(
     if key:
         await r2_storage.delete_file(key)
 
-    # Remove file from files field
+    # Remove file from files field and file_filenames field
     existing_files = db_question.files.split(",") if db_question.files else []
-    new_files = [f for f in existing_files if f.strip() != file_url.strip()]
+    existing_filenames = db_question.file_filenames.split(",") if db_question.file_filenames else []
+    
+    # Find the index of the file to remove
+    try:
+        file_index = existing_files.index(file_url.strip())
+        # Remove from both arrays at the same index
+        new_files = [f for i, f in enumerate(existing_files) if i != file_index]
+        new_filenames = [f for i, f in enumerate(existing_filenames) if i != file_index]
+    except ValueError:
+        # File not found, just return current state
+        new_files = existing_files
+        new_filenames = existing_filenames
+    
     db_question.files = ",".join(new_files)
+    db_question.file_filenames = ",".join(new_filenames)
     await db.commit()
     await db.refresh(db_question)
     return {"ok": True, "remaining_files": new_files}
@@ -1029,14 +1060,21 @@ async def upload_insight_files(
     # Upload files to R2
     upload_results = await r2_storage.upload_multiple_files(files, folder="insights")
     uploaded_urls = [result["file_url"] for result in upload_results]
+    uploaded_filenames = [result["filename"] for result in upload_results]
 
     # Update the files field (append new files)
     existing_files = db_insight.files.split(",") if db_insight.files else []
     all_files = existing_files + uploaded_urls
     db_insight.files = ",".join([f.strip() for f in all_files if f.strip()])
+    
+    # Update the file_filenames field (append new filenames)
+    existing_filenames = db_insight.file_filenames.split(",") if db_insight.file_filenames else []
+    all_filenames = existing_filenames + uploaded_filenames
+    db_insight.file_filenames = ",".join([f.strip() for f in all_filenames if f.strip()])
+    
     await db.commit()
     await db.refresh(db_insight)
-    return {"file_urls": uploaded_urls, "all_files": all_files}
+    return {"file_urls": uploaded_urls, "file_filenames": uploaded_filenames, "all_files": all_files}
 
 @app.post("/insights/delete_file/")
 async def delete_insight_file(
@@ -1055,10 +1093,23 @@ async def delete_insight_file(
     if key:
         await r2_storage.delete_file(key)
 
-    # Remove file from files field
+    # Remove file from files field and file_filenames field
     existing_files = db_insight.files.split(",") if db_insight.files else []
-    new_files = [f for f in existing_files if f.strip() != file_url.strip()]
+    existing_filenames = db_insight.file_filenames.split(",") if db_insight.file_filenames else []
+    
+    # Find the index of the file to remove
+    try:
+        file_index = existing_files.index(file_url.strip())
+        # Remove from both arrays at the same index
+        new_files = [f for i, f in enumerate(existing_files) if i != file_index]
+        new_filenames = [f for i, f in enumerate(existing_filenames) if i != file_index]
+    except ValueError:
+        # File not found, just return current state
+        new_files = existing_files
+        new_filenames = existing_filenames
+    
     db_insight.files = ",".join(new_files)
+    db_insight.file_filenames = ",".join(new_filenames)
     await db.commit()
     await db.refresh(db_insight)
     return {"ok": True, "remaining_files": new_files}
@@ -1081,14 +1132,21 @@ async def upload_thought_files(
     # Upload files to R2
     upload_results = await r2_storage.upload_multiple_files(files, folder="thoughts")
     uploaded_urls = [result["file_url"] for result in upload_results]
+    uploaded_filenames = [result["filename"] for result in upload_results]
 
     # Update the files field (append new files)
     existing_files = db_thought.files.split(",") if db_thought.files else []
     all_files = existing_files + uploaded_urls
     db_thought.files = ",".join([f.strip() for f in all_files if f.strip()])
+    
+    # Update the file_filenames field (append new filenames)
+    existing_filenames = db_thought.file_filenames.split(",") if db_thought.file_filenames else []
+    all_filenames = existing_filenames + uploaded_filenames
+    db_thought.file_filenames = ",".join([f.strip() for f in all_filenames if f.strip()])
+    
     await db.commit()
     await db.refresh(db_thought)
-    return {"file_urls": uploaded_urls, "all_files": all_files}
+    return {"file_urls": uploaded_urls, "file_filenames": uploaded_filenames, "all_files": all_files}
 
 @app.post("/thoughts/delete_file/")
 async def delete_thought_file(
@@ -1107,10 +1165,23 @@ async def delete_thought_file(
     if key:
         await r2_storage.delete_file(key)
 
-    # Remove file from files field
+    # Remove file from files field and file_filenames field
     existing_files = db_thought.files.split(",") if db_thought.files else []
-    new_files = [f for f in existing_files if f.strip() != file_url.strip()]
+    existing_filenames = db_thought.file_filenames.split(",") if db_thought.file_filenames else []
+    
+    # Find the index of the file to remove
+    try:
+        file_index = existing_files.index(file_url.strip())
+        # Remove from both arrays at the same index
+        new_files = [f for i, f in enumerate(existing_files) if i != file_index]
+        new_filenames = [f for i, f in enumerate(existing_filenames) if i != file_index]
+    except ValueError:
+        # File not found, just return current state
+        new_files = existing_files
+        new_filenames = existing_filenames
+    
     db_thought.files = ",".join(new_files)
+    db_thought.file_filenames = ",".join(new_filenames)
     await db.commit()
     await db.refresh(db_thought)
     return {"ok": True, "remaining_files": new_files}
@@ -1345,14 +1416,21 @@ async def upload_claim_files(
     # Upload files to R2
     upload_results = await r2_storage.upload_multiple_files(files, folder="claims")
     uploaded_urls = [result["file_url"] for result in upload_results]
+    uploaded_filenames = [result["filename"] for result in upload_results]
 
     # Update the files field (append new files)
     existing_files = db_claim.files.split(",") if db_claim.files else []
     all_files = existing_files + uploaded_urls
     db_claim.files = ",".join([f.strip() for f in all_files if f.strip()])
+    
+    # Update the file_filenames field (append new filenames)
+    existing_filenames = db_claim.file_filenames.split(",") if db_claim.file_filenames else []
+    all_filenames = existing_filenames + uploaded_filenames
+    db_claim.file_filenames = ",".join([f.strip() for f in all_filenames if f.strip()])
+    
     await db.commit()
     await db.refresh(db_claim)
-    return {"file_urls": uploaded_urls, "all_files": all_files}
+    return {"file_urls": uploaded_urls, "file_filenames": uploaded_filenames, "all_files": all_files}
 
 @app.post("/claims/delete_file/")
 async def delete_claim_file(
@@ -1371,10 +1449,23 @@ async def delete_claim_file(
     if key:
         await r2_storage.delete_file(key)
 
-    # Remove file from files field
+    # Remove file from files field and file_filenames field
     existing_files = db_claim.files.split(",") if db_claim.files else []
-    new_files = [f for f in existing_files if f.strip() != file_url.strip()]
+    existing_filenames = db_claim.file_filenames.split(",") if db_claim.file_filenames else []
+    
+    # Find the index of the file to remove
+    try:
+        file_index = existing_files.index(file_url.strip())
+        # Remove from both arrays at the same index
+        new_files = [f for i, f in enumerate(existing_files) if i != file_index]
+        new_filenames = [f for i, f in enumerate(existing_filenames) if i != file_index]
+    except ValueError:
+        # File not found, just return current state
+        new_files = existing_files
+        new_filenames = existing_filenames
+    
     db_claim.files = ",".join(new_files)
+    db_claim.file_filenames = ",".join(new_filenames)
     await db.commit()
     await db.refresh(db_claim)
     return {"ok": True, "remaining_files": new_files}

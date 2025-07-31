@@ -61,6 +61,7 @@ class SourceMaterialBase(BaseModel):
     argument_type: Optional[str] = None
     function: Optional[str] = None
     files: Optional[str] = None  # Comma-separated string
+    file_filenames: Optional[str] = None  # Comma-separated string of original filenames
     notes: Optional[str] = None  # Additional notes
 
 class SourceMaterialCreate(SourceMaterialBase):
@@ -135,6 +136,7 @@ class QuestionBase(BaseModel):
     priority: Optional[str] = None  # e.g., high, medium, low
     tags: Optional[List[str]] = None  # Comma-separated string
     files: Optional[str] = None  # Comma-separated string
+    file_filenames: Optional[str] = None  # Comma-separated string of original filenames
 
 class QuestionCreate(QuestionBase):
     pass
@@ -151,6 +153,7 @@ class QuestionUpdate(BaseModel):
     status: Optional[str] = None
     priority: Optional[str] = None
     files: Optional[str] = None
+    file_filenames: Optional[str] = None
     tags: Optional[List[str]] = None
 
 class InsightBase(BaseModel):
@@ -158,6 +161,7 @@ class InsightBase(BaseModel):
     insight_text: str
     sources_linked: Optional[str] = None  # e.g., "3 Sources Linked"
     files: Optional[str] = None  # Comma-separated string
+    file_filenames: Optional[str] = None  # Comma-separated string of original filenames
     insight_type: Optional[str] = None
     tags: Optional[List[str]] = None  # Comma-separated string
 
@@ -169,6 +173,7 @@ class InsightUpdate(BaseModel):
     insight_text: Optional[str] = None
     sources_linked: Optional[str] = None
     files: Optional[str] = None
+    file_filenames: Optional[str] = None
     insight_type: Optional[str] = None
     tags: Optional[List[str]] = None
 
@@ -182,6 +187,7 @@ class ThoughtBase(BaseModel):
     thought_text: str
     tags: Optional[List[str]] = None  # Comma-separated string
     files: Optional[str] = None  # Comma-separated string
+    file_filenames: Optional[str] = None  # Comma-separated string of original filenames
 
 class ThoughtCreate(ThoughtBase):
     pass
@@ -190,6 +196,7 @@ class ThoughtUpdate(BaseModel):
     project_id: Optional[int] = None
     thought_text: Optional[str] = None
     files: Optional[str] = None
+    file_filenames: Optional[str] = None
     tags: Optional[List[str]] = None
 
 class Thought(ThoughtBase):
@@ -203,6 +210,7 @@ class ClaimBase(BaseModel):
     claim_type: Optional[str] = None  # Hypothesis, Thesis, Conclusion, Proposal
     tags: Optional[List[str]] = None  # Comma-separated string
     files: Optional[str] = None  # Comma-separated string
+    file_filenames: Optional[str] = None  # Comma-separated string of original filenames
 
 class ClaimCreate(ClaimBase):
     pass
@@ -217,4 +225,5 @@ class ClaimUpdate(BaseModel):
     claim_text: Optional[str] = None
     claim_type: Optional[str] = None
     files: Optional[str] = None
+    file_filenames: Optional[str] = None
     tags: Optional[List[str]] = None

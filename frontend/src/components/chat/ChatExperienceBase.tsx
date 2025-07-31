@@ -79,11 +79,6 @@ const ChatExperienceBase: React.FC<ChatExperienceBaseProps> = ({
   const [citationSearchValue, setCitationSearchValue] = useState("");
 
   const currentPrompt = prompts[chatStep];
-  console.log('=== CURRENT PROMPT CALCULATION DEBUG ===');
-  console.log('chatStep:', chatStep);
-  console.log('prompts.length:', prompts.length);
-  console.log('currentPrompt:', currentPrompt);
-  console.log('prompts array:', prompts.map((p: any, i: number) => ({ index: i, id: p.id })));
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Get the node position for the current card
@@ -221,19 +216,13 @@ const ChatExperienceBase: React.FC<ChatExperienceBaseProps> = ({
   // Citation selection now handles advancement directly in handleCitationSelect
 
   // Filter citations for search
-  const filteredCitations = citations.filter((citation: Citation) =>
+  const filteredCitations: Citation[] = citations.filter((citation: Citation) =>
     citation.text.toLowerCase().includes(citationSearchValue.toLowerCase()) ||
     (citation.credibility && citation.credibility.toLowerCase().includes(citationSearchValue.toLowerCase()))
   );
 
   // Handle citation selection
   const handleCitationSelect = (citation: Citation) => {
-    console.log('=== CITATION SELECTION DEBUG (WORKING VERSION) ===');
-    console.log('Selected citation:', citation);
-    console.log('Current prompt ID:', currentPrompt.id);
-    console.log('Current chatStep:', chatStep);
-    console.log('Total prompts:', prompts.length);
-    
     setSelectedCitation(citation);
     setCitationSelectorOpen(false);
     setCitationSearchValue("");
@@ -292,26 +281,18 @@ const ChatExperienceBase: React.FC<ChatExperienceBaseProps> = ({
 
   // Back button handler
   const handleBack = () => {
-    console.log('=== BACK BUTTON DEBUG ===');
-    console.log('Current chatStep:', chatStep);
-    console.log('Current selectedCitation:', selectedCitation);
-    console.log('Current chatAnswers:', chatAnswers);
-    
     if (chatStep > 0) {
       let newStep = chatStep - 1;
-      console.log('Initial new step will be:', newStep);
       
       // Handle special case: if we're going back and would land on credibility step
       // but we have a selected citation, skip to citation step instead
       if (newStep >= 0 && newStep < prompts.length && prompts[newStep].id === 'sourceCredibility' && selectedCitation) {
-        console.log('Skipping credibility step when going back (have selected citation)');
         newStep = newStep - 1; // Go back one more step to citation
       }
       
       // Ensure we don't go below 0
       if (newStep < 0) newStep = 0;
       
-      console.log('Final new step will be:', newStep);
       setChatStep(newStep);
       
       // Rebuild chat history up to the new step
@@ -332,7 +313,6 @@ const ChatExperienceBase: React.FC<ChatExperienceBaseProps> = ({
       setChatHistory(newHistory);
     } else if (chatStep >= prompts.length) {
       // Handle going back from summary screen
-      console.log('Going back from summary screen');
       let newStep = prompts.length - 1;
       
       // If we have a selected citation and the last prompt is credibility, go back to citation
@@ -352,7 +332,6 @@ const ChatExperienceBase: React.FC<ChatExperienceBaseProps> = ({
           if (Array.isArray(answer)) {
             answer = answer.join(", ");
           }
-          console.log(`Adding answer for prompt ${prompts[i-1].id}:`, answer);
           newHistory.push({ role: "user" as const, text: answer === "" ? "Skipped" : answer });
           newHistory.push({ role: "system" as const, text: prompts[i].prompt });
         }
@@ -663,15 +642,8 @@ const ChatExperienceBase: React.FC<ChatExperienceBaseProps> = ({
         {chatStep < prompts.length && currentPrompt && (
           <div className="space-y-3">
             {(() => {
-              console.log('=== RENDERING CURRENT PROMPT DEBUG ===');
-              console.log('Current prompt ID:', currentPrompt.id);
-              console.log('Current prompt options:', currentPrompt.options);
-              console.log('Selected citation:', selectedCitation);
-              console.log('Chat answers:', chatAnswers);
-              
               // If we're on the credibility step and we have a selected citation, skip it
               if (currentPrompt.id === 'sourceCredibility' && selectedCitation) {
-                console.log('Skipping credibility prompt because we have a selected citation');
                 return null;
               }
         

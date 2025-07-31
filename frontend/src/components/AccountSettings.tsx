@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import { Edit, Trash2 } from "lucide-react";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -22,9 +23,11 @@ interface AccountSettingsProps {
 const SOURCE_FUNCTION_TYPE = "sourceFunction";
 const SOURCE_CREDIBILITY_TYPE = "sourceCredibility";
 const INSIGHT_TYPE = "insightType";
+const CLASS_TYPE = "class";
 
 const TABS = [
   { id: "account", label: "Account Info" },
+  { id: "classes", label: "My Classes" },
   { id: "sourceFunctions", label: "Custom Source Functions" },
   { id: "sourceCredibilities", label: "Custom Source Credibilities" },
   { id: "insightTypes", label: "Custom Insight Types" },
@@ -36,7 +39,7 @@ export default function AccountSettings({ open, onOpenChange }: AccountSettingsP
   const [loadingOptions, setLoadingOptions] = useState(false);
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState("account");
-  const [addInput, setAddInput] = useState<{ sourceFunction: string; sourceCredibility: string; insightType: string }>({ sourceFunction: "", sourceCredibility: "", insightType: "" });
+  const [addInput, setAddInput] = useState<{ sourceFunction: string; sourceCredibility: string; insightType: string; class: string }>({ sourceFunction: "", sourceCredibility: "", insightType: "", class: "" });
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editInput, setEditInput] = useState("");
   const [savingEdit, setSavingEdit] = useState(false);
@@ -87,10 +90,10 @@ export default function AccountSettings({ open, onOpenChange }: AccountSettingsP
   }, [open]);
 
   // Add new custom option
-  const getAddInput = (type: 'sourceFunction' | 'sourceCredibility' | 'insightType') => addInput[type] || "";
+  const getAddInput = (type: 'sourceFunction' | 'sourceCredibility' | 'insightType' | 'class') => addInput[type] || "";
 
   const handleAddOption = async (type: string) => {
-    const value = getAddInput(type as 'sourceFunction' | 'sourceCredibility' | 'insightType');
+    const value = getAddInput(type as 'sourceFunction' | 'sourceCredibility' | 'insightType' | 'class');
     if (!value.trim()) return;
     setAddingType(type);
     const token = localStorage.getItem("token");
@@ -295,8 +298,8 @@ export default function AccountSettings({ open, onOpenChange }: AccountSettingsP
           <div className="flex-1 p-6 min-h-[320px]">
             {activeTab === "account" && (
               <>
-                <DialogTitle className="mb-2">Account Info</DialogTitle>
-                <div className="mb-4">
+                <DialogTitle className="mb-8">Account Info</DialogTitle>
+                <div className="mb-6">
                   <span className="font-semibold">Email:</span> {email || "Unknown"}
                 </div>
                 {resetStep === "idle" && (
@@ -411,6 +414,102 @@ export default function AccountSettings({ open, onOpenChange }: AccountSettingsP
                 )}
               </>
             )}
+            {activeTab === "classes" && (
+              <>
+                <DialogTitle className="mb-2">My Classes</DialogTitle>
+                <div className="flex gap-2 mb-4">
+                  <input
+                    type="text"
+                    value={getAddInput(CLASS_TYPE)}
+                    onChange={e => setAddInput(prev => ({ ...prev, [CLASS_TYPE]: e.target.value }))}
+                    placeholder="Add new class..."
+                    className="border border-gray-300 rounded-lg px-4 py-2 text-sm w-full focus:ring-2 focus:ring-primary focus:border-primary outline-none transition"
+                    onKeyDown={e => { if (e.key === 'Enter') handleAddOption(CLASS_TYPE); }}
+                  />
+                  <Button
+                    type="button"
+                    className="px-5 h-10 rounded-lg bg-primary text-white font-semibold hover:bg-primary/90 transition"
+                    disabled={addingType === CLASS_TYPE || !getAddInput(CLASS_TYPE).trim()}
+                    onClick={() => handleAddOption(CLASS_TYPE)}
+                  >
+                    {addingType === CLASS_TYPE ? "Adding..." : "Add"}
+                  </Button>
+                </div>
+                {loadingOptions ? (
+                  <div className="text-gray-500 text-sm">Loading...</div>
+                ) : getOptionsByType(CLASS_TYPE).length === 0 ? (
+                  <div className="text-gray-400 text-sm italic">No classes saved.</div>
+                ) : (
+                  <ul className="divide-y divide-gray-200 border border-gray-200 rounded-lg bg-white">
+                    {getOptionsByType(CLASS_TYPE).map((opt, idx, arr) => (
+                      <li key={opt.id} className="flex items-center justify-between px-3 py-2 group">
+                        {editingId === opt.id ? (
+                          <>
+                            <input
+                              type="text"
+                              value={editInput}
+                              onChange={e => setEditInput(e.target.value)}
+                              className="border border-gray-300 rounded px-2 py-1 text-sm w-full mr-2 focus:ring-2 focus:ring-primary focus:border-primary outline-none transition"
+                              onKeyDown={e => { if (e.key === 'Enter') handleSaveEdit(opt.id, CLASS_TYPE); }}
+                              autoFocus
+                            />
+                            <Button
+                              type="button"
+                              size="sm"
+                              className="px-3 py-1 text-xs mr-2 rounded bg-primary text-white hover:bg-primary/90 transition"
+                              disabled={savingEdit || !editInput.trim()}
+                              onClick={() => handleSaveEdit(opt.id, CLASS_TYPE)}
+                            >
+                              {savingEdit ? "Saving..." : "Save"}
+                            </Button>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="secondary"
+                              className="px-3 py-1 text-xs rounded hover:bg-gray-100 transition"
+                              onClick={() => { setEditingId(null); setEditInput(""); }}
+                            >
+                              Cancel
+                            </Button>
+                          </>
+                        ) : (
+                          <>
+                            <span className="truncate text-sm mr-2 font-medium text-gray-800">{opt.value}</span>
+                            <div className="flex gap-1"> {/* Always visible now */}
+                              <Button
+                                type="button"
+                                size="icon"
+                                variant="ghost"
+                                className="rounded-full hover:bg-gray-100"
+                                onClick={() => handleEditOption(opt.id, opt.value)}
+                                aria-label="Edit"
+                              >
+                                <Edit className="h-4 w-4 text-gray-600" />
+                              </Button>
+                              <Button
+                                type="button"
+                                size="icon"
+                                variant="ghost"
+                                className="rounded-full hover:bg-red-50"
+                                disabled={deletingId === opt.id}
+                                onClick={() => handleDeleteOption(opt.id)}
+                                aria-label="Delete"
+                              >
+                                {deletingId === opt.id ? (
+                                  <span className="text-xs">...</span>
+                                ) : (
+                                  <Trash2 className="h-4 w-4 text-red-500" />
+                                )}
+                              </Button>
+                            </div>
+                          </>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </>
+            )}
             {activeTab === "sourceFunctions" && (
               <>
                 <DialogTitle className="mb-2">Custom Source Functions</DialogTitle>
@@ -481,7 +580,7 @@ export default function AccountSettings({ open, onOpenChange }: AccountSettingsP
                                 onClick={() => handleEditOption(opt.id, opt.value)}
                                 aria-label="Edit"
                               >
-                                <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M15.232 5.232l3.536 3.536M9 11l6 6M3 21h6l11.293-11.293a1 1 0 0 0 0-1.414l-3.586-3.586a1 1 0 0 0-1.414 0L3 15v6z"/></svg>
+                                <Edit className="h-4 w-4 text-gray-600" />
                               </Button>
                               <Button
                                 type="button"
@@ -495,7 +594,7 @@ export default function AccountSettings({ open, onOpenChange }: AccountSettingsP
                                 {deletingId === opt.id ? (
                                   <span className="text-xs">...</span>
                                 ) : (
-                                  <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M6 19a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7H6v12zM19 7V5a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v2m5 4v6m4-6v6"/></svg>
+                                  <Trash2 className="h-4 w-4 text-red-500" />
                                 )}
                               </Button>
                             </div>
@@ -577,7 +676,7 @@ export default function AccountSettings({ open, onOpenChange }: AccountSettingsP
                                 onClick={() => handleEditOption(opt.id, opt.value)}
                                 aria-label="Edit"
                               >
-                                <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M15.232 5.232l3.536 3.536M9 11l6 6M3 21h6l11.293-11.293a1 1 0 0 0 0-1.414l-3.586-3.586a1 1 0 0 0-1.414 0L3 15v6z"/></svg>
+                                <Edit className="h-4 w-4 text-gray-600" />
                               </Button>
                               <Button
                                 type="button"
@@ -591,7 +690,7 @@ export default function AccountSettings({ open, onOpenChange }: AccountSettingsP
                                 {deletingId === opt.id ? (
                                   <span className="text-xs">...</span>
                                 ) : (
-                                  <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M6 19a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7H6v12zM19 7V5a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v2m5 4v6m4-6v6"/></svg>
+                                  <Trash2 className="h-4 w-4 text-red-500" />
                                 )}
                               </Button>
                             </div>
@@ -673,7 +772,7 @@ export default function AccountSettings({ open, onOpenChange }: AccountSettingsP
                                 onClick={() => handleEditOption(opt.id, opt.value)}
                                 aria-label="Edit"
                               >
-                                <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M15.232 5.232l3.536 3.536M9 11l6 6M3 21h6l11.293-11.293a1 1 0 0 0 0-1.414l-3.586-3.586a1 1 0 0 0-1.414 0L3 15v6z"/></svg>
+                                <Edit className="h-4 w-4 text-gray-600" />
                               </Button>
                               <Button
                                 type="button"
@@ -687,7 +786,7 @@ export default function AccountSettings({ open, onOpenChange }: AccountSettingsP
                                 {deletingId === opt.id ? (
                                   <span className="text-xs">...</span>
                                 ) : (
-                                  <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M6 19a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7H6v12zM19 7V5a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v2m5 4v6m4-6v6"/></svg>
+                                  <Trash2 className="h-4 w-4 text-red-500" />
                                 )}
                               </Button>
                             </div>

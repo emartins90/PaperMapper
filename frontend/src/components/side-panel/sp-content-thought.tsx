@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import FileUploadSection from "../canvas-add-files/FileUploadSection";
 import UnsavedCardFileUpload from "../shared/UnsavedCardFileUpload";
 import { uploadFilesForCardType } from "../useFileUploadHandler";
@@ -46,6 +46,7 @@ export default function ThoughtCardContent({
   const [files, setFiles] = React.useState<string[]>(cardData?.files || []);
   const [fileEntries, setFileEntries] = React.useState<Array<{ url: string; filename: string; type: string }>>(cardData?.fileEntries || []);
   const [isUploading, setIsUploading] = React.useState(false);
+  const [pendingNodeUpdate, setPendingNodeUpdate] = React.useState<{ files: string[], fileEntries: any[] } | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   // For unsaved cards, store files as File objects
@@ -97,20 +98,37 @@ export default function ThoughtCardContent({
     }
   }, [thought, pendingFiles, onFormDataChange]);
 
+  // Handle pending node updates
+  React.useEffect(() => {
+    if (pendingNodeUpdate && openCard) {
+      onUpdateNodeData?.(openCard.id, pendingNodeUpdate);
+      setPendingNodeUpdate(null);
+    }
+  }, [pendingNodeUpdate, openCard, onUpdateNodeData]);
+
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || !openCard) return;
+    
     setIsUploading(true);
     try {
       // If we have a backend ID, upload to backend
       if (cardData?.thoughtId) {
-        await uploadFilesForCardType(
+        const result = await uploadFilesForCardType(
           "thought",
           cardData.thoughtId,
           Array.from(e.target.files),
           files,
-          (newFiles) => {
+          (newFiles, newFileEntries) => {
             setFiles(newFiles);
-            onUpdateNodeData?.(openCard.id, { files: newFiles });
+            setFileEntries(prev => {
+              const updatedFileEntries = [...prev, ...(newFileEntries || [])];
+              
+              // Queue node data update for next render cycle
+              const pendingUpdate = { files: newFiles, fileEntries: updatedFileEntries };
+              setPendingNodeUpdate(pendingUpdate);
+              
+              return updatedFileEntries;
+            });
           }
         );
       } else {
@@ -124,6 +142,7 @@ export default function ThoughtCardContent({
         });
       }
     } catch (err) {
+      console.error("File upload error:", err);
       alert("Failed to upload file: " + (err as Error).message);
     } finally {
       setIsUploading(false);
@@ -140,8 +159,10 @@ export default function ThoughtCardContent({
       });
       if (!res.ok) throw new Error("Failed to delete file");
       const newFiles = files.filter(f => f !== fileUrl);
+      const newFileEntries = fileEntries.filter(entry => entry.url !== fileUrl);
       setFiles(newFiles);
-      onUpdateNodeData?.(openCard.id, { files: newFiles });
+      setFileEntries(newFileEntries);
+      onUpdateNodeData?.(openCard.id, { files: newFiles, fileEntries: newFileEntries });
     } catch (err) {
       alert("Failed to delete file: " + (err as Error).message);
     }

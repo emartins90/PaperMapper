@@ -65,6 +65,7 @@ export default function SourceCardContent({
   const [files, setFiles] = useState<string[]>(cardData?.files || []);
   const [fileEntries, setFileEntries] = useState<Array<{ url: string; filename: string; type: string }>>(cardData?.fileEntries || []);
   const [isUploading, setIsUploading] = useState(false);
+  const [pendingNodeUpdate, setPendingNodeUpdate] = useState<{ files: string[], fileEntries: any[] } | null>(null);
   
   // For unsaved cards, store files as File[] objects
   const [pendingFiles, setPendingFiles] = useState<File[]>(cardData?.pendingFiles || []);
@@ -174,7 +175,6 @@ export default function SourceCardContent({
       
       if (response.ok) {
         const data = await response.json();
-        console.log('Fetched citation data from database:', data);
         
         // Update citation state based on database data
         if (data.citation_id && citations.length > 0) {
@@ -214,23 +214,13 @@ export default function SourceCardContent({
 
   // Update all fields when component mounts or card changes
   useEffect(() => {
-    console.log('=== useEffect triggered ===');
-    console.log('openCard?.id:', openCard?.id);
-    console.log('cardData?.sourceMaterialId:', cardData?.sourceMaterialId);
-    console.log('isUnsaved:', isUnsaved);
-    console.log('citations.length:', citations.length);
-    console.log('isCitationOnlyUpdateRef.current:', isCitationOnlyUpdateRef.current);
-    
     // Skip field resets if we're making a citation-only update for unsaved cards
     if (isCitationOnlyUpdateRef.current && isUnsaved) {
-      console.log('Skipping field resets - citation-only update for unsaved card');
-      console.log('cardData?.citationId:', cardData?.citationId);
       isCitationOnlyUpdateRef.current = false;
       
       // Only handle citation state, don't reset other fields
       if (cardData?.citationId && citations.length > 0) {
         const citation = citations.find(c => c.id === cardData.citationId);
-        console.log('Found citation to set:', citation);
         if (citation) {
           setSelectedCitation(citation);
           setLocalCitationId(cardData.citationId);
@@ -238,7 +228,6 @@ export default function SourceCardContent({
           setCredibility(citation.credibility || "");
         }
       } else {
-        console.log('No citation to set, clearing citation state');
         setSelectedCitation(null);
         setLocalCitationId(null);
       }
@@ -258,7 +247,6 @@ export default function SourceCardContent({
     // Handle citation state based on whether card is saved or unsaved
     if (isUnsaved) {
       // For unsaved cards, use local state from cardData
-      console.log('Card is unsaved, using local citation state');
       if (cardData?.citationId && citations.length > 0) {
         const citation = citations.find(c => c.id === cardData.citationId);
         if (citation) {
@@ -273,7 +261,6 @@ export default function SourceCardContent({
       }
     } else {
       // For saved cards, fetch from database
-      console.log('Card is saved, fetching citation data from database');
       fetchCardCitationData();
     }
   }, [openCard?.id, cardData, citations, isUnsaved, shouldRefreshCitation]);
@@ -300,6 +287,14 @@ export default function SourceCardContent({
     setFiles(cardData?.files || []);
     setFileEntries(cardData?.fileEntries || []);
   }, [cardData?.files, cardData?.fileEntries]);
+
+  // Handle pending node updates
+  useEffect(() => {
+    if (pendingNodeUpdate && openCard) {
+      onUpdateNodeData?.(openCard.id, pendingNodeUpdate);
+      setPendingNodeUpdate(null);
+    }
+  }, [pendingNodeUpdate, openCard, onUpdateNodeData]);
 
   // Save all fields to backend
   const saveAllFields = async () => {
@@ -703,14 +698,19 @@ export default function SourceCardContent({
     try {
       // If we have a backend ID, upload to backend
       if (cardData?.sourceMaterialId) {
-        await uploadFilesForCardType(
+        const result = await uploadFilesForCardType(
           "source",
           cardData.sourceMaterialId,
           Array.from(e.target.files),
           files,
-          (newFiles) => {
+          (newFiles, newFileEntries) => {
             setFiles(newFiles);
-            onUpdateNodeData?.(openCard.id, { files: newFiles });
+            setFileEntries(prev => {
+              const updatedFileEntries = [...prev, ...(newFileEntries || [])];
+              return updatedFileEntries;
+            });
+            // Queue node data update for next render cycle
+            setPendingNodeUpdate({ files: newFiles, fileEntries: [...fileEntries, ...(newFileEntries || [])] });
           }
         );
       } else {
@@ -749,7 +749,9 @@ export default function SourceCardContent({
 
       // Remove the file from the files array
       const newFiles = files.filter(f => f !== fileUrl);
+      const newFileEntries = fileEntries.filter(entry => entry.url !== fileUrl);
       setFiles(newFiles);
+      setFileEntries(newFileEntries);
 
       // Prepare the update payload (all required fields, snake_case)
       const payload = {
@@ -761,6 +763,7 @@ export default function SourceCardContent({
         argument_type: cardData.thesisSupport ?? "",
         function: cardData.sourceFunction ?? "",
         files: newFiles.length ? newFiles.join(',') : "",
+        file_filenames: newFileEntries.length ? newFileEntries.map(entry => entry.filename).join(',') : "",
         notes: cardData.additionalNotes ?? "",
       };
 
@@ -776,7 +779,7 @@ export default function SourceCardContent({
       
       // Update the node data in the parent component to reflect the change immediately
       if (onUpdateNodeData) {
-        onUpdateNodeData(openCard?.id || "", { files: newFiles });
+        onUpdateNodeData(openCard?.id || "", { files: newFiles, fileEntries: newFileEntries });
       }
     } catch (err) {
       alert('Failed to fully delete file.');
@@ -936,11 +939,6 @@ export default function SourceCardContent({
 
   // Handle citation removal
   const handleCitationRemove = async () => {
-    console.log('=== Starting citation removal ===');
-    console.log('isUnsaved:', isUnsaved);
-    console.log('selectedCitation:', selectedCitation);
-    console.log('openCard?.id:', openCard?.id);
-    
     // Clear all citation-related state immediately
     setSelectedCitation(null);
     setSourceCitation("");
@@ -1000,8 +998,6 @@ export default function SourceCardContent({
             throw new Error(`Failed to remove citation: ${response.status} ${errorText}`);
           }
 
-          console.log('Citation removed from database successfully');
-          
           // Dispatch source material update event to refresh source list
           window.dispatchEvent(new CustomEvent('sourceMaterialUpdate'));
           
@@ -1365,7 +1361,6 @@ export default function SourceCardContent({
                         variant="ghost"
                         size="sm"
                         onClick={() => {
-                          console.log('Remove citation button clicked!');
                           handleCitationRemove();
                         }}
                         className="p-1 h-8 w-8 text-red-600 hover:text-red-700 flex-shrink-0"

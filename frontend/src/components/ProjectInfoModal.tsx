@@ -6,7 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { MdDelete, MdUpload } from "react-icons/md";
+import { Combobox, useCustomOptions } from "@/components/ui/combobox";
+import { LuTrash2, LuUpload } from "react-icons/lu";
 import FileChip from "./canvas-add-files/FileChip";
 import { FullscreenFileViewer } from "./canvas-add-files/FullscreenFileViewer";
 
@@ -23,18 +24,18 @@ interface Project {
 }
 
 interface ProjectInfoModalProps {
-  projectId: number;
+  projectId?: number; // Optional for create mode
+  mode: 'create' | 'edit';
   onClose: () => void;
 }
 
-export default function ProjectInfoModal({ projectId, onClose }: ProjectInfoModalProps) {
+export default function ProjectInfoModal({ projectId, mode, onClose }: ProjectInfoModalProps) {
   const [project, setProject] = useState<Project | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(mode === 'edit');
   const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     class_subject: "",
-    paper_type: "",
     due_date: "",
     status: "not_started"
   });
@@ -51,6 +52,9 @@ export default function ProjectInfoModal({ projectId, onClose }: ProjectInfoModa
   const nameInputRef = useRef<HTMLInputElement>(null);
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
+  // Use custom options hook for classes
+  const classOptions = useCustomOptions("class");
 
   // Helper to check if file is an image
   function isImageFile(filename: string) {
@@ -81,33 +85,36 @@ export default function ProjectInfoModal({ projectId, onClose }: ProjectInfoModa
   }
 
   useEffect(() => {
-    const fetchProject = async () => {
-      try {
-        const response = await fetch(`${API_URL}/projects/${projectId}`, {
-          credentials: "include",
-        });
-        if (response.ok) {
-          const projectData = await response.json();
-          setProject(projectData);
-          setFormData({
-            name: projectData.name || "",
-            class_subject: projectData.class_subject || "",
-            paper_type: projectData.paper_type || "",
-            due_date: projectData.due_date ? projectData.due_date.split('T')[0] : "",
-            status: projectData.status || "not_started"
+    if (mode === 'edit' && projectId) {
+      const fetchProject = async () => {
+        try {
+          const response = await fetch(`${API_URL}/projects/${projectId}`, {
+            credentials: "include",
           });
-          setCurrentFile(projectData.assignment_file);
-          setCurrentFilename(projectData.assignment_filename);
+          if (response.ok) {
+            const projectData = await response.json();
+            setProject(projectData);
+            setFormData({
+              name: projectData.name || "",
+              class_subject: projectData.class_subject || "",
+              due_date: projectData.due_date ? projectData.due_date.split('T')[0] : "",
+              status: projectData.status || "not_started"
+            });
+            setCurrentFile(projectData.assignment_file);
+            setCurrentFilename(projectData.assignment_filename);
+          }
+        } catch (error) {
+          console.error("Failed to fetch project:", error);
+        } finally {
+          setLoading(false);
         }
-      } catch (error) {
-        console.error("Failed to fetch project:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
+      };
 
-    fetchProject();
-  }, [projectId]);
+      fetchProject();
+    } else {
+      setLoading(false);
+    }
+  }, [projectId, mode]);
 
   useEffect(() => {
     // Focus the name input after a small delay to ensure modal is fully rendered
@@ -121,58 +128,99 @@ export default function ProjectInfoModal({ projectId, onClose }: ProjectInfoModa
   }, []);
 
   const handleSave = async () => {
-    if (!project) return;
+    if (mode === 'edit' && !project) return;
     
     setSaving(true);
     try {
-      // Update project info
-      const updateResponse = await fetch(`${API_URL}/projects/${projectId}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
-        body: JSON.stringify({
-          name: formData.name,
-          class_subject: formData.class_subject,
-          paper_type: formData.paper_type,
-          due_date: formData.due_date || null,
-          status: formData.status,
-        }),
-      });
-
-      if (!updateResponse.ok) {
-        throw new Error("Failed to update project");
-      }
-
-      // Upload file if selected
-      if (file) {
-        const uploadFormData = new FormData();
-        uploadFormData.append("file", file);
-        uploadFormData.append("project_id", projectId.toString());
-
-        const uploadResponse = await fetch(`${API_URL}/projects/upload_assignment/`, {
+      if (mode === 'create') {
+        // Create new project
+        const createResponse = await fetch(`${API_URL}/projects/`, {
           method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
           credentials: "include",
-          body: uploadFormData,
+          body: JSON.stringify({
+            name: formData.name,
+            class_subject: formData.class_subject,
+            due_date: formData.due_date || null,
+            status: formData.status,
+          }),
         });
 
-        if (!uploadResponse.ok) {
-          throw new Error("Failed to upload file");
+        if (!createResponse.ok) {
+          throw new Error("Failed to create project");
         }
 
-        const uploadResult = await uploadResponse.json();
-        setCurrentFile(uploadResult.file_url);
-        setCurrentFilename(file.name);
-      }
+        const newProject = await createResponse.json();
+        
+        // Upload file if selected
+        if (file && newProject.id) {
+          const uploadFormData = new FormData();
+          uploadFormData.append("file", file);
+          uploadFormData.append("project_id", newProject.id.toString());
 
-      // Refresh project data
-      const refreshResponse = await fetch(`${API_URL}/projects/${projectId}`, {
-        credentials: "include",
-      });
-      if (refreshResponse.ok) {
-        const updatedProject = await refreshResponse.json();
-        setProject(updatedProject);
+          const uploadResponse = await fetch(`${API_URL}/projects/upload_assignment/`, {
+            method: "POST",
+            credentials: "include",
+            body: uploadFormData,
+          });
+
+          if (!uploadResponse.ok) {
+            throw new Error("Failed to upload file");
+          }
+        }
+      } else {
+        // Update existing project
+        const updateResponse = await fetch(`${API_URL}/projects/${projectId}`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          credentials: "include",
+          body: JSON.stringify({
+            name: formData.name,
+            class_subject: formData.class_subject,
+            due_date: formData.due_date || null,
+            status: formData.status,
+          }),
+        });
+
+        if (!updateResponse.ok) {
+          throw new Error("Failed to update project");
+        }
+
+        // Upload file if selected
+        if (file && projectId) {
+          const uploadFormData = new FormData();
+          uploadFormData.append("file", file);
+          uploadFormData.append("project_id", projectId.toString());
+
+          const uploadResponse = await fetch(`${API_URL}/projects/upload_assignment/`, {
+            method: "POST",
+            credentials: "include",
+            body: uploadFormData,
+          });
+
+          if (!uploadResponse.ok) {
+            throw new Error("Failed to upload file");
+          }
+
+          const uploadResult = await uploadResponse.json();
+          setCurrentFile(uploadResult.file_url);
+          setCurrentFilename(file.name);
+        }
+
+        // Refresh project data
+        if (projectId) {
+          const refreshResponse = await fetch(`${API_URL}/projects/${projectId}`, {
+            credentials: "include",
+          });
+          if (refreshResponse.ok) {
+            const updatedProject = await refreshResponse.json();
+            setProject(updatedProject);
+          }
+        }
       }
 
       onClose();
@@ -193,7 +241,7 @@ export default function ProjectInfoModal({ projectId, onClose }: ProjectInfoModa
   };
 
   const handleCurrentFileRemove = async () => {
-    if (!project) return;
+    if (!project || !projectId) return;
     
     try {
       const response = await fetch(`${API_URL}/projects/delete_assignment/?project_id=${projectId}`, {
@@ -234,9 +282,9 @@ export default function ProjectInfoModal({ projectId, onClose }: ProjectInfoModa
     <Dialog open={true} onOpenChange={onClose}>
       <DialogContent className="max-w-md p-6">
         <DialogHeader>
-          <DialogTitle>Edit Project Info</DialogTitle>
+          <DialogTitle>{mode === 'create' ? 'Create New Project' : 'Edit Project Info'}</DialogTitle>
           <DialogDescription>
-            Update project details and assignment file.
+            {mode === 'create' ? 'Add project details and optional assignment file.' : 'Update project details and assignment file.'}
           </DialogDescription>
         </DialogHeader>
         
@@ -254,21 +302,18 @@ export default function ProjectInfoModal({ projectId, onClose }: ProjectInfoModa
 
           <div className="space-y-2">
             <Label htmlFor="class_subject">Class/Subject</Label>
-            <Input
-              id="class_subject"
-              value={formData.class_subject}
-              onChange={(e) => setFormData({ ...formData, class_subject: e.target.value })}
-              placeholder="Enter class or subject"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="paper_type">Paper Type</Label>
-            <Input
-              id="paper_type"
-              value={formData.paper_type}
-              onChange={(e) => setFormData({ ...formData, paper_type: e.target.value })}
-              placeholder="Enter paper type"
+            <Combobox
+              options={classOptions.options}
+              value={formData.class_subject || ""}
+              onChange={async (value) => {
+                setFormData({ ...formData, class_subject: value });
+                // If it's a new custom option, persist it
+                if (value && !classOptions.options.some(o => o.value === value)) {
+                  await classOptions.addOption(value);
+                }
+              }}
+              placeholder="Select or type class..."
+              allowCustom={true}
             />
           </div>
 
@@ -317,14 +362,14 @@ export default function ProjectInfoModal({ projectId, onClose }: ProjectInfoModa
                     onClick={handleCurrentFileRemove}
                     className="ml-2"
                   >
-                    <MdDelete className="h-4 w-4" />
+                    <LuTrash2 className="h-4 w-4" />
                   </Button>
                 </div>
               ) : file ? (
                 <div className="flex items-center justify-between p-3 border rounded-md bg-gray-50">
                   <div className="flex items-center gap-2">
                     <div className="w-8 h-8 bg-blue-100 rounded flex items-center justify-center">
-                      <MdUpload className="h-4 w-4 text-blue-600" />
+                      <LuUpload className="h-4 w-4 text-blue-600" />
                     </div>
                     <span className="text-sm font-medium text-gray-900 truncate">
                       {file.name}
@@ -336,7 +381,7 @@ export default function ProjectInfoModal({ projectId, onClose }: ProjectInfoModa
                     onClick={handleFileRemove}
                     className="ml-2"
                   >
-                    <MdDelete className="h-4 w-4" />
+                    <LuTrash2 className="h-4 w-4" />
                   </Button>
                 </div>
               ) : (
@@ -358,7 +403,7 @@ export default function ProjectInfoModal({ projectId, onClose }: ProjectInfoModa
             Cancel
           </Button>
           <Button onClick={handleSave} disabled={saving}>
-            {saving ? "Saving..." : "Save Changes"}
+            {saving ? "Saving..." : mode === 'create' ? "Create Project" : "Save Changes"}
           </Button>
         </div>
       </DialogContent>

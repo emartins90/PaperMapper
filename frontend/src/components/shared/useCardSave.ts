@@ -229,10 +229,10 @@ export const useCardSave = ({
           backendId,
           uploadedFiles,
           [], // No existing files for new cards
-          (newFiles: string[]) => {
-            // Update node data with the new files
+          (newFiles: string[], newFileEntries: any[]) => {
+            // Update node data with the new files and fileEntries
             if (onUpdateNodeData) {
-              onUpdateNodeData(cardId, { files: newFiles });
+              onUpdateNodeData(cardId, { files: newFiles, fileEntries: newFileEntries });
             }
           }
         );

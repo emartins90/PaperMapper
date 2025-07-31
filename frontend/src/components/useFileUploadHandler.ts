@@ -7,10 +7,14 @@ export async function uploadFilesForCardType(
   backendId: string | number,
   files: File[],
   existingFiles: string[],
-  onUpdateNodeData: (newFiles: string[]) => void
-): Promise<string[]> {
-  if (!files.length) return existingFiles;
+  onUploadComplete?: (newFiles: string[], newFileEntries: any[]) => void
+): Promise<{ fileUrls: string[], fileEntries: any[] }> {
+  if (!files.length) {
+    return { fileUrls: existingFiles, fileEntries: [] };
+  }
+  
   const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+  
   const formData = new FormData();
   for (const file of files) {
     formData.append("files", file);
@@ -49,18 +53,32 @@ export async function uploadFilesForCardType(
       body: formData,
       credentials: "include", // Include authentication cookies
     });
-
+    
     if (!res.ok) {
       const errorText = await res.text();
       console.error("[uploadFilesForCardType] Error response:", errorText);
       throw new Error("Failed to upload files");
     }
+    
     const data = await res.json();
+    
     const newFiles = [...existingFiles, ...(data.file_urls || [])];
-    onUpdateNodeData(newFiles);
-    return newFiles;
+    
+    // Create fileEntries with original filenames
+    const uploadedFilenames = data.file_filenames || [];
+    const newFileEntries = uploadedFilenames.map((filename: string, index: number) => ({
+      url: data.file_urls[index],
+      filename: filename,
+      type: ""
+    }));
+    
+    // Call the callback that was passed to this function
+    onUploadComplete?.(newFiles, newFileEntries);
+    
+    return { fileUrls: newFiles, fileEntries: newFileEntries };
   } catch (err) {
     console.error("[uploadFilesForCardType] Exception:", err);
+    console.log("=== FILE UPLOAD DEBUG END (ERROR) ===");
     throw err;
   }
 }

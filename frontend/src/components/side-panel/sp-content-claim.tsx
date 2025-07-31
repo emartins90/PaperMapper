@@ -54,6 +54,7 @@ export default function ClaimCardContent({
   const [files, setFiles] = React.useState<string[]>(cardData?.files || []);
   const [fileEntries, setFileEntries] = React.useState<Array<{ url: string; filename: string; type: string }>>(cardData?.fileEntries || []);
   const [isUploading, setIsUploading] = React.useState(false);
+  const [pendingNodeUpdate, setPendingNodeUpdate] = React.useState<{ files: string[], fileEntries: any[] } | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   // For unsaved cards, store files as File objects
@@ -107,20 +108,33 @@ export default function ClaimCardContent({
     }
   }, [claim, claimType, pendingFiles, onFormDataChange]);
 
+  // Handle pending node updates
+  React.useEffect(() => {
+    if (pendingNodeUpdate && openCard) {
+      onUpdateNodeData?.(openCard.id, pendingNodeUpdate);
+      setPendingNodeUpdate(null);
+    }
+  }, [pendingNodeUpdate, openCard, onUpdateNodeData]);
+
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || !openCard) return;
     setIsUploading(true);
     try {
       // If we have a backend ID, upload to backend
       if (cardData?.claimId) {
-        await uploadFilesForCardType(
+        const result = await uploadFilesForCardType(
           "claim",
           cardData.claimId,
           Array.from(e.target.files),
           files,
-          (newFiles) => {
+          (newFiles, newFileEntries) => {
             setFiles(newFiles);
-            onUpdateNodeData?.(openCard.id, { files: newFiles });
+            setFileEntries(prev => {
+              const updatedFileEntries = [...prev, ...(newFileEntries || [])];
+              return updatedFileEntries;
+            });
+            // Queue node data update for next render cycle
+            setPendingNodeUpdate({ files: newFiles, fileEntries: [...fileEntries, ...(newFileEntries || [])] });
           }
         );
       } else {
@@ -150,8 +164,10 @@ export default function ClaimCardContent({
       });
       if (!res.ok) throw new Error("Failed to delete file");
       const newFiles = files.filter(f => f !== fileUrl);
+      const newFileEntries = fileEntries.filter(entry => entry.url !== fileUrl);
       setFiles(newFiles);
-      onUpdateNodeData?.(openCard.id, { files: newFiles });
+      setFileEntries(newFileEntries);
+      onUpdateNodeData?.(openCard.id, { files: newFiles, fileEntries: newFileEntries });
     } catch (err) {
       alert("Failed to delete file: " + (err as Error).message);
     }

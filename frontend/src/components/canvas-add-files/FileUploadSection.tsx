@@ -1,7 +1,7 @@
 import { Button } from "../ui/button";
 import React from "react";
-import { MdClose } from "react-icons/md";
-import { MdPictureAsPdf, MdDescription, MdAudiotrack, MdInsertDriveFile } from "react-icons/md";
+import { LuX } from "react-icons/lu";
+import { FaFilePdf, FaFileWord, FaFileAudio, FaFile } from "react-icons/fa6";
 
 type FileEntry = { url: string; filename: string; type: string };
 
@@ -31,15 +31,15 @@ export default function FileUploadSection({
   // Prefer fileEntries if present (for new cards), else fall back to files array
   const displayFiles: FileEntry[] = fileEntries.length > 0
     ? fileEntries
-    : files.map((url) => ({ url, filename: url.split("/").pop() || "file", type: "" }));
+    : files.map((url) => ({ url, filename: "file", type: "" }));
 
   // Helper to get icon and color by file type
   const getFileIcon = (filename: string) => {
     const ext = filename.split('.').pop()?.toLowerCase();
-    if (ext === "pdf") return { icon: <MdPictureAsPdf className="text-red-500 w-5 h-5" />, color: "bg-red-100" };
-    if (["doc", "docx"].includes(ext || "")) return { icon: <MdDescription className="text-blue-700 w-5 h-5" />, color: "bg-blue-100" };
-    if (["mp3", "wav", "m4a", "ogg"].includes(ext || "")) return { icon: <MdAudiotrack className="text-purple-500 w-5 h-5" />, color: "bg-purple-100" };
-    return { icon: <MdInsertDriveFile className="text-gray-500 w-5 h-5" />, color: "bg-gray-100" };
+    if (ext === "pdf") return { icon: <FaFilePdf className="text-red-500 w-5 h-5" />, color: "bg-red-100" };
+    if (["doc", "docx"].includes(ext || "")) return { icon: <FaFileWord className="text-blue-700 w-5 h-5" />, color: "bg-blue-100" };
+    if (["mp3", "wav", "m4a", "ogg"].includes(ext || "")) return { icon: <FaFileAudio className="text-purple-500 w-5 h-5" />, color: "bg-purple-100" };
+    return { icon: <FaFile className="text-gray-500 w-5 h-5" />, color: "bg-gray-100" };
   };
 
   // Helper to check if file is an image
@@ -112,7 +112,7 @@ export default function FileUploadSection({
                   className="absolute top-1 right-1 bg-white border border-gray-300 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-200 shadow-md"
                   title="Delete file"
                 >
-                  <MdClose className="text-red-500" size={16}/>
+                  <LuX className="text-red-500" size={16}/>
                 </button>
               </div>
             );

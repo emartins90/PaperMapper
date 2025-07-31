@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { MdHelpOutline, MdLibraryBooks, MdLightbulbOutline, MdChatBubbleOutline, MdOutlineRecordVoiceOver } from "react-icons/md";
+import { LuCircleHelp, LuBookOpen, LuLightbulb, LuMessageCircle, LuSpeech } from "react-icons/lu";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Switch } from "@/components/ui/switch";
@@ -58,7 +58,7 @@ export default function BottomNav({
               <Button variant="light" className="bg-claim-100 hover:bg-claim-300" size="icon" aria-label="Add Claim Card" onClick={() => {
                 onAddClaim?.();
               }}>
-                <MdOutlineRecordVoiceOver size={40} />
+                <LuSpeech size={40} />
               </Button>
             </TooltipTrigger>
             <TooltipContent>
@@ -70,7 +70,7 @@ export default function BottomNav({
               <Button variant="light" className="bg-question-100 hover:bg-question-300" size="icon" aria-label="Add Question Card" onClick={() => {
                 onAddQuestion?.();
               }}>
-                <MdHelpOutline size={40} />
+                <LuCircleHelp size={40} />
               </Button>
             </TooltipTrigger>
             <TooltipContent>
@@ -82,7 +82,7 @@ export default function BottomNav({
               <Button variant="light" className="bg-source-100 hover:bg-source-300" size="icon" aria-label="Add Source Material Card" onClick={() => {
                 onAddSourceMaterial?.();
               }}>
-                <MdLibraryBooks size={40} />
+                <LuBookOpen size={40} />
               </Button>
             </TooltipTrigger>
             <TooltipContent>
@@ -94,7 +94,7 @@ export default function BottomNav({
               <Button variant="light" className="bg-insight-100 hover:bg-insight-300" size="icon" aria-label="Add Insight Card" onClick={() => {
                 onAddInsight?.();
               }}>
-                <MdLightbulbOutline size={40} />
+                <LuLightbulb size={40} />
               </Button>
             </TooltipTrigger>
             <TooltipContent>
@@ -106,7 +106,7 @@ export default function BottomNav({
               <Button variant="light" className="bg-thought-100 hover:bg-thought-300" size="icon" aria-label="Add Thought Card" onClick={() => {
                 onAddThought?.();
               }}>
-                <MdChatBubbleOutline size={40} />
+                <LuMessageCircle size={40} />
               </Button>
             </TooltipTrigger>
             <TooltipContent>

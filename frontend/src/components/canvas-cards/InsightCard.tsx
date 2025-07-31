@@ -2,7 +2,7 @@ import React from "react";
 import Tag from "@/components/Tag";
 import { Handle, Position } from "reactflow";
 import { FileListDisplay } from "../canvas-add-files/FileListDisplay";
-import { MdLightbulbOutline } from "react-icons/md";
+import { LuLightbulb } from "react-icons/lu";
 
 type InsightCardProps = {
   data: {
@@ -12,6 +12,7 @@ type InsightCardProps = {
     tags?: string[] | string;
     onOpen?: () => void;
     files?: string[];
+    fileEntries?: Array<{ url: string; filename: string; type: string }>;
     onFileClick?: (fileUrl: string, fileType: 'image' | 'pdf' | 'other' | 'audio') => void;
   };
   showHandles?: boolean;
@@ -44,7 +45,7 @@ export default function InsightCard({ data, showHandles = true, width = 'w-96' }
       )}
       <div className="flex items-center justify-between mb-2">
         <div className="text-insight-700 truncate-block flex items-center gap-1">
-          <MdLightbulbOutline className="text-insight-400" size={22} />
+          <LuLightbulb className="text-insight-400" size={22} />
           <span className="font-bold">Insight</span>{data.insightType ? <span className="font-normal"> : {data.insightType}</span> : ''}
         </div>
         <button onClick={data.onOpen} aria-label="Open card">
@@ -63,7 +64,7 @@ export default function InsightCard({ data, showHandles = true, width = 'w-96' }
       
       {/* Render uploaded files (images as thumbnails, others as file names) */}
       {data.files && data.files.length > 0 && (
-        <FileListDisplay files={data.files} onFileClick={data.onFileClick} showFilesLabel={true} cardType="insight" />
+        <FileListDisplay files={data.files} fileEntries={data.fileEntries} onFileClick={data.onFileClick} showFilesLabel={true} cardType="insight" />
       )}
     </div>
   );

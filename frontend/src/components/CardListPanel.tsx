@@ -6,11 +6,18 @@ import ThoughtCard from "./canvas-cards/ThoughtCard";
 import ClaimCard from "./canvas-cards/ClaimCard";
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
-import { MdClose, MdFilterList } from "react-icons/md";
 import { Popover, PopoverTrigger, PopoverContent } from "./ui/popover";
 import { ToggleGroup, ToggleGroupItem } from "./ui/toggle-group";
 import { Badge } from "./ui/badge";
-import { MdHelpOutline, MdLibraryBooks, MdLightbulbOutline, MdChatBubbleOutline, MdOutlineRecordVoiceOver } from "react-icons/md";
+import { 
+  LuCircleHelp, 
+  LuBookOpen, 
+  LuLightbulb, 
+  LuMessageCircle,  
+  LuSpeech,
+  LuX,
+  LuListFilter
+} from "react-icons/lu";
 
 interface CardListPanelProps {
   nodes: any[];
@@ -28,11 +35,11 @@ export default function CardListPanel({ nodes, onClose, onCardClick, selectedCar
   const [filterPopoverOpen, setFilterPopoverOpen] = useState(false);
   // Card type filter state
   const cardTypeOptions = [
-    { value: 'claim', label: 'Claim', icon: MdOutlineRecordVoiceOver, color: 'bg-claim-100', text: 'text-claim-700' },
-    { value: 'question', label: 'Question', icon: MdHelpOutline, color: 'bg-question-100', text: 'text-question-700' },
-    { value: 'source', label: 'Source', icon: MdLibraryBooks, color: 'bg-source-100', text: 'text-source-700' },
-    { value: 'insight', label: 'Insight', icon: MdLightbulbOutline, color: 'bg-insight-100', text: 'text-insight-700' },
-    { value: 'thought', label: 'Thought', icon: MdChatBubbleOutline, color: 'bg-thought-100', text: 'text-thought-700' },
+    { value: 'claim', label: 'Claim', icon: LuSpeech, color: 'bg-claim-100', text: 'text-claim-700' },
+    { value: 'question', label: 'Question', icon: LuCircleHelp, color: 'bg-question-100', text: 'text-question-700' },
+    { value: 'source', label: 'Source', icon: LuBookOpen, color: 'bg-source-100', text: 'text-source-700' },
+    { value: 'insight', label: 'Insight', icon: LuLightbulb, color: 'bg-insight-100', text: 'text-insight-700' },
+    { value: 'thought', label: 'Thought', icon: LuMessageCircle, color: 'bg-thought-100', text: 'text-thought-700' },
   ];
   const [selectedTypes, setSelectedTypes] = useState<string[]>(cardTypeOptions.map(opt => opt.value));
   const [deletingTags, setDeletingTags] = useState<Set<string>>(new Set());
@@ -164,7 +171,7 @@ export default function CardListPanel({ nodes, onClose, onCardClick, selectedCar
         <div className="sticky top-0 z-10 bg-white p-4 border-b border-gray-200 flex items-center justify-between">
           <h2 className="text-lg font-semibold text-gray-900">Card List</h2>
           <Button variant="ghost" size="sm" onClick={onClose}>
-            <MdClose size={20} />
+            <LuX size={20} />
           </Button>
         </div>
         {/* Search bar */}
@@ -188,7 +195,7 @@ export default function CardListPanel({ nodes, onClose, onCardClick, selectedCar
                 tabIndex={-1}
                 aria-label="Clear search"
               >
-                <MdClose size={16} />
+                <LuX size={16} />
               </Button>
             )}
           </div>
@@ -211,7 +218,7 @@ export default function CardListPanel({ nodes, onClose, onCardClick, selectedCar
       <div className="sticky top-0 z-10 bg-white p-4 border-b border-gray-200 flex items-center justify-between">
         <h2 className="text-lg font-semibold text-gray-900">Card List</h2>
         <Button variant="ghost" size="sm" onClick={onClose}>
-          <MdClose size={20} />
+          <LuX size={20} />
         </Button>
       </div>
       {/* Search bar and filter */}
@@ -235,7 +242,7 @@ export default function CardListPanel({ nodes, onClose, onCardClick, selectedCar
               tabIndex={-1}
               aria-label="Clear search"
             >
-              <MdClose size={16} />
+              <LuX size={16} />
             </Button>
           )}
         </div>
@@ -243,7 +250,7 @@ export default function CardListPanel({ nodes, onClose, onCardClick, selectedCar
         <Popover>
           <PopoverTrigger asChild>
             <Button variant="outline" size="icon" className="relative" aria-label="Filter by tags">
-              <MdFilterList size={20} />
+              <LuListFilter size={20} />
               {selectedTags.length > 0 && (
                 <Badge className="absolute -top-2 -right-2 px-1.5 py-0.5 text-xs rounded-full" variant="default">
                   {selectedTags.length}
@@ -358,7 +365,7 @@ export default function CardListPanel({ nodes, onClose, onCardClick, selectedCar
                 onClick={() => handleRemoveTag(tag)}
                 aria-label={`Remove tag ${tag}`}
               >
-                <MdClose size={14} />
+                <LuX size={14} />
               </button>
             </Badge>
           ))}

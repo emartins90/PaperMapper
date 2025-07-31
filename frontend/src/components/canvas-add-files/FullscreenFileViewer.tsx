@@ -2,7 +2,7 @@ import React from "react";
 import ReactDOM from "react-dom";
 import { useRef, useEffect, useState } from "react";
 import WaveSurfer from "wavesurfer.js";
-import { MdClose } from "react-icons/md";
+import { LuX } from "react-icons/lu";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -16,7 +16,61 @@ interface FullscreenFileViewerProps {
   onUpdateCard?: (cardId: string, newData: any) => void;
 }
 
-const getFileName = (fileUrl: string | null) => fileUrl ? fileUrl.split("/").pop() || "file" : "";
+const getFileName = (fileUrl: string | null, cardNode?: any) => {
+  if (!fileUrl) {
+    return "";
+  }
+  
+  // Try to find the original filename from cardNode's fileEntries
+  if (cardNode?.data?.fileEntries) {
+    // Helper function to convert secure URL back to R2 URL for comparison
+    const convertSecureToR2Url = (secureUrl: string) => {
+      if (secureUrl.startsWith('/secure-files/')) {
+        const parts = secureUrl.split('/');
+        const filename = parts[parts.length - 1];
+        const folder = parts[parts.length - 2];
+        // Convert back to R2 URL format
+        return `https://pub-paper-mapper-dev.r2.dev/${folder}/${filename}`;
+      }
+      return secureUrl;
+    };
+    
+    // Helper function to convert R2 URL to secure URL for comparison
+    const convertR2ToSecureUrl = (r2Url: string) => {
+      if (r2Url.includes('.r2.dev') || r2Url.includes('.r2.cloudflarestorage.com')) {
+        const filename = r2Url.split('/').pop();
+        const folder = r2Url.split('/').slice(-2)[0]; // Get the folder name
+        return `/secure-files/${folder}/${filename}`;
+      }
+      return r2Url;
+    };
+    
+    // Try exact match first
+    let entry = cardNode.data.fileEntries.find((entry: any) => entry.url === fileUrl);
+    
+    // If no exact match, try converting secure URL to R2 URL
+    if (!entry) {
+      const r2Url = convertSecureToR2Url(fileUrl);
+      entry = cardNode.data.fileEntries.find((entry: any) => entry.url === r2Url);
+    }
+    
+    // If still no match, try converting R2 URLs to secure URLs
+    if (!entry) {
+      const secureUrl = convertR2ToSecureUrl(fileUrl);
+      entry = cardNode.data.fileEntries.find((entry: any) => {
+        const entrySecureUrl = convertR2ToSecureUrl(entry.url);
+        return entrySecureUrl === secureUrl;
+      });
+    }
+    
+    if (entry) {
+      return entry.filename;
+    }
+  }
+  
+  // Fallback to generic filename
+  return "file";
+};
 
 export const FullscreenFileViewer: React.FC<FullscreenFileViewerProps> = ({ 
   open, 
@@ -118,6 +172,7 @@ export const FullscreenFileViewer: React.FC<FullscreenFileViewerProps> = ({
     setError(null);
     try {
       const fullUrl = getFullUrl(url);
+      
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
       
       const response = await fetch(`${apiUrl}${fullUrl}`, {
@@ -125,15 +180,18 @@ export const FullscreenFileViewer: React.FC<FullscreenFileViewerProps> = ({
       });
       
       if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Response error:", errorText);
         throw new Error(`Failed to load file: ${response.status} ${response.statusText}`);
       }
       
       const blob = await response.blob();
+      
       const newBlobUrl = URL.createObjectURL(blob);
       setBlobUrl(newBlobUrl);
     } catch (err) {
+      console.error("File fetch error:", err);
       setError(err instanceof Error ? err.message : 'Failed to load file');
-      console.error('Error loading file:', err);
     } finally {
       setLoading(false);
     }
@@ -182,8 +240,8 @@ export const FullscreenFileViewer: React.FC<FullscreenFileViewerProps> = ({
       onClick={handleOverlayClick}
     >
       {/* Filename top left */}
-      <span className="absolute top-0 left-0 p-6 text-white text-xl font-semibold drop-shadow-lg truncate max-w-[70vw] z-50 select-none" title={getFileName(fileUrl)}>
-        {getFileName(fileUrl)}
+      <span className="absolute top-0 left-0 p-6 text-white text-xl font-semibold drop-shadow-lg truncate max-w-[70vw] z-50 select-none" title={getFileName(fileUrl, cardNode)}>
+        {getFileName(fileUrl, cardNode)}
       </span>
       {/* Close button top right */}
       <button
@@ -193,7 +251,7 @@ export const FullscreenFileViewer: React.FC<FullscreenFileViewerProps> = ({
         tabIndex={0}
         style={{ aspectRatio: '1/1' }}
       >
-        <MdClose size={32} />
+        <LuX size={32} />
       </button>
       {/* Main flex row for file and inputs */}
       <div className="relative z-10 flex flex-row items-start justify-center w-full max-w-[90vw] max-h-[calc(90vh-72px)] gap-4 p-8">
@@ -223,7 +281,7 @@ export const FullscreenFileViewer: React.FC<FullscreenFileViewerProps> = ({
           {!loading && !error && fileType === 'image' && blobUrl && (
             <img
               src={blobUrl}
-              alt={getFileName(fileUrl)}
+              alt={getFileName(fileUrl, cardNode)}
               className="object-contain rounded-lg shadow-2xl max-w-full max-h-[calc(90vh-72px)]"
               style={{ display: 'block', marginTop: 0, marginBottom: 0 }}
             />
@@ -238,8 +296,8 @@ export const FullscreenFileViewer: React.FC<FullscreenFileViewerProps> = ({
           )}
           {fileType === 'other' && (
             <div className="bg-white/90 rounded-lg shadow-2xl p-8 flex flex-col items-center justify-center">
-              <span className="mb-4 text-lg font-semibold text-gray-900 truncate max-w-[60vw]" title={getFileName(fileUrl)}>
-                {getFileName(fileUrl)}
+              <span className="mb-4 text-lg font-semibold text-gray-900 truncate max-w-[60vw]" title={getFileName(fileUrl, cardNode)}>
+                {getFileName(fileUrl, cardNode)}
               </span>
               <span className="mb-2 text-gray-700">File preview not supported.</span>
               <a
@@ -261,8 +319,8 @@ export const FullscreenFileViewer: React.FC<FullscreenFileViewerProps> = ({
           )}
           {fileType === 'audio' && (
             <div className="bg-white/90 rounded-lg shadow-2xl p-8 flex flex-col items-center justify-center max-w-2xl min-w-[320px]">
-              <span className="mb-4 text-lg font-semibold text-gray-900 truncate max-w-[60vw]" title={getFileName(fileUrl)}>
-                {getFileName(fileUrl)}
+              <span className="mb-4 text-lg font-semibold text-gray-900 truncate max-w-[60vw]" title={getFileName(fileUrl, cardNode)}>
+                {getFileName(fileUrl, cardNode)}
               </span>
               <AudioWaveform fileUrl={fileUrl} />
               <audio controls src={fileUrl} className="mt-4 w-full max-w-md" />

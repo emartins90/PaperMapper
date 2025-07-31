@@ -135,9 +135,11 @@ export default function CanvasInner({ projectId }: CanvasProps) {
     const loadCards = async () => {
       try {
         const token = localStorage.getItem("token");
+        
         const res = await fetch(`${API_URL}/cards/?project_id=${projectId}`, {
           credentials: "include", // Send cookies with request
         });
+        
         if (!res.ok) throw new Error("Failed to load cards");
         const cards = await res.json();
         
@@ -172,6 +174,16 @@ export default function CanvasInner({ projectId }: CanvasProps) {
                   }
                 }
                 
+                // Create fileEntries with original filenames
+                const fileUrls = sourceMaterial.files ? sourceMaterial.files.split(',').filter((url: string) => url.trim()) : [];
+                const fileFilenames = sourceMaterial.file_filenames ? sourceMaterial.file_filenames.split(',').filter((name: string) => name.trim()) : [];
+                
+                const fileEntries = fileUrls.map((url: string, index: number) => ({
+                  url,
+                  filename: fileFilenames[index] || "file",
+                  type: ""
+                }));
+                
                 cardData = {
                   tags: Array.isArray(sourceMaterial.tags) ? sourceMaterial.tags : (sourceMaterial.tags ? [sourceMaterial.tags] : []),
                   text: sourceMaterial.content || "",
@@ -184,7 +196,8 @@ export default function CanvasInner({ projectId }: CanvasProps) {
                   sourceMaterialId: sourceMaterial.id,
                   projectId: sourceMaterial.project_id,
                   citationId: sourceMaterial.citation_id,
-                  files: sourceMaterial.files ? sourceMaterial.files.split(',').filter((url: string) => url.trim()) : [],
+                  files: fileUrls,
+                  fileEntries: fileEntries,
                 };
               }
             } catch (err) {
@@ -198,6 +211,16 @@ export default function CanvasInner({ projectId }: CanvasProps) {
               });
               if (questionRes.ok) {
                 const question = await questionRes.json();
+                // Create fileEntries with original filenames
+                const fileUrls = question.files ? question.files.split(',').filter((url: string) => url.trim()) : [];
+                const fileFilenames = question.file_filenames ? question.file_filenames.split(',').filter((name: string) => name.trim()) : [];
+                
+                const fileEntries = fileUrls.map((url: string, index: number) => ({
+                  url,
+                  filename: fileFilenames[index] || "file",
+                  type: ""
+                }));
+                
                 cardData = {
                   tags: Array.isArray(question.tags) ? question.tags : (question.tags ? [question.tags] : []),
                   question: question.question_text || "",
@@ -206,7 +229,8 @@ export default function CanvasInner({ projectId }: CanvasProps) {
                   priority: question.priority || "",
                   questionId: question.id,
                   projectId: question.project_id,
-                  files: question.files ? question.files.split(',').filter((url: string) => url.trim()) : [],
+                  files: fileUrls,
+                  fileEntries: fileEntries,
                 };
               }
             } catch (err) {
@@ -227,6 +251,16 @@ export default function CanvasInner({ projectId }: CanvasProps) {
               });
               if (insightRes.ok) {
                 const insight = await insightRes.json();
+                // Create fileEntries with original filenames
+                const fileUrls = insight.files ? insight.files.split(',').filter((url: string) => url.trim()) : [];
+                const fileFilenames = insight.file_filenames ? insight.file_filenames.split(',').filter((name: string) => name.trim()) : [];
+                
+                const fileEntries = fileUrls.map((url: string, index: number) => ({
+                  url,
+                  filename: fileFilenames[index] || "file",
+                  type: ""
+                }));
+                
                 cardData = {
                   tags: Array.isArray(insight.tags) ? insight.tags : (insight.tags ? [insight.tags] : []),
                   insight: insight.insight_text || "",
@@ -234,7 +268,8 @@ export default function CanvasInner({ projectId }: CanvasProps) {
                   insightType: insight.insight_type || "",
                   insightId: insight.id,
                   projectId: insight.project_id,
-                  files: insight.files ? insight.files.split(',').filter((url: string) => url.trim()) : [],
+                  files: fileUrls,
+                  fileEntries: fileEntries,
                 };
               }
             } catch (err) {
@@ -254,12 +289,23 @@ export default function CanvasInner({ projectId }: CanvasProps) {
               });
               if (thoughtRes.ok) {
                 const thought = await thoughtRes.json();
+                // Create fileEntries with original filenames
+                const fileUrls = thought.files ? thought.files.split(',').filter((url: string) => url.trim()) : [];
+                const fileFilenames = thought.file_filenames ? thought.file_filenames.split(',').filter((name: string) => name.trim()) : [];
+                
+                const fileEntries = fileUrls.map((url: string, index: number) => ({
+                  url,
+                  filename: fileFilenames[index] || "file",
+                  type: ""
+                }));
+                
                 cardData = {
                   tags: Array.isArray(thought.tags) ? thought.tags : (thought.tags ? [thought.tags] : []),
                   thought: thought.thought_text || "",
                   thoughtId: thought.id,
                   projectId: thought.project_id,
-                  files: thought.files ? thought.files.split(',').filter((url: string) => url.trim()) : [],
+                  files: fileUrls,
+                  fileEntries: fileEntries,
                 };
               }
             } catch (err) {
@@ -278,13 +324,24 @@ export default function CanvasInner({ projectId }: CanvasProps) {
               });
               if (claimRes.ok) {
                 const claim = await claimRes.json();
+                // Create fileEntries with original filenames
+                const fileUrls = claim.files ? claim.files.split(',').filter((url: string) => url.trim()) : [];
+                const fileFilenames = claim.file_filenames ? claim.file_filenames.split(',').filter((name: string) => name.trim()) : [];
+                
+                const fileEntries = fileUrls.map((url: string, index: number) => ({
+                  url,
+                  filename: fileFilenames[index] || "file",
+                  type: ""
+                }));
+                
                 cardData = {
                   tags: Array.isArray(claim.tags) ? claim.tags : (claim.tags ? [claim.tags] : []),
                   claim: claim.claim_text || "",
                   claimType: claim.claim_type || undefined,
                   claimId: claim.id,
                   projectId: claim.project_id,
-                  files: claim.files ? claim.files.split(',').filter((url: string) => url.trim()) : [],
+                  files: fileUrls,
+                  fileEntries: fileEntries,
                 };
               }
             } catch (err) {
@@ -1248,11 +1305,12 @@ export default function CanvasInner({ projectId }: CanvasProps) {
           backendId,
           uploadedFiles,
           [], // always start with empty for new cards
-          (newFiles: string[]) => {
+          (newFiles: string[], newFileEntries: any[]) => {
             files = newFiles;
+            updatedNodeData.files = files;
+            updatedNodeData.fileEntries = newFileEntries;
           }
         );
-        updatedNodeData.files = files;
       } else {
         // For other card types, check if files are in chatAnswers.files as a fallback
         let filesToUpload = uploadedFiles;
@@ -1275,11 +1333,12 @@ export default function CanvasInner({ projectId }: CanvasProps) {
             backendId,
             filesToUpload,
             [], // always start with empty for new cards
-            (newFiles: string[]) => {
+            (newFiles: string[], newFileEntries: any[]) => {
               files = newFiles;
+              updatedNodeData.files = files;
+              updatedNodeData.fileEntries = newFileEntries;
             }
           );
-          updatedNodeData.files = files;
         } else if (!filesFromChatAnswers) {
           files = [];
           updatedNodeData.files = files;
@@ -1478,7 +1537,7 @@ export default function CanvasInner({ projectId }: CanvasProps) {
               savedSM.id,
               node.data.pendingFiles,
               [], // Start with empty array since we're uploading to a new record
-              (newFiles) => {
+              (newFiles, newFileEntries) => {
                 finalFiles = newFiles;
               }
             );
@@ -1556,7 +1615,7 @@ export default function CanvasInner({ projectId }: CanvasProps) {
               savedQuestion.id,
               node.data.pendingFiles,
               [], // Start with empty array since we're uploading to a new record
-              (newFiles) => {
+              (newFiles, newFileEntries) => {
                 finalFiles = newFiles;
               }
             );
@@ -1631,7 +1690,7 @@ export default function CanvasInner({ projectId }: CanvasProps) {
               savedInsight.id,
               node.data.pendingFiles,
               [], // Start with empty array since we're uploading to a new record
-              (newFiles) => {
+              (newFiles, newFileEntries) => {
                 finalFiles = newFiles;
               }
             );
@@ -1706,7 +1765,7 @@ export default function CanvasInner({ projectId }: CanvasProps) {
               savedThought.id,
               node.data.pendingFiles,
               [], // Start with empty array since we're uploading to a new record
-              (newFiles) => {
+              (newFiles, newFileEntries) => {
                 finalFiles = newFiles;
               }
             );
@@ -1779,7 +1838,7 @@ export default function CanvasInner({ projectId }: CanvasProps) {
               savedClaim.id,
               node.data.pendingFiles,
               [], // Start with empty array since we're uploading to a new record
-              (newFiles) => {
+              (newFiles, newFileEntries) => {
                 finalFiles = newFiles;
               }
             );

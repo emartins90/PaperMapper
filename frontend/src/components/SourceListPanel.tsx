@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
-import { MdClose, MdFilterList, MdEdit, MdDelete, MdOpenInNew } from "react-icons/md";
+import { LuX, LuFilter, LuPencil, LuTrash2, LuExternalLink } from "react-icons/lu";
 import { Popover, PopoverTrigger, PopoverContent } from "./ui/popover";
 import { ToggleGroup, ToggleGroupItem } from "./ui/toggle-group";
 import { Badge } from "./ui/badge";
@@ -494,7 +494,7 @@ export default function SourceListPanel({ projectId, onClose, onSourceCardClick,
         <div className="sticky top-0 z-10 bg-white p-4 border-b border-gray-200 flex items-center justify-between">
           <h2 className="text-lg font-semibold text-gray-900">Source List</h2>
           <Button variant="ghost" size="sm" onClick={onClose}>
-            <MdClose size={20} />
+            <LuX size={20} />
           </Button>
         </div>
         <div className="p-4">
@@ -512,7 +512,7 @@ export default function SourceListPanel({ projectId, onClose, onSourceCardClick,
         <div className="sticky top-0 z-10 bg-white p-4 border-b border-gray-200 flex items-center justify-between">
           <h2 className="text-lg font-semibold text-gray-900">Source List</h2>
           <Button variant="ghost" size="sm" onClick={onClose}>
-            <MdClose size={20} />
+            <LuX size={20} />
           </Button>
         </div>
         <div className="p-4">
@@ -530,7 +530,7 @@ export default function SourceListPanel({ projectId, onClose, onSourceCardClick,
         <div className="sticky top-0 z-10 bg-white p-4 border-b border-gray-200 flex items-center justify-between">
           <h2 className="text-lg font-semibold text-gray-900">Source List</h2>
           <Button variant="ghost" size="sm" onClick={onClose}>
-            <MdClose size={20} />
+            <LuX size={20} />
           </Button>
         </div>
         <div className="p-4">
@@ -553,7 +553,7 @@ export default function SourceListPanel({ projectId, onClose, onSourceCardClick,
                 tabIndex={-1}
                 aria-label="Clear search"
               >
-                <MdClose size={16} />
+                <LuX size={16} />
               </Button>
             )}
           </div>
@@ -579,7 +579,7 @@ export default function SourceListPanel({ projectId, onClose, onSourceCardClick,
           <div className="flex gap-2">
           
             <Button variant="ghost" size="sm" onClick={onClose}>
-              <MdClose size={20} />
+              <LuX size={20} />
             </Button>
           </div>
         </div>
@@ -616,7 +616,7 @@ export default function SourceListPanel({ projectId, onClose, onSourceCardClick,
                 tabIndex={-1}
                 aria-label="Clear search"
               >
-                <MdClose size={16} />
+                <LuX size={16} />
               </Button>
             )}
           </div>
@@ -625,7 +625,7 @@ export default function SourceListPanel({ projectId, onClose, onSourceCardClick,
           <Popover>
             <PopoverTrigger asChild>
               <Button variant="outline" size="icon" className="relative" aria-label="Filter by tags and credibility">
-                <MdFilterList size={20} />
+                <LuFilter size={20} />
                 {activeFilterCount > 0 && (
                   <Badge className="absolute -top-2 -right-2 px-1.5 py-0.5 text-xs rounded-full" variant="default">
                     {activeFilterCount}
@@ -729,7 +729,7 @@ export default function SourceListPanel({ projectId, onClose, onSourceCardClick,
                   onClick={() => handleRemoveTag(tag)}
                   aria-label={`Remove tag ${tag}`}
                 >
-                  <MdClose size={14} />
+                  <LuX size={14} />
                 </button>
               </Badge>
             ))}
@@ -752,7 +752,7 @@ export default function SourceListPanel({ projectId, onClose, onSourceCardClick,
                   }}
                   aria-label={`Remove credibility ${credibility}`}
                 >
-                  <MdClose size={14} />
+                  <LuX size={14} />
                 </button>
               </Badge>
             ))}
@@ -815,7 +815,7 @@ export default function SourceListPanel({ projectId, onClose, onSourceCardClick,
                     onClick={() => handleEditCitation(citation)}
                     className="h-8 w-8 p-0"
                   >
-                    <MdEdit size={16} />
+                    <LuPencil size={16} />
                   </Button>
                   <Button
                     variant="outline"
@@ -824,7 +824,7 @@ export default function SourceListPanel({ projectId, onClose, onSourceCardClick,
                     onClick={() => handleDeleteCitation(citation)}
                     className="h-8 w-8 p-0 hover:bg-red-50 hover:text-red-600 hover:border-red-200"
                   >
-                    <MdDelete size={16} />
+                    <LuTrash2 size={16} />
                   </Button>
                 </div>
               </div>
@@ -867,7 +867,7 @@ export default function SourceListPanel({ projectId, onClose, onSourceCardClick,
                             onClick={() => handleSourceCardClick(sourceMaterial)}
                             className="p-1 h-8 w-8"
                           >
-                            <MdOpenInNew size={16} />
+                            <LuExternalLink size={16} />
                           </Button>
                         </div>
                       </div>

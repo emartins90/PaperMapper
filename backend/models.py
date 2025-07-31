@@ -59,6 +59,7 @@ class SourceMaterial(Base):
     argument_type = Column(String, nullable=True)
     function = Column(String, nullable=True)
     files = Column(String, nullable=True)  # Store as comma-separated for now
+    file_filenames = Column(String, nullable=True)  # Store original filenames as comma-separated
     notes = Column(String, nullable=True)  # Additional notes field
     citation = relationship("Citation", back_populates="source_materials")
     project = relationship("Project", back_populates="source_materials")
@@ -114,6 +115,7 @@ class Question(Base):
     priority = Column(String, nullable=True)  # e.g., high, medium, low
     tags = Column(ARRAY(String), nullable=True)  # Store as comma-separated for now
     files = Column(String, nullable=True)  # Store as comma-separated for now
+    file_filenames = Column(String, nullable=True)  # Store original filenames as comma-separated
     project = relationship("Project", back_populates="questions")
 
 class Insight(Base):
@@ -123,6 +125,7 @@ class Insight(Base):
     insight_text = Column(String, nullable=False)
     sources_linked = Column(String, nullable=True)  # e.g., "3 Sources Linked"
     files = Column(String, nullable=True)  # Store as comma-separated for now
+    file_filenames = Column(String, nullable=True)  # Store original filenames as comma-separated
     insight_type = Column(String, nullable=True)  # e.g., Resolved Confusion, Noticed a Pattern, etc.
     tags = Column(ARRAY(String), nullable=True)  # Store as comma-separated for now
     project = relationship("Project", back_populates="insights")
@@ -134,6 +137,7 @@ class Thought(Base):
     thought_text = Column(String, nullable=False)
     tags = Column(ARRAY(String), nullable=True)  # Store as comma-separated for now
     files = Column(String, nullable=True)  # Store as comma-separated for now
+    file_filenames = Column(String, nullable=True)  # Store original filenames as comma-separated
     project = relationship("Project", back_populates="thoughts")
 
 class Claim(Base):
@@ -144,4 +148,5 @@ class Claim(Base):
     claim_type = Column(String, nullable=True)  # Hypothesis, Thesis, Conclusion, Proposal
     tags = Column(ARRAY(String), nullable=True)  # Store as comma-separated for now
     files = Column(String, nullable=True)  # Store as comma-separated for now
+    file_filenames = Column(String, nullable=True)  # Store original filenames as comma-separated
     project = relationship("Project", back_populates="claims")
