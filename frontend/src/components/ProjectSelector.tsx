@@ -476,7 +476,7 @@ export default function ProjectSelector({ token }: { token: string }) {
           {/* Main Content - Projects */}
           <div className="lg:col-span-3 order-1 lg:order-2">
             <div className="bg-transparent">
-              <div className="p-6">
+              <div className="px-6">
                 {/* Large screen layout - all on one line */}
                 <div className="hidden sm:flex items-center justify-between mb-6">
                   <h2 className="text-2xl font-bold text-gray-900">My Projects</h2>
@@ -488,7 +488,7 @@ export default function ProjectSelector({ token }: { token: string }) {
                         placeholder="Search Projects"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="pl-10 w-64"
+                        className="pl-10 w-64 bg-white"
                       />
                     </div>
                     
@@ -615,14 +615,14 @@ export default function ProjectSelector({ token }: { token: string }) {
                     </Button>
                   </div>
                   
-                  <div className="flex items-center space-x-4 mb-6">
+                  <div className="flex items-center space-x-4 mb-2">
                     <div className="relative flex-1">
                       <LuSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                       <Input
                         placeholder="Search Projects"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="pl-10 w-full"
+                        className="pl-10 w-full bg-white"
                       />
                     </div>
                     
@@ -743,7 +743,7 @@ export default function ProjectSelector({ token }: { token: string }) {
                 </div>
               )}
 
-              <div className="p-6 bg-transparent">
+              <div className="px-6 py-4 bg-transparent">
                 {loading ? (
                   <div className="text-center py-8">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
