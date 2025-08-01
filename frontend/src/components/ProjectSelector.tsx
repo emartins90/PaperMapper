@@ -39,6 +39,7 @@ import FileChip from "./canvas-add-files/FileChip";
 import ProjectInfoModal from "./ProjectInfoModal";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { Badge } from "./ui/badge";
+import ResourceSection, { sampleResources } from "./ResourceSection";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -452,30 +453,35 @@ export default function ProjectSelector({ token }: { token: string }) {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-4 lg:px-4 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          {/* Left Sidebar */}
-          <div className="lg:col-span-1">
-            <div className="bg-white h-full rounded-lg p-6 border border-gray-200">
+          {/* Left Sidebar - Resources */}
+          <div className="lg:col-span-1 order-2 lg:order-1">
+            <div className="bg-white h-full rounded-lg p-4 border border-gray-200 overflow-y-auto max-h-screen">
               <h2 className="text-lg font-bold text-gray-900 mb-4">Resources</h2>
-              <p className="text-md font-semibold text-foreground mb-2">Using Paper Mapper</p>
-              <p className="text-md font-semibold text-foreground mb-2">Writing Process & Structure</p>
-              <p className="text-md font-semibold text-foreground mb-2">Thesis, Hypothesis, & Argument Support</p>
-              <p className="text-md font-semibold text-foreground mb-2">Critical Thinking & Questioning</p>
-              <p className="text-md font-semibold text-foreground mb-2">Source Evaluation & Credibility</p>
-              <p className="text-md font-semibold text-foreground mb-2">Citations & Bibliographies</p>
-            
-              {/* Add resource content here */}
+              
+              {/* Example resource sections */}
+              <div className="space-y-4">
+                {Object.entries(sampleResources).map(([title, resources]) => (
+                  <ResourceSection
+                    key={title}
+                    title={title}
+                    resources={resources}
+                  />
+                ))}
+              </div>
             </div>
           </div>
 
-          {/* Main Content */}
-          <div className="lg:col-span-3">
+          {/* Main Content - Projects */}
+          <div className="lg:col-span-3 order-1 lg:order-2">
             <div className="bg-transparent">
               <div className="p-6">
-                <div className="grid grid-cols-3 items-center">
+                {/* Large screen layout - all on one line */}
+                <div className="hidden sm:flex items-center justify-between mb-6">
                   <h2 className="text-2xl font-bold text-gray-900">My Projects</h2>
-                  <div className="flex items-center justify-center space-x-4">
+                  
+                  <div className="flex items-center space-x-4">
                     <div className="relative">
                       <LuSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                       <Input
@@ -594,10 +600,139 @@ export default function ProjectSelector({ token }: { token: string }) {
                       </PopoverContent>
                     </Popover>
                   </div>
-                  <div className="flex justify-end">
+                  
+                  <Button onClick={handleCreate} className="bg-gray-800 hover:bg-gray-900">
+                    <LuPlus className="w-4 h-4 mr-2" /> New Project
+                  </Button>
+                </div>
+
+                {/* Small screen layout - stacked */}
+                <div className="sm:hidden">
+                  <div className="flex items-center justify-between mb-6">
+                    <h2 className="text-2xl font-bold text-gray-900">My Projects</h2>
                     <Button onClick={handleCreate} className="bg-gray-800 hover:bg-gray-900">
                       <LuPlus className="w-4 h-4 mr-2" /> New Project
                     </Button>
+                  </div>
+                  
+                  <div className="flex items-center space-x-4 mb-6">
+                    <div className="relative flex-1">
+                      <LuSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                      <Input
+                        placeholder="Search Projects"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="pl-10 w-full"
+                      />
+                    </div>
+                    
+                    {/* Filter popover */}
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" size="icon" className="relative flex-shrink-0" aria-label="Filter and sort projects">
+                          <LuListFilter className="w-4 h-4" />
+                          {(statusFilter.length > 0 || sortBy !== 'due_date') && (
+                            <Badge className="absolute -top-2 -right-2 px-1.5 py-0.5 text-xs rounded-full" variant="default">
+                              {statusFilter.length + (sortBy !== 'due_date' ? 1 : 0)}
+                            </Badge>
+                          )}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent align="end" className="w-78 shadow-xl">
+                        <div className="max-h-180 overflow-y-auto space-y-1">
+                          {/* Sort By */}
+                          <label className="text-md font-semibold text-foreground">Sort By</label>
+                          <div className="space-y-2 mb-4 mt-2">
+                            {[
+                              { value: 'due_date', label: 'Due Date' },
+                              { value: 'last_edited', label: 'Last Edited' },
+                              { value: 'name', label: 'Name' }
+                            ].map(option => (
+                              <div key={option.value} className="flex items-center justify-between px-2 py-1 rounded hover:bg-accent">
+                                <label className="flex items-center gap-2 cursor-pointer flex-1">
+                                  <input
+                                    type="radio"
+                                    name="sortBy"
+                                    value={option.value}
+                                    checked={sortBy === option.value}
+                                    onChange={(e) => setSortBy(e.target.value as any)}
+                                    className="accent-primary"
+                                  />
+                                  <span className="text-md">{option.label}</span>
+                                </label>
+                                {sortBy === option.value && (
+                                  <div className="flex items-center gap-1">
+                                    <button
+                                      type="button"
+                                      onClick={() => setSortOrder('asc')}
+                                      className={`p-1 rounded-full ${sortOrder === 'asc' ? 'bg-gray-200' : ''}`}
+                                      aria-label="Sort ascending"
+                                    >
+                                      <LuChevronUp className="w-4 h-4 text-gray-500" />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => setSortOrder('desc')}
+                                      className={`p-1 rounded-full ${sortOrder === 'desc' ? 'bg-gray-200' : ''}`}
+                                      aria-label="Sort descending"
+                                    >
+                                      <LuChevronDown className="w-4 h-4 text-gray-500" />
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+
+                          {/* Status Filter */}
+                          <label className="text-md font-semibold text-foreground">Status</label>
+                          <div className="space-y-2 mb-4 mt-2">
+                            {[
+                              { value: 'not_started', label: 'Not Started' },
+                              { value: 'in_progress', label: 'In Progress' },
+                              { value: 'ready_to_write', label: 'Ready to Write' },
+                              { value: 'complete', label: 'Complete' }
+                            ].map(option => (
+                              <label key={option.value} className="flex items-center gap-2 cursor-pointer px-2 py-1 rounded hover:bg-accent">
+                                <input
+                                  type="checkbox"
+                                  value={option.value}
+                                  checked={statusFilter.includes(option.value)}
+                                  onChange={(e) => {
+                                    const newStatusFilter = [...statusFilter];
+                                    if (e.target.checked) {
+                                      newStatusFilter.push(option.value);
+                                    } else {
+                                      newStatusFilter.splice(newStatusFilter.indexOf(option.value), 1);
+                                    }
+                                    setStatusFilter(newStatusFilter);
+                                  }}
+                                  className="accent-primary"
+                                />
+                                <span className="text-md">{option.label}</span>
+                              </label>
+                            ))}
+                          </div>
+
+                          {/* Clear all filters */}
+                          {(statusFilter.length > 0 || sortBy !== 'due_date') && (
+                            <div className="mt-4 pt-4 border-t">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  setStatusFilter([]);
+                                  setSortBy('due_date');
+                                }}
+                                className="w-full"
+                              >
+                                Clear all filters
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      </PopoverContent>
+                    </Popover>
                   </div>
                 </div>
               </div>
