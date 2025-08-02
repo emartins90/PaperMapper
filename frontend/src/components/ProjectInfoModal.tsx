@@ -370,11 +370,11 @@ export default function ProjectInfoModal({ projectId, mode, onClose }: ProjectIn
                 </div>
               ) : file ? (
                 <div className="flex items-center justify-between p-3 border rounded-md bg-gray-50">
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 bg-blue-100 rounded flex items-center justify-center">
+                  <div className="flex items-center gap-2 min-w-0 flex-1" style={{ maxWidth: '300px' }}>
+                    <div className="w-8 h-8 bg-blue-100 rounded flex items-center justify-center flex-shrink-0">
                       <LuUpload className="h-4 w-4 text-blue-600" />
                     </div>
-                    <span className="text-sm font-medium text-gray-900 truncate">
+                    <span className="text-sm font-medium text-gray-900" style={{ maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {file.name}
                     </span>
                   </div>

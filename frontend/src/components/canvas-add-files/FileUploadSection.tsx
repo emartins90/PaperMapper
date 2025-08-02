@@ -2,6 +2,7 @@ import { Button } from "../ui/button";
 import React from "react";
 import { LuX } from "react-icons/lu";
 import { FaFilePdf, FaFileWord, FaFileAudio, FaFile } from "react-icons/fa6";
+import { Spinner } from "../ui/spinner";
 
 type FileEntry = { url: string; filename: string; type: string };
 
@@ -15,6 +16,7 @@ type FileUploadSectionProps = {
   fileEntries?: FileEntry[];
   cardType?: string; // Add cardType prop
   onFileClick?: (fileUrl: string, entry: FileEntry) => void; // Optional click handler
+  deletingFiles?: Set<string>; // Track which files are being deleted
 };
 
 export default function FileUploadSection({
@@ -26,7 +28,8 @@ export default function FileUploadSection({
   accept = "image/*,.pdf,.doc,.docx,audio/mp3,audio/wav,audio/m4a,audio/ogg",
   fileEntries = [],
   cardType = "questions", // Default to questions for backward compatibility
-  onFileClick
+  onFileClick,
+  deletingFiles = new Set()
 }: FileUploadSectionProps) {
   // Prefer fileEntries if present (for new cards), else fall back to files array
   const displayFiles: FileEntry[] = fileEntries.length > 0
@@ -90,7 +93,14 @@ export default function FileUploadSection({
           onClick={() => fileInputRef.current?.click()}
           disabled={isUploading}
         >
-          + Add Files & Images
+          {isUploading ? (
+            <>
+              <Spinner size="sm" className="mr-2" />
+              Uploading...
+            </>
+          ) : (
+            "+ Add Files & Images"
+          )}
         </Button>
       </div>
       {displayFiles && displayFiles.length > 0 && (
@@ -111,8 +121,13 @@ export default function FileUploadSection({
                   onClick={() => onFileDelete(entry.url)}
                   className="absolute top-1 right-1 bg-white border border-gray-300 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-200 shadow-md"
                   title="Delete file"
+                  disabled={deletingFiles.has(entry.url)}
                 >
-                  <LuX className="text-red-500" size={16}/>
+                  {deletingFiles.has(entry.url) ? (
+                    <Spinner size="sm" className="text-red-500" />
+                  ) : (
+                    <LuX className="text-red-500" size={16}/>
+                  )}
                 </button>
               </div>
             );
@@ -129,6 +144,7 @@ export default function FileUploadSection({
                       className={`text-sm font-medium text-gray-900 ${onFileClick ? 'cursor-pointer underline' : ''}`}
                       onClick={onFileClick ? () => onFileClick(entry.url, entry) : undefined}
                       aria-label={onFileClick ? `Open ${entry.filename}` : undefined}
+                      style={{ maxWidth: '240px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
                     >
                       {entry.filename}
                     </p>
@@ -138,10 +154,15 @@ export default function FileUploadSection({
                   onClick={() => onFileDelete(entry.url)}
                   className="text-red-500 hover:text-red-700 p-1"
                   title="Remove file"
+                  disabled={deletingFiles.has(entry.url)}
                 >
-                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                  </svg>
+                  {deletingFiles.has(entry.url) ? (
+                    <Spinner size="sm" className="text-red-500" />
+                  ) : (
+                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                    </svg>
+                  )}
                 </button>
               </div>
             );

@@ -18,9 +18,9 @@ const FileChip: React.FC<FileChipProps> = ({ fileUrl, filename }) => {
   const name = filename || "file";
   const { icon } = getFileIcon(name);
   return (
-    <div className={"flex items-center px-2 py-2 rounded-md text-xs font-medium bg-gray-50 gap-2 w-full min-w-0 max-w-full"} style={{lineHeight: 1.2}}>
+    <div className="flex items-center px-2 py-2 rounded-md text-xs font-medium bg-gray-50 gap-2 w-full min-w-0 max-w-full overflow-hidden" style={{lineHeight: 1.2}}>
       <span className="flex-shrink-0">{icon}</span>
-      <span className="flex-1 min-w-0 truncate text-gray-900">{name}</span>
+      <span className="flex-1 min-w-0 text-gray-900" style={{ maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</span>
     </div>
   );
 };

@@ -98,7 +98,7 @@ const UnsavedCardFileUpload: React.FC<UnsavedCardFileUploadProps> = ({
                     {icon}
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-gray-900">{file.name}</p>
+                    <p className="text-sm font-medium text-gray-900" style={{ maxWidth: '240px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{file.name}</p>
                   </div>
                 </div>
                 <button

@@ -17,6 +17,7 @@ import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, Command
 import { Check, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Spinner } from "@/components/ui/spinner";
 
 interface Citation {
   id: number;
@@ -65,6 +66,7 @@ export default function SourceCardContent({
   const [files, setFiles] = useState<string[]>(cardData?.files || []);
   const [fileEntries, setFileEntries] = useState<Array<{ url: string; filename: string; type: string }>>(cardData?.fileEntries || []);
   const [isUploading, setIsUploading] = useState(false);
+  const [deletingFiles, setDeletingFiles] = useState<Set<string>>(new Set());
   const [pendingNodeUpdate, setPendingNodeUpdate] = useState<{ files: string[], fileEntries: any[] } | null>(null);
   
   // For unsaved cards, store files as File[] objects
@@ -742,6 +744,10 @@ export default function SourceCardContent({
       alert('Source material data is missing.');
       return;
     }
+    
+    // Add file to deleting set
+    setDeletingFiles(prev => new Set(prev).add(fileUrl));
+    
     try {
       const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
       // Delete the file from the uploads directory (ignore 404)
@@ -783,6 +789,13 @@ export default function SourceCardContent({
       }
     } catch (err) {
       alert('Failed to fully delete file.');
+    } finally {
+      // Remove file from deleting set
+      setDeletingFiles(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(fileUrl);
+        return newSet;
+      });
     }
   };
 
@@ -1218,6 +1231,7 @@ export default function SourceCardContent({
               fileEntries={fileEntries}
               cardType="source"
               onFileClick={onFileClick}
+              deletingFiles={deletingFiles}
             />
           )}
           
@@ -1239,9 +1253,16 @@ export default function SourceCardContent({
               <button
                 onClick={handleSaveSource}
                 disabled={isSavingCard}
-                className="w-full bg-primary text-primary-foreground py-2 px-4 rounded-lg font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full bg-primary text-primary-foreground py-2 px-4 rounded-lg font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
               >
-                {isSavingCard ? "Saving..." : "Save Source"}
+                {isSavingCard ? (
+                  <>
+                    <Spinner size="sm" className="mr-2" />
+                    Saving...
+                  </>
+                ) : (
+                  "Save Source"
+                )}
               </button>
             </div>
           )}

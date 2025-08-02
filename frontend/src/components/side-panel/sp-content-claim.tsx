@@ -8,6 +8,7 @@ import { useCardSave } from "../shared/useCardSave";
 import LinkedCardsTab from "../LinkedCardsTab";
 import { Label } from "@/components/ui/label";
 import { MultiCombobox } from "@/components/ui/multi-combobox";
+import { Spinner } from "@/components/ui/spinner";
 
 const CLAIM_TYPES = [
   "Hypothesis",
@@ -54,6 +55,7 @@ export default function ClaimCardContent({
   const [files, setFiles] = React.useState<string[]>(cardData?.files || []);
   const [fileEntries, setFileEntries] = React.useState<Array<{ url: string; filename: string; type: string }>>(cardData?.fileEntries || []);
   const [isUploading, setIsUploading] = React.useState(false);
+  const [deletingFiles, setDeletingFiles] = React.useState<Set<string>>(new Set());
   const [pendingNodeUpdate, setPendingNodeUpdate] = React.useState<{ files: string[], fileEntries: any[] } | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
@@ -157,6 +159,10 @@ export default function ClaimCardContent({
 
   const handleFileDelete = async (fileUrl: string) => {
     if (!openCard) return;
+    
+    // Add file to deleting set
+    setDeletingFiles(prev => new Set(prev).add(fileUrl));
+    
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/claims/delete_file/?claim_id=${cardData?.claimId}&file_url=${encodeURIComponent(fileUrl)}`, {
         method: "POST",
@@ -170,6 +176,13 @@ export default function ClaimCardContent({
       onUpdateNodeData?.(openCard.id, { files: newFiles, fileEntries: newFileEntries });
     } catch (err) {
       alert("Failed to delete file: " + (err as Error).message);
+    } finally {
+      // Remove file from deleting set
+      setDeletingFiles(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(fileUrl);
+        return newSet;
+      });
     }
   };
 
@@ -311,6 +324,7 @@ export default function ClaimCardContent({
               fileEntries={fileEntries}
               cardType="claim"
               onFileClick={onFileClick}
+              deletingFiles={deletingFiles}
             />
           )}
           {/* Save button for unsaved cards - only show if showSaveButton is true */}
@@ -319,9 +333,16 @@ export default function ClaimCardContent({
               <button
                 onClick={handleSaveClaim}
                 disabled={isSaving || !claim.trim()}
-                className="w-full bg-primary text-primary-foreground py-2 px-4 rounded-lg font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full bg-primary text-primary-foreground py-2 px-4 rounded-lg font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
               >
-                {isSaving ? "Saving..." : "Save Claim"}
+                {isSaving ? (
+                  <>
+                    <Spinner size="sm" className="mr-2" />
+                    Saving...
+                  </>
+                ) : (
+                  "Save Claim"
+                )}
               </button>
             </div>
           )}

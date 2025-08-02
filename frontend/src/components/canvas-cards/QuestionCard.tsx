@@ -3,6 +3,7 @@ import Tag from "@/components/Tag";
 import { Handle, Position } from "reactflow";
 import { FileListDisplay } from "../canvas-add-files/FileListDisplay";
 import { LuCircleHelp } from "react-icons/lu";
+import { Spinner } from "../ui/spinner";
 
 type QuestionCardProps = {
   data: {
@@ -13,9 +14,12 @@ type QuestionCardProps = {
     statusColor?: string;
     tags?: string[] | string;
     onOpen?: () => void;
+    onSelect?: () => void;
     files?: string[];
     fileEntries?: Array<{ url: string; filename: string; type: string }>;
     onFileClick?: (fileUrl: string, fileType: 'image' | 'pdf' | 'other' | 'audio') => void;
+    isDeleting?: boolean;
+    isSelected?: boolean;
   };
   showHandles?: boolean;
   width?: string;
@@ -96,7 +100,24 @@ export default function QuestionCard({ data, showHandles = true, width = 'w-96' 
   const handleStyles = isNotRelevant ? grayHandleStyle : handleStyle;
 
   return (
-    <div className={`rounded-xl border-2 ${cardBorderClass} bg-white p-4 shadow-md ${width} relative`}>
+    <div 
+      className={`rounded-xl border-2 bg-white p-4 shadow-md ${width} relative transition-all duration-200 cursor-pointer
+        ${data.isSelected 
+          ? 'border-question-400 shadow-lg shadow-question-200/50' 
+          : `${cardBorderClass} hover:border-question-300 hover:shadow-lg`
+        }`}
+      onClick={data.onSelect}
+    >
+      {/* Deletion overlay */}
+      {data.isDeleting && (
+        <div className="absolute inset-0 bg-white/80 rounded-xl flex items-center justify-center z-10">
+          <div className="flex items-center gap-2 text-gray-600">
+            <Spinner size="sm" />
+            <span className="text-sm font-medium">Deleting...</span>
+          </div>
+        </div>
+      )}
+      
       {/* Source handles on all four sides */}
       {showHandles && (
         <>

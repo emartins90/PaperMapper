@@ -128,6 +128,12 @@ export default function CanvasInner({ projectId }: CanvasProps) {
   const [viewerFile, setViewerFile] = useState<string | null>(null);
   const [viewerType, setViewerType] = useState<'image' | 'pdf' | 'other' | 'audio'>('image');
 
+  // Track which cards are being deleted
+  const [deletingCards, setDeletingCards] = useState<Set<string>>(new Set());
+
+  // Track selected card
+  const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
+
   // Load cards from backend when projectId changes
   useEffect(() => {
     if (!projectId) return;
@@ -456,6 +462,11 @@ export default function CanvasInner({ projectId }: CanvasProps) {
     setOpenCard({ id: cardId, type: cardType });
   }, [nodes, fitView]);
 
+  // Handle card selection
+  const handleCardSelect = useCallback((cardId: string) => {
+    setSelectedCardId(cardId);
+  }, []);
+
   // Helper to inject onOpen and onFileClick into node data
   const nodesWithOpen = useMemo(() =>
     nodes.map((node) => ({
@@ -464,10 +475,13 @@ export default function CanvasInner({ projectId }: CanvasProps) {
         ...node.data,
         onOpen: () => handleOpenCard(node.id, node.type || ''),
         onFileClick: handleFileClick,
+        onSelect: () => handleCardSelect(node.id), // Add selection handler
         cardType: node.type || 'source', // Add cardType to data for FileListDisplay
+        isDeleting: deletingCards.has(node.id), // Add deletion state
+        isSelected: selectedCardId === node.id, // Add selected state
       },
     })),
-    [nodes, handleOpenCard, handleFileClick]
+    [nodes, handleOpenCard, handleFileClick, handleCardSelect, deletingCards, selectedCardId]
   );
 
   // Mouse move handler for ghost
@@ -1382,6 +1396,9 @@ export default function CanvasInner({ projectId }: CanvasProps) {
     const node = nodes.find(n => n.id === cardId);
     if (!node) return;
     
+    // Add card to deleting set
+    setDeletingCards(prev => new Set(prev).add(cardId));
+    
     try {
       const token = localStorage.getItem("token");
       
@@ -1444,6 +1461,13 @@ export default function CanvasInner({ projectId }: CanvasProps) {
       
     } catch (err) {
       console.error("Failed to delete card data from backend:", err);
+    } finally {
+      // Remove card from deleting set
+      setDeletingCards(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(cardId);
+        return newSet;
+      });
     }
     
     // Remove the node from the canvas
@@ -2076,7 +2100,13 @@ export default function CanvasInner({ projectId }: CanvasProps) {
         snapToGrid={false}
         snapGrid={[15, 15]}
         onPaneMouseMove={onPaneMouseMove}
-        onPaneClick={onPaneClick}
+        onPaneClick={(evt) => {
+          // If clicking on the pane (not on a node), deselect any selected card
+          if (evt.target === evt.currentTarget) {
+            setSelectedCardId(null);
+          }
+          onPaneClick(evt);
+        }}
         minZoom={0.05}
         defaultViewport={{ x: 0, y: 0, zoom: 0.6 }}
       >

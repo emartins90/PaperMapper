@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { CardType } from "../../components/useFileUploadHandler";
 import FileChip from "../canvas-add-files/FileChip";
 import { useCardSave } from "../shared/useCardSave";
+import { Spinner } from "../ui/spinner";
 
 interface Citation {
   id: number;
@@ -216,7 +217,7 @@ const ChatExperienceBase: React.FC<ChatExperienceBaseProps> = ({
   // Citation selection now handles advancement directly in handleCitationSelect
 
   // Filter citations for search
-  const filteredCitations: Citation[] = citations.filter((citation: Citation) =>
+  const filteredCitations: Citation[] = citations.filter((citation) =>
     citation.text.toLowerCase().includes(citationSearchValue.toLowerCase()) ||
     (citation.credibility && citation.credibility.toLowerCase().includes(citationSearchValue.toLowerCase()))
   );
@@ -919,7 +920,7 @@ const ChatExperienceBase: React.FC<ChatExperienceBaseProps> = ({
                                   {icon}
                                 </div>
                                 <div>
-                                  <p className="text-sm font-medium text-gray-900">{file.name}</p>
+                                  <p className="text-sm font-medium text-gray-900" style={{ maxWidth: '240px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{file.name}</p>
                                 </div>
                               </div>
                               <button
@@ -1188,7 +1189,12 @@ const ChatExperienceBase: React.FC<ChatExperienceBaseProps> = ({
             disabled={chatStep === 0 && chatType === 'question' && !(chatInputs[currentPrompt.id]?.trim()) || isSaving || cardSaved}
             className={`flex-1 ${chatStep === 0 && chatType === 'question' && !(chatInputs[currentPrompt.id]?.trim()) || cardSaved ? "opacity-50 cursor-not-allowed" : ""}`}
           >
-            {isSaving ? "Saving..." : cardSaved ? "Saved!" : (
+            {isSaving ? (
+              <>
+                <Spinner size="sm" className="mr-2" />
+                Saving...
+              </>
+            ) : cardSaved ? "Saved!" : (
               ((chatType === 'question' || chatType === 'claim') && chatStep === prompts.length - 1)
                 ? "Done"
                 : ((chatType === 'insight' || chatType === 'thought') && chatStep === prompts.length - 1)
@@ -1204,7 +1210,12 @@ const ChatExperienceBase: React.FC<ChatExperienceBaseProps> = ({
             Back
           </Button>
           <Button type="button" onClick={handleFinalSubmit} disabled={isSaving} className="flex-1">
-            {isSaving ? "Saving..." : "Done"}
+            {isSaving ? (
+              <>
+                <Spinner size="sm" className="mr-2" />
+                Saving...
+              </>
+            ) : "Done"}
           </Button>
         </div>
       )}

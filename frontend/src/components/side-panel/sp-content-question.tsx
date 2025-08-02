@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Combobox, useCustomOptions } from "@/components/ui/combobox";
 import { MultiCombobox } from "@/components/ui/multi-combobox";
+import { Spinner } from "@/components/ui/spinner";
 
 const QUESTION_CATEGORIES = [
   "Clarify a concept",
@@ -80,6 +81,7 @@ export default function QuestionCardContent({
   const [fileEntries, setFileEntries] = React.useState<Array<{ url: string; filename: string; type: string }>>(cardData?.fileEntries || []);
   const [isUploading, setIsUploading] = React.useState(false);
   const [isSaving, setIsSaving] = React.useState(false);
+  const [deletingFiles, setDeletingFiles] = React.useState<Set<string>>(new Set());
   const [pendingNodeUpdate, setPendingNodeUpdate] = React.useState<{ files: string[], fileEntries: any[] } | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
@@ -246,6 +248,10 @@ export default function QuestionCardContent({
 
   const handleFileDelete = async (fileUrl: string) => {
     if (!openCard) return;
+    
+    // Add file to deleting set
+    setDeletingFiles(prev => new Set(prev).add(fileUrl));
+    
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/questions/delete_file/?question_id=${cardData?.questionId}&file_url=${encodeURIComponent(fileUrl)}`, {
         method: "POST",
@@ -259,6 +265,13 @@ export default function QuestionCardContent({
       onUpdateNodeData?.(openCard.id, { files: newFiles, fileEntries: newFileEntries });
     } catch (err) {
       alert("Failed to delete file: " + (err as Error).message);
+    } finally {
+      // Remove file from deleting set
+      setDeletingFiles(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(fileUrl);
+        return newSet;
+      });
     }
   };
 
@@ -433,6 +446,7 @@ export default function QuestionCardContent({
               fileEntries={fileEntries}
               cardType="question"
               onFileClick={onFileClick}
+              deletingFiles={deletingFiles}
             />
           )}
 
@@ -442,9 +456,16 @@ export default function QuestionCardContent({
               <button
                 onClick={handleSaveQuestion}
                 disabled={isSaving || !question.trim()}
-                className="w-full bg-primary text-primary-foreground py-2 px-4 rounded-lg font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full bg-primary text-primary-foreground py-2 px-4 rounded-lg font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
               >
-                {isSaving ? "Saving..." : "Save Question"}
+                {isSaving ? (
+                  <>
+                    <Spinner size="sm" className="mr-2" />
+                    Saving...
+                  </>
+                ) : (
+                  "Save Question"
+                )}
               </button>
             </div>
           )}

@@ -4,6 +4,13 @@
   */
 @custom-variant dark (&:is(.dark *));
 
+/* Custom truncation class */
+.truncate-40-chars {
+  max-width: 40ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 
 @theme inline {
 
