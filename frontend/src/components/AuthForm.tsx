@@ -45,8 +45,13 @@ export default function AuthForm({ onAuth }: { onAuth: (token: string) => void }
 
   return (
     <div className="max-w-sm mx-auto mt-20 p-6 bg-white rounded shadow">
+      <div className="text-center mb-6">
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">PaperThread</h1>
+        <p className="text-gray-600 text-sm">Weave your research into papers</p>
+      </div>
+      
       <h2 className="text-2xl font-bold mb-4 text-center">
-        {mode === "login" ? "Login" : "Register"}
+        {mode === "login" ? "Welcome back" : "Get started"}
       </h2>
       
       <form onSubmit={handleSubmit} className="space-y-4">
