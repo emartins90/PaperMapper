@@ -10,13 +10,24 @@ env_path = Path(__file__).parent / f".env.{ENV}"
 load_dotenv(env_path)
 
 print("Loaded DATABASE_URL:", os.getenv("DATABASE_URL"))
+print("Loaded DATABASE_SYNC_URL:", os.getenv("DATABASE_SYNC_URL"))
 print("Loaded from:", env_path)
 
 class Settings:
     # Database
     DATABASE_URL: str = os.getenv("DATABASE_URL")
+    DATABASE_SYNC_URL: str = os.getenv("DATABASE_SYNC_URL")
+    
     if not DATABASE_URL:
         raise ValueError(f"DATABASE_URL not found in {env_path}. Please create this file with your database configuration.")
+    
+    # If no sync URL provided, try to convert async URL
+    if not DATABASE_SYNC_URL:
+        if DATABASE_URL.startswith("postgresql+asyncpg"):
+            DATABASE_SYNC_URL = DATABASE_URL.replace("+asyncpg", "")
+        else:
+            # For Railway, the sync URL is the public URL
+            DATABASE_SYNC_URL = DATABASE_URL.replace("railway.internal", "mainline.proxy.rlwy.net")
     
     # JWT - Generate a strong secret if not provided
     JWT_SECRET: str = os.getenv("JWT_SECRET")

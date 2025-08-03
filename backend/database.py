@@ -6,6 +6,7 @@ from sqlalchemy.orm import sessionmaker
 from config import settings
 
 DATABASE_URL = settings.DATABASE_URL
+DATABASE_SYNC_URL = settings.DATABASE_SYNC_URL
 
 if DATABASE_URL.startswith("postgresql+asyncpg"):
     # Async for app
@@ -18,7 +19,7 @@ else:
 
 # Always define a sync engine/session for auth and migrations
 from sqlalchemy import create_engine as sync_create_engine
-sync_engine = sync_create_engine(DATABASE_URL.replace("+asyncpg", ""))
+sync_engine = sync_create_engine(DATABASE_SYNC_URL)
 SyncSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=sync_engine)
 
 Base = declarative_base()
