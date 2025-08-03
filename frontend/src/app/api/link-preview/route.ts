@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
     // Fetch the HTML content
     const response = await fetch(url, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; PaperMapper/1.0)',
+        'User-Agent': 'Mozilla/5.0 (compatible; Paper Thread/1.0)',
       },
       // Add timeout
       signal: AbortSignal.timeout(10000), // 10 second timeout

@@ -10,7 +10,7 @@ def main():
     # Set environment to development
     os.environ["ENV"] = "development"
     
-    print("🚀 Starting PaperMapper Backend in DEVELOPMENT mode")
+    print("🚀 Starting Paper Thread Backend in DEVELOPMENT mode")
     print(f"Environment: {os.environ.get('ENV')}")
     
     # Run uvicorn

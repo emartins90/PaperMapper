@@ -1,5 +1,5 @@
 from fastapi_users_db_sqlalchemy import SQLAlchemyBaseUserTable
-from sqlalchemy import Boolean, DateTime, Date
+from sqlalchemy import Boolean, DateTime, Date, func
 from sqlalchemy import Column, Integer, String, ForeignKey, Float
 from sqlalchemy.orm import relationship
 from backend.database import Base
@@ -24,7 +24,7 @@ class Project(Base):
     class_subject = Column(String, nullable=True)
     paper_type = Column(String, nullable=True)
     due_date = Column(Date, nullable=True)
-    last_edited_date = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+    last_edited_date = Column(DateTime, default=func.now(), onupdate=func.now())
     status = Column(String, default="not_started")  # not_started, in_progress, ready_to_write, complete
     assignment_file = Column(String, nullable=True)  # File path/URL
     assignment_filename = Column(String, nullable=True)  # Original filename

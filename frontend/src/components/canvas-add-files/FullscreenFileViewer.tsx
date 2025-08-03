@@ -23,45 +23,57 @@ const getFileName = (fileUrl: string | null, cardNode?: any) => {
   
   // Try to find the original filename from cardNode's fileEntries
   if (cardNode?.data?.fileEntries) {
-    // Helper function to convert secure URL back to R2 URL for comparison
+    // Try exact match first
+    let entry = cardNode.data.fileEntries.find((entry: any) => entry.url === fileUrl);
+    
+    if (entry) {
+      return entry.filename;
+    }
+    
+    // If no exact match, try to match by filename (last part of URL)
+    const fileUrlFilename = fileUrl.split('/').pop();
+    entry = cardNode.data.fileEntries.find((entry: any) => {
+      const entryFilename = entry.url.split('/').pop();
+      return entryFilename === fileUrlFilename;
+    });
+    
+    if (entry) {
+      return entry.filename;
+    }
+    
+    // If still no match, try converting secure URL to R2 URL
     const convertSecureToR2Url = (secureUrl: string) => {
       if (secureUrl.startsWith('/secure-files/')) {
         const parts = secureUrl.split('/');
         const filename = parts[parts.length - 1];
         const folder = parts[parts.length - 2];
-        // Convert back to R2 URL format
         return `https://pub-paper-mapper-dev.r2.dev/${folder}/${filename}`;
       }
       return secureUrl;
     };
     
-    // Helper function to convert R2 URL to secure URL for comparison
+    const r2Url = convertSecureToR2Url(fileUrl);
+    entry = cardNode.data.fileEntries.find((entry: any) => entry.url === r2Url);
+    
+    if (entry) {
+      return entry.filename;
+    }
+    
+    // If still no match, try converting R2 URLs to secure URLs
     const convertR2ToSecureUrl = (r2Url: string) => {
       if (r2Url.includes('.r2.dev') || r2Url.includes('.r2.cloudflarestorage.com')) {
         const filename = r2Url.split('/').pop();
-        const folder = r2Url.split('/').slice(-2)[0]; // Get the folder name
+        const folder = r2Url.split('/').slice(-2)[0];
         return `/secure-files/${folder}/${filename}`;
       }
       return r2Url;
     };
     
-    // Try exact match first
-    let entry = cardNode.data.fileEntries.find((entry: any) => entry.url === fileUrl);
-    
-    // If no exact match, try converting secure URL to R2 URL
-    if (!entry) {
-      const r2Url = convertSecureToR2Url(fileUrl);
-      entry = cardNode.data.fileEntries.find((entry: any) => entry.url === r2Url);
-    }
-    
-    // If still no match, try converting R2 URLs to secure URLs
-    if (!entry) {
-      const secureUrl = convertR2ToSecureUrl(fileUrl);
-      entry = cardNode.data.fileEntries.find((entry: any) => {
-        const entrySecureUrl = convertR2ToSecureUrl(entry.url);
-        return entrySecureUrl === secureUrl;
-      });
-    }
+    const secureUrl = convertR2ToSecureUrl(fileUrl);
+    entry = cardNode.data.fileEntries.find((entry: any) => {
+      const entrySecureUrl = convertR2ToSecureUrl(entry.url);
+      return entrySecureUrl === secureUrl;
+    });
     
     if (entry) {
       return entry.filename;
@@ -289,7 +301,7 @@ export const FullscreenFileViewer: React.FC<FullscreenFileViewerProps> = ({
           {!loading && !error && fileType === 'pdf' && blobUrl && (
             <iframe
               src={blobUrl}
-              title="PDF Viewer"
+              title={getFileName(fileUrl, cardNode)}
               className={`w-full h-[calc(90vh-72px)] rounded-lg shadow-2xl bg-white`}
               style={{ minWidth: windowWidth >= 1100 ? '600px' : '100%', maxWidth: windowWidth >= 1100 ? '75vw' : '90vw', minHeight: '600px', display: 'block', marginTop: 0, marginBottom: 0 }}
             />

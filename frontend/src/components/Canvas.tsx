@@ -2054,7 +2054,12 @@ export default function CanvasInner({ projectId }: CanvasProps) {
     return parts[parts.length - 1];
   }
   const viewerFileName = getFileNameFromUrl(viewerFile);
-  const viewerNode = viewerFileName ? nodes.find(n => Array.isArray(n.data.files) && n.data.files.some((f: string) => getFileNameFromUrl(f) === viewerFileName)) : undefined;
+  const viewerNode = viewerFileName ? nodes.find(n => {
+    // Check both files array and fileEntries array
+    const filesMatch = Array.isArray(n.data.files) && n.data.files.some((f: string) => getFileNameFromUrl(f) === viewerFileName);
+    const fileEntriesMatch = Array.isArray(n.data.fileEntries) && n.data.fileEntries.some((entry: any) => getFileNameFromUrl(entry.url) === viewerFileName);
+    return filesMatch || fileEntriesMatch;
+  }) : undefined;
   return (
     <div 
       style={{ 

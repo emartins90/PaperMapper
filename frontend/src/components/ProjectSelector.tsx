@@ -83,6 +83,7 @@ export default function ProjectSelector({ token }: { token: string }) {
   const [viewerOpen, setViewerOpen] = useState(false);
   const [viewerFile, setViewerFile] = useState<string | null>(null);
   const [viewerType, setViewerType] = useState<'image' | 'pdf' | 'other' | 'audio'>('other');
+  const [viewerCardNode, setViewerCardNode] = useState<any>(null);
   
   // Sorting and filtering state
   const [sortBy, setSortBy] = useState<'due_date' | 'last_edited' | 'name'>('due_date');
@@ -247,7 +248,7 @@ export default function ProjectSelector({ token }: { token: string }) {
   }
 
   // Handler for file click
-  function handleFileClick(fileUrl: string) {
+  function handleFileClick(fileUrl: string, project: Project) {
     const filename = fileUrl.split('/').pop() || '';
     
     // Convert R2 URL to secure endpoint URL for assignment files
@@ -256,9 +257,22 @@ export default function ProjectSelector({ token }: { token: string }) {
       secureUrl = `/secure-files/assignments/${filename}`;
     }
     
+    // Create a mock cardNode structure for the project assignment file
+    const mockCardNode = {
+      id: `project-${project.id}`,
+      type: "project",
+      data: {
+        fileEntries: [{
+          url: secureUrl, // Use the secure URL that matches what we pass to viewerFile
+          filename: project.assignment_filename || filename
+        }]
+      }
+    };
+    
     setViewerFile(secureUrl);
     setViewerType(getFileType(filename));
     setViewerOpen(true);
+    setViewerCardNode(mockCardNode);
   }
 
   // Sort projects function
@@ -435,10 +449,10 @@ export default function ProjectSelector({ token }: { token: string }) {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+              <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
                 <LuFileText className="w-5 h-5 text-white" />
               </div>
-              <h1 className="text-xl font-semibold text-gray-900">Paper Mapper</h1>
+              <h1 className="text-xl font-semibold text-gray-900">Paper Thread</h1>
             </div>
             <Button
               onClick={() => setIsAccountModalOpen(true)}
@@ -790,7 +804,7 @@ export default function ProjectSelector({ token }: { token: string }) {
                                   className="cursor-pointer"
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    handleFileClick(project.assignment_file!);
+                                    handleFileClick(project.assignment_file!, project);
                                   }}
                                 >
                                   <FileChip 
@@ -916,8 +930,12 @@ export default function ProjectSelector({ token }: { token: string }) {
         open={viewerOpen} 
         fileUrl={viewerFile} 
         fileType={viewerType} 
-        onClose={() => setViewerOpen(false)}
+        onClose={() => {
+          setViewerOpen(false);
+          setViewerCardNode(null);
+        }}
         cardType="assignments"
+        cardNode={viewerCardNode}
       />
     </div>
   );
