@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 from typing import Optional
-from backend.models import UserCustomOption
+from models import UserCustomOption
 
 def get_user_custom_options(db: Session, user_id: int, option_type: Optional[str] = None):
     query = db.query(UserCustomOption).filter(UserCustomOption.user_id == user_id)

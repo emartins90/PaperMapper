@@ -2,19 +2,20 @@
 """
 Test upload endpoint without R2
 """
-import sys
+import asyncio
 import os
-sys.path.insert(0, os.path.abspath(os.path.dirname(__file__) + "/.."))
-
-from fastapi import FastAPI, File, Form, Depends, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
+import sys
+from pathlib import Path
 from typing import List
-import tempfile
+import aiofiles
+from fastapi import UploadFile
 import uuid
-
-# Import your existing auth setup
-from backend.main import get_current_user, models
-from backend.database import SessionLocal
+from datetime import datetime
+import mimetypes
+from fastapi.responses import StreamingResponse
+import io
+from main import get_current_user, models
+from database import SessionLocal
 from sqlalchemy.ext.asyncio import AsyncSession
 
 app = FastAPI()

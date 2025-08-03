@@ -10,7 +10,7 @@ class R2Storage:
     """Handles file uploads to Cloudflare R2 storage"""
     
     def __init__(self):
-        from backend.config import settings
+        from config import settings
         # Initialize R2 client (S3-compatible)
         self.s3_client = boto3.client(
             's3',
