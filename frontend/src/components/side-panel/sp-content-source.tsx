@@ -1424,7 +1424,7 @@ export default function SourceCardContent({
                                       <p className="text-xs text-gray-600">Credibility: {citation.credibility}</p>
                                     )}
                                   </div>
-                                  <Check className={cn("ml-2 h-4 w-4", (selectedCitation && selectedCitation.id === citation.id) ? "opacity-100" : "opacity-0")} />
+                                  <Check className={cn("ml-2 h-4 w-4", (selectedCitation && (selectedCitation as Citation).id === citation.id) ? "opacity-100" : "opacity-0")} />
                                 </CommandItem>
                               ))}
                             </CommandGroup>
