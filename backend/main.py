@@ -2,11 +2,11 @@ from fastapi import FastAPI, Depends, HTTPException, status, UploadFile, File, F
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional
-from backend.database import SessionLocal, engine, Base, DATABASE_URL, SyncSessionLocal
-from backend import models, schemas
-from backend.models import User, Project, PasswordResetCode
-from backend.schemas import UserRead, UserCreate, UserUpdate, Project as ProjectSchema, ProjectCreate, CardUpdate
-from backend.user_db import get_user_db
+from database import SessionLocal, engine, Base, DATABASE_URL, SyncSessionLocal
+import models, schemas
+from models import User, Project, PasswordResetCode
+from schemas import UserRead, UserCreate, UserUpdate, Project as ProjectSchema, ProjectCreate, CardUpdate
+from user_db import get_user_db
 from fastapi_users import FastAPIUsers
 from fastapi_users_db_sqlalchemy import SQLAlchemyUserDatabase
 from fastapi_users.authentication import AuthenticationBackend
@@ -21,7 +21,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm.exc import StaleDataError
 from sqlalchemy import delete as sa_delete
 from pydantic import BaseModel
-from backend.r2_storage import R2Storage
+from r2_storage import R2Storage
 from dotenv import load_dotenv
 from fastapi.responses import StreamingResponse
 
@@ -29,12 +29,12 @@ import uuid
 import os
 from sqlalchemy import select
 from pathlib import Path
-from backend import crud
+import crud
 import random
 import datetime
 from fastapi_users.router import get_auth_router
 
-from backend.config import settings
+from config import settings
 
 # Password reset request models
 class ForgotPasswordRequest(BaseModel):
