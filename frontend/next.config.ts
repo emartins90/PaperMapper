@@ -5,7 +5,7 @@ const nextConfig: NextConfig = {
     return [
       {
         source: '/secure-files/:folder/:filename',
-        destination: 'http://localhost:8000/secure-files/:folder/:filename',
+        destination: `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/secure-files/:folder/:filename`,
       },
     ];
   },

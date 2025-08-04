@@ -1426,10 +1426,13 @@ async def get_secure_file(folder: str, filename: str, current_user=Depends(get_c
     # TODO: Add file ownership/authorization checks here if needed
     r2 = R2Storage()
     key = f"{folder}/{filename}"
+    print(f"[SECURE-FILES] Requesting file: {key}")
     try:
         file_obj = r2.s3_client.get_object(Bucket=r2.bucket_name, Key=key)
+        print(f"[SECURE-FILES] Successfully retrieved file: {key}")
         return StreamingResponse(file_obj['Body'], media_type=file_obj['ContentType'])
     except Exception as e:
+        print(f"[SECURE-FILES] Error retrieving file {key}: {str(e)}")
         raise HTTPException(status_code=404, detail=f"File not found or access denied: {str(e)}")
 
 # --- Claim File Upload/Deletion Endpoints ---
