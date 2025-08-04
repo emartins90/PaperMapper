@@ -101,23 +101,26 @@ cookie_transport = CookieTransport(
     cookie_domain=None,  # Let browser set domain automatically
     cookie_path="/"  # Available across entire site
 )
-auth_backend = AuthenticationBackend(
+
+# Add Bearer transport for token-based authentication
+bearer_transport = BearerTransport(tokenUrl="auth/jwt/login")
+
+# Create both authentication backends
+cookie_auth_backend = AuthenticationBackend(
     name="cookie",
     transport=cookie_transport,
     get_strategy=get_jwt_strategy,
 )
 
-# Comment out BearerTransport and old backend
-# bearer_transport = BearerTransport(tokenUrl="auth/jwt/login")
-# auth_backend = AuthenticationBackend(
-#     name="jwt",
-#     transport=bearer_transport,
-#     get_strategy=get_jwt_strategy,
-# )
+bearer_auth_backend = AuthenticationBackend(
+    name="jwt",
+    transport=bearer_transport,
+    get_strategy=get_jwt_strategy,
+)
 
 fastapi_users = FastAPIUsers[User, int](
     get_user_manager,
-    [auth_backend],
+    [cookie_auth_backend, bearer_auth_backend],  # Support both cookie and bearer
 )
 
 get_current_user = fastapi_users.current_user(active=True)
