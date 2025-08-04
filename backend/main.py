@@ -69,6 +69,17 @@ class UserManager(BaseUserManager[User, int]):
     def parse_id(self, value: str) -> int:
         return int(value)
 
+    async def create(self, user_create: schemas.UC, safe: bool = False, request: Optional[Request] = None) -> models.UP:
+        try:
+            print(f"Attempting to create user with email: {user_create.email}")
+            result = await super().create(user_create, safe, request)
+            print(f"User creation successful: {result.id}")
+            return result
+        except Exception as e:
+            print(f"User creation failed with error: {str(e)}")
+            print(f"Error type: {type(e)}")
+            raise
+
 async def get_user_manager(user_db=Depends(get_user_db)):
     yield UserManager(user_db)
 
