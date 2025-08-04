@@ -97,7 +97,7 @@ cookie_transport = CookieTransport(
     cookie_max_age=30 * 24 * 3600,  # 30 days - users stay logged in
     cookie_secure=settings.ENV == "production",  # HTTPS only in production
     cookie_httponly=True,  # Prevent XSS
-    cookie_samesite="lax",  # CSRF protection
+    cookie_samesite="none",  # Allow cross-site requests
     cookie_domain=None,  # Let browser set domain automatically
     cookie_path="/"  # Available across entire site
 )
@@ -973,7 +973,7 @@ async def logout():
         path="/",
         secure=settings.ENV == "production",
         httponly=True,
-        samesite="lax"
+        samesite="none"  # Match the login cookie settings
     )
     return response
 
@@ -1428,7 +1428,12 @@ def get_current_user_debug(current_user=Depends(get_current_user)):
     return current_user
 
 @app.get("/secure-files/{folder}/{filename}")
-async def get_secure_file(folder: str, filename: str, current_user=Depends(get_current_user_debug), db: AsyncSession = Depends(get_db())):
+async def get_secure_file(folder: str, filename: str, current_user=Depends(get_current_user_debug), db: AsyncSession = Depends(get_db()), request: Request = None):
+    # Debug incoming cookies
+    if request:
+        print(f"[SECURE-FILES] Incoming cookies: {request.headers.get('cookie', 'NO_COOKIES')}")
+        print(f"[SECURE-FILES] All headers: {dict(request.headers)}")
+    
     # Verify file ownership by checking if the file belongs to the user's projects
     r2 = R2Storage()
     key = f"{folder}/{filename}"
