@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { useRouter } from "next/navigation";
@@ -34,7 +34,6 @@ import {
 
 import AccountSettings from "./AccountSettings";
 import { FullscreenFileViewer } from "./canvas-add-files/FullscreenFileViewer";
-import { useRef } from "react";
 import FileChip from "./canvas-add-files/FileChip";
 import ProjectInfoModal from "./ProjectInfoModal";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
@@ -90,17 +89,7 @@ export default function ProjectSelector({ token }: { token: string }) {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [statusFilter, setStatusFilter] = useState<string[]>([]);
   
-  // Title height tracking for dynamic text sizing
-  const [titleHeights, setTitleHeights] = useState<{[key: number]: boolean}>({});
 
-  // Function to check if title is wrapped
-  const checkTitleWrap = (projectId: number, element: HTMLHeadingElement) => {
-    const isWrapped = element.scrollHeight > element.clientHeight;
-    setTitleHeights(prev => ({
-      ...prev,
-      [projectId]: isWrapped
-    }));
-  };
   
   const router = useRouter();
 
@@ -794,17 +783,7 @@ export default function ProjectSelector({ token }: { token: string }) {
                               {project.status === 'ready_to_write' && (
                                 <LuNotebookPen className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
                               )}
-                              <h3 
-                                className={`font-bold text-gray-900 leading-tight line-clamp-2 min-w-0 ${
-                                  titleHeights[project.id] ? 'text-base' : 'text-lg'
-                                }`}
-                                ref={(el) => {
-                                  if (el) {
-                                    // Check if title is wrapped after a brief delay to ensure rendering
-                                    setTimeout(() => checkTitleWrap(project.id, el), 0);
-                                  }
-                                }}
-                              >
+                              <h3 className="font-bold text-gray-900 leading-tight line-clamp-2 min-w-0 text-base">
                                 {project.name}
                               </h3>
                             </div>
