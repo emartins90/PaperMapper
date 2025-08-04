@@ -1,5 +1,5 @@
 import { Button } from "../ui/button";
-import React from "react";
+import React, { useEffect } from "react";
 import { LuX } from "react-icons/lu";
 import { FaFilePdf, FaFileWord, FaFileAudio, FaFile } from "react-icons/fa6";
 import { Spinner } from "../ui/spinner";
@@ -31,6 +31,14 @@ export default function FileUploadSection({
   onFileClick,
   deletingFiles = new Set()
 }: FileUploadSectionProps) {
+  
+  // Debug authentication state
+  useEffect(() => {
+    console.log('[AUTH-DEBUG] Current cookies:', document.cookie);
+    console.log('[AUTH-DEBUG] Local storage token:', localStorage.getItem('token'));
+    console.log('[AUTH-DEBUG] Local storage email:', localStorage.getItem('email'));
+  }, []);
+
   // Prefer fileEntries if present (for new cards), else fall back to files array
   const displayFiles: FileEntry[] = fileEntries.length > 0
     ? fileEntries
@@ -55,22 +63,31 @@ export default function FileUploadSection({
 
   // Helper to get image source
   const getImageSrc = (entry: FileEntry) => {
+    console.log('[FILE-DEBUG] getImageSrc called with entry:', entry);
+    
     // If it's a local upload
     if (entry.url.startsWith('/uploads/')) {
-      return `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}${entry.url}`;
+      const url = `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}${entry.url}`;
+      console.log('[FILE-DEBUG] Local upload URL:', url);
+      return url;
     }
     // If it's a public R2 URL, extract the filename and use the secure endpoint
     if (entry.url.includes('.r2.dev') || entry.url.includes('.r2.cloudflarestorage.com')) {
       const filename = entry.url.split('/').pop();
       const folder = cardType === "source" ? "source-materials" : `${cardType}s`;
-      return `/secure-files/${folder}/${filename}`;
+      const url = `/secure-files/${folder}/${filename}`;
+      console.log('[FILE-DEBUG] R2 URL converted to secure-files:', url);
+      return url;
     }
     // If it's just a filename
     if (!entry.url.startsWith('http') && !entry.url.startsWith('/')) {
       const folder = cardType === "source" ? "source-materials" : `${cardType}s`;
-      return `/secure-files/${folder}/${entry.url}`;
+      const url = `/secure-files/${folder}/${entry.url}`;
+      console.log('[FILE-DEBUG] Filename converted to secure-files:', url);
+      return url;
     }
     // Otherwise, return as-is
+    console.log('[FILE-DEBUG] Returning as-is:', entry.url);
     return entry.url;
   };
 
