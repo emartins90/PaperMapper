@@ -98,7 +98,7 @@ cookie_transport = CookieTransport(
     cookie_secure=settings.ENV == "production",  # HTTPS only in production
     cookie_httponly=True,  # Prevent XSS
     cookie_samesite="none",  # Allow cross-site requests
-    cookie_domain=None,  # Let browser set domain automatically
+    cookie_domain=".paperthread-app.com" if settings.ENV == "production" else None,  # Cross-domain in production
     cookie_path="/"  # Available across entire site
 )
 
