@@ -42,6 +42,10 @@ class Settings:
     R2_SECRET_ACCESS_KEY: str = os.getenv("R2_SECRET_ACCESS_KEY")
     R2_BUCKET_NAME: str = os.getenv("R2_BUCKET_NAME")
     
+    # Mailgun Email
+    MAILGUN_API_KEY: str = os.getenv("MAILGUN_API_KEY")
+    MAILGUN_DOMAIN: str = os.getenv("MAILGUN_DOMAIN")
+    
     # CORS
     CORS_ORIGINS: List[str] = os.getenv("CORS_ORIGINS", "http://localhost:3000").split(",")
     

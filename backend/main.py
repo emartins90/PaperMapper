@@ -1277,15 +1277,13 @@ async def forgot_password(request: ForgotPasswordRequest, db: Session = Depends(
     db.add(reset_code)
     db.commit()
     
-    # TODO: Send email instead of logging
-    # For development, print to console for testing
-    if settings.ENV == "development":
+    # Send email via Mailgun
+    from email_service import MailgunEmailService
+    email_service = MailgunEmailService()
+    email_sent = email_service.send_password_reset_email(user.email, code)
+    
+    if not email_sent and settings.ENV == "development":
         print(f"Password reset code for {user.email}: {code}")
-    else:
-        # In production, this should send an actual email
-        # For now, just log that it was sent (without the code)
-        print(f"Password reset code sent to {user.email}")
-        # TODO: Implement email sending service here
     
     return {"message": "Password reset code sent"}
 

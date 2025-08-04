@@ -9,3 +9,4 @@ python-multipart
 python-dotenv
 fastapi-users[sqlalchemy]
 fastapi-users-db-sqlalchemy
+requests
