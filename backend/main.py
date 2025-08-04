@@ -56,6 +56,9 @@ class UserManager(BaseUserManager[User, int]):
 
     async def on_after_register(self, user: User, request=None):
         print(f"User {user.id} has registered.")
+        print(f"User email: {user.email}")
+        print(f"User is_active: {user.is_active}")
+        print(f"User is_verified: {user.is_verified}")
 
     async def on_after_forgot_password(self, user: User, token: str, request=None):
         print(f"User {user.id} has forgot their password. Reset token: {token}")
