@@ -944,7 +944,7 @@ async def delete_project(project_id: int, db: Session = Depends(get_sync_db), cu
 
 # User and auth routes
 app.include_router(
-    fastapi_users.get_auth_router(auth_backend),
+    fastapi_users.get_auth_router(bearer_auth_backend),
     prefix="/auth/jwt",
     tags=["auth"],
 )
@@ -961,7 +961,7 @@ app.include_router(
 
 # Register the cookie login route
 app.include_router(
-    fastapi_users.get_auth_router(auth_backend),
+    fastapi_users.get_auth_router(cookie_auth_backend),
     prefix="/auth/cookie",
     tags=["auth"],
 )
