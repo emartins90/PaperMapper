@@ -254,7 +254,9 @@ export default function ProjectSelector({ token }: { token: string }) {
     // Convert R2 URL to secure endpoint URL for assignment files
     let secureUrl = fileUrl;
     if (fileUrl.includes('.r2.dev') || fileUrl.includes('.r2.cloudflarestorage.com')) {
-      secureUrl = `/secure-files/assignments/${filename}`;
+      secureUrl = process.env.NODE_ENV === 'production' 
+        ? `/api/secure-files/assignments/${filename}`
+        : `/secure-files/assignments/${filename}`;
     }
     
     // Create a mock cardNode structure for the project assignment file

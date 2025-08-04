@@ -58,12 +58,18 @@ export const FileListDisplay: React.FC<FileListDisplayProps> = ({
     if (fileUrl.includes('.r2.dev') || fileUrl.includes('.r2.cloudflarestorage.com')) {
       const filename = fileUrl.split('/').pop();
       const folder = cardType === "source" ? "source-materials" : `${cardType}s`;
-      return `/secure-files/${folder}/${filename}`;
+      // Use API route in production, direct path in development
+      return process.env.NODE_ENV === 'production' 
+        ? `/api/secure-files/${folder}/${filename}`
+        : `/secure-files/${folder}/${filename}`;
     }
     // If it's just a filename
     if (!fileUrl.startsWith('http') && !fileUrl.startsWith('/')) {
       const folder = cardType === "source" ? "source-materials" : `${cardType}s`;
-      return `/secure-files/${folder}/${fileUrl}`;
+      // Use API route in production, direct path in development
+      return process.env.NODE_ENV === 'production' 
+        ? `/api/secure-files/${folder}/${fileUrl}`
+        : `/secure-files/${folder}/${fileUrl}`;
     }
     // Otherwise, return as-is
     return fileUrl;

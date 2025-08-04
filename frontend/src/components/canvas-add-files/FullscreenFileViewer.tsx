@@ -43,7 +43,7 @@ const getFileName = (fileUrl: string | null, cardNode?: any) => {
     
     // If still no match, try converting secure URL to R2 URL
     const convertSecureToR2Url = (secureUrl: string) => {
-      if (secureUrl.startsWith('/secure-files/')) {
+      if (secureUrl.startsWith('/secure-files/') || secureUrl.startsWith('/api/secure-files/')) {
         const parts = secureUrl.split('/');
         const filename = parts[parts.length - 1];
         const folder = parts[parts.length - 2];
@@ -64,7 +64,10 @@ const getFileName = (fileUrl: string | null, cardNode?: any) => {
       if (r2Url.includes('.r2.dev') || r2Url.includes('.r2.cloudflarestorage.com')) {
         const filename = r2Url.split('/').pop();
         const folder = r2Url.split('/').slice(-2)[0];
-        return `/secure-files/${folder}/${filename}`;
+        // Use API route in production, direct path in development
+        return process.env.NODE_ENV === 'production' 
+          ? `/api/secure-files/${folder}/${filename}`
+          : `/secure-files/${folder}/${filename}`;
       }
       return r2Url;
     };
@@ -167,13 +170,19 @@ export const FullscreenFileViewer: React.FC<FullscreenFileViewerProps> = ({
     if (url.includes('.r2.dev') || url.includes('.r2.cloudflarestorage.com')) {
       const filename = url.split('/').pop();
       const folder = cardType === "source" ? "source-materials" : `${cardType}s`;
-      return `/secure-files/${folder}/${filename}`;
+      // Use API route in production, direct path in development
+      return process.env.NODE_ENV === 'production' 
+        ? `/api/secure-files/${folder}/${filename}`
+        : `/secure-files/${folder}/${filename}`;
     }
     
     // If it's just a filename, try to construct the secure URL
     if (!url.startsWith('http') && !url.startsWith('/')) {
       const folder = cardType === "source" ? "source-materials" : `${cardType}s`;
-      return `/secure-files/${folder}/${url}`;
+      // Use API route in production, direct path in development
+      return process.env.NODE_ENV === 'production' 
+        ? `/api/secure-files/${folder}/${url}`
+        : `/secure-files/${folder}/${url}`;
     }
     // Otherwise, return as-is
     return url;

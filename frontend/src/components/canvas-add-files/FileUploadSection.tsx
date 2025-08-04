@@ -75,15 +75,21 @@ export default function FileUploadSection({
     if (entry.url.includes('.r2.dev') || entry.url.includes('.r2.cloudflarestorage.com')) {
       const filename = entry.url.split('/').pop();
       const folder = cardType === "source" ? "source-materials" : `${cardType}s`;
-      const url = `/secure-files/${folder}/${filename}`;
-      console.log('[FILE-DEBUG] R2 URL converted to secure-files:', url);
+      // Use API route in production, direct path in development
+      const url = process.env.NODE_ENV === 'production' 
+        ? `/api/secure-files/${folder}/${filename}`
+        : `/secure-files/${folder}/${filename}`;
+      console.log('[FILE-DEBUG] R2 URL converted to:', url);
       return url;
     }
     // If it's just a filename
     if (!entry.url.startsWith('http') && !entry.url.startsWith('/')) {
       const folder = cardType === "source" ? "source-materials" : `${cardType}s`;
-      const url = `/secure-files/${folder}/${entry.url}`;
-      console.log('[FILE-DEBUG] Filename converted to secure-files:', url);
+      // Use API route in production, direct path in development
+      const url = process.env.NODE_ENV === 'production' 
+        ? `/api/secure-files/${folder}/${entry.url}`
+        : `/secure-files/${folder}/${entry.url}`;
+      console.log('[FILE-DEBUG] Filename converted to:', url);
       return url;
     }
     // Otherwise, return as-is

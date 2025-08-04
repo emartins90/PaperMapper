@@ -76,7 +76,9 @@ export default function ProjectInfoModal({ projectId, mode, onClose }: ProjectIn
     // Convert R2 URL to secure endpoint URL for assignment files
     let secureUrl = fileUrl;
     if (fileUrl.includes('.r2.dev') || fileUrl.includes('.r2.cloudflarestorage.com')) {
-      secureUrl = `/secure-files/assignments/${filename}`;
+      secureUrl = process.env.NODE_ENV === 'production' 
+        ? `/api/secure-files/assignments/${filename}`
+        : `/secure-files/assignments/${filename}`;
     }
     
     setViewerFile(secureUrl);

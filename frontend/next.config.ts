@@ -2,12 +2,18 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   async rewrites() {
-    return [
-      {
-        source: '/secure-files/:folder/:filename',
-        destination: `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/secure-files/:folder/:filename`,
-      },
-    ];
+    // In development, proxy directly to backend
+    // In production, use API route for better cookie handling
+    if (process.env.NODE_ENV === 'development') {
+      return [
+        {
+          source: '/secure-files/:folder/:filename',
+          destination: `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/secure-files/:folder/:filename`,
+        },
+      ];
+    }
+    // In production, no rewrite - use API route
+    return [];
   },
 };
 
