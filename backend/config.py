@@ -6,6 +6,12 @@ import secrets
 
 # Load environment variables based on ENV setting
 ENV = os.getenv("ENV", "development")
+
+# Detect production environment more reliably
+if os.getenv("RAILWAY_ENVIRONMENT") or os.getenv("RAILWAY_PROJECT_ID"):
+    ENV = "production"
+    print("Detected Railway environment, setting ENV=production")
+
 env_path = Path(__file__).parent / f".env.{ENV}"
 load_dotenv(env_path)
 

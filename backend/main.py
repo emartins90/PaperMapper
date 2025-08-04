@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, HTTPException, status, UploadFile, File, Form, Request
+from fastapi import FastAPI, Depends, HTTPException, status, UploadFile, File, Form, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional
@@ -84,7 +84,11 @@ async def get_user_manager(user_db=Depends(get_user_db)):
     yield UserManager(user_db)
 
 def get_jwt_strategy() -> JWTStrategy:
-    return JWTStrategy(secret=SECRET, lifetime_seconds=30 * 24 * 3600)  # 30 days
+    return JWTStrategy(
+        secret=SECRET, 
+        lifetime_seconds=30 * 24 * 3600,  # 30 days
+        token_audience=["fastapi-users:auth"]  # Add audience for extra security
+    )
 
 # Use cookie transport for authentication with secure settings
 cookie_transport = CookieTransport(
@@ -92,7 +96,9 @@ cookie_transport = CookieTransport(
     cookie_max_age=30 * 24 * 3600,  # 30 days - users stay logged in
     cookie_secure=settings.ENV == "production",  # HTTPS only in production
     cookie_httponly=True,  # Prevent XSS
-    cookie_samesite="lax"  # CSRF protection
+    cookie_samesite="lax",  # CSRF protection
+    cookie_domain=None,  # Let browser set domain automatically
+    cookie_path="/"  # Available across entire site
 )
 auth_backend = AuthenticationBackend(
     name="cookie",
@@ -955,6 +961,21 @@ app.include_router(
     prefix="/auth/cookie",
     tags=["auth"],
 )
+
+# Add logout endpoint
+@app.post("/auth/logout")
+async def logout():
+    """Logout and clear authentication cookie"""
+    response = Response()
+    response.delete_cookie(
+        key="auth_token",
+        path="/",
+        secure=settings.ENV == "production",
+        httponly=True,
+        samesite="lax"
+    )
+    return response
+
 # If you want to disable JWT login, comment out the JWT login route registration if present.
 
 # --- File Upload Endpoints ---
