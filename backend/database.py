@@ -8,14 +8,9 @@ from config import settings
 DATABASE_URL = settings.DATABASE_URL
 DATABASE_SYNC_URL = settings.DATABASE_SYNC_URL
 
-if DATABASE_URL.startswith("postgresql+asyncpg"):
-    # Async for app
-    engine = create_async_engine(DATABASE_URL, echo=True)
-    SessionLocal = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
-else:
-    # For Railway, use async engine even without +asyncpg
-    engine = create_async_engine(DATABASE_URL, echo=True)
-    SessionLocal = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+# Always use async engine for the main app
+engine = create_async_engine(DATABASE_URL, echo=True)
+SessionLocal = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
 # Always define a sync engine/session for auth and migrations
 from sqlalchemy import create_engine as sync_create_engine
