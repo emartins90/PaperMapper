@@ -17,7 +17,7 @@ import ReactFlow, {
 } from "reactflow";
 import "reactflow/dist/style.css";
 import { toast } from "sonner";
-import { getDeviceSpecificAction } from "@/lib/deviceDetection";
+import { getDeviceSpecificAction, isMobileDevice } from "@/lib/deviceDetection";
 
 import QuestionCard from "../components/canvas-cards/QuestionCard";
 import SourceMaterialCard from "../components/canvas-cards/SourceMaterialCard";
@@ -134,6 +134,27 @@ export default function CanvasInner({ projectId }: CanvasProps) {
 
   // Track selected card
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
+
+  // Mobile device detection
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Check if device is mobile
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(isMobileDevice());
+    };
+
+    // Check on mount
+    checkMobile();
+
+    // Check on window resize
+    const handleResize = () => {
+      checkMobile();
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Load cards from backend when projectId changes
   useEffect(() => {
@@ -2177,17 +2198,20 @@ export default function CanvasInner({ projectId }: CanvasProps) {
         projectId={projectId}
         onFileClick={handleSidePanelFileClick}
       />
-      <BottomNav 
-        onAddClaim={startPlacingClaim}
-        onAddSourceMaterial={startPlacingSource}
-        onAddQuestion={startPlacingQuestion}
-        onAddInsight={startPlacingInsight}
-        onAddThought={startPlacingThought}
-        guided={guided}
-        onGuidedChange={setGuided}
-        guidedLoading={guidedLoading}
-        guidedError={guidedError}
-      />
+      {/* Bottom Navigation - Hidden on mobile */}
+      {!isMobile && (
+        <BottomNav 
+          onAddClaim={startPlacingClaim}
+          onAddSourceMaterial={startPlacingSource}
+          onAddQuestion={startPlacingQuestion}
+          onAddInsight={startPlacingInsight}
+          onAddThought={startPlacingThought}
+          guided={guided}
+          onGuidedChange={setGuided}
+          guidedLoading={guidedLoading}
+          guidedError={guidedError}
+        />
+      )}
     </div>
   );
 } 
