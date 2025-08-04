@@ -127,6 +127,11 @@ get_current_user = fastapi_users.current_user(active=True)
 
 app = FastAPI()
 
+# Add a simple health check endpoint
+@app.get("/health")
+async def health_check():
+    return {"status": "ok", "message": "Server is running"}
+
 # Initialize R2 storage
 r2_storage = R2Storage()
 
@@ -1621,4 +1626,8 @@ async def delete_claim_file(
 
 if __name__ == "__main__":
     import uvicorn
+    print("Starting FastAPI server...")
+    print(f"CORS origins: {settings.CORS_ORIGINS}")
+    print(f"Environment: {settings.ENV}")
+    print(f"Database URL: {DATABASE_URL[:50]}...")  # Only show first 50 chars for security
     uvicorn.run(app, host="0.0.0.0", port=8000)
