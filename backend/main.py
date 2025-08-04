@@ -1618,6 +1618,25 @@ async def delete_claim_file(
     await db.refresh(db_claim)
     return {"ok": True, "remaining_files": new_files}
 
+# Debug endpoint to check authentication
+@app.get("/debug/auth")
+async def debug_auth(current_user=Depends(get_current_user)):
+    return {
+        "authenticated": True,
+        "user_id": current_user.id,
+        "email": current_user.email,
+        "message": "User is authenticated"
+    }
+
+@app.get("/debug/auth-optional")
+async def debug_auth_optional(current_user=Depends(get_current_user_debug)):
+    return {
+        "authenticated": True,
+        "user_id": current_user.id,
+        "email": current_user.email,
+        "message": "User is authenticated (with debug)"
+    }
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)

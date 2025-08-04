@@ -37,6 +37,22 @@ export default function FileUploadSection({
     console.log('[AUTH-DEBUG] Current cookies:', document.cookie);
     console.log('[AUTH-DEBUG] Local storage token:', localStorage.getItem('token'));
     console.log('[AUTH-DEBUG] Local storage email:', localStorage.getItem('email'));
+    
+    // Test authentication endpoint
+    const testAuth = async () => {
+      try {
+        const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+        const response = await fetch(`${API_URL}/debug/auth`, {
+          credentials: 'include',
+        });
+        const data = await response.json();
+        console.log('[AUTH-DEBUG] Auth test result:', data);
+      } catch (error) {
+        console.log('[AUTH-DEBUG] Auth test failed:', error);
+      }
+    };
+    
+    testAuth();
   }, []);
 
   // Prefer fileEntries if present (for new cards), else fall back to files array
