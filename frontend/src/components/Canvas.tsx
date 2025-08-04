@@ -17,7 +17,7 @@ import ReactFlow, {
 } from "reactflow";
 import "reactflow/dist/style.css";
 import { toast } from "sonner";
-import { getDeviceSpecificAction, isMobileDevice } from "@/lib/deviceDetection";
+import { getDeviceSpecificAction, isMobileDevice } from "../lib/deviceDetection";
 
 import QuestionCard from "../components/canvas-cards/QuestionCard";
 import SourceMaterialCard from "../components/canvas-cards/SourceMaterialCard";

@@ -4,7 +4,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { isMobileDevice } from "@/lib/deviceDetection";
+import { isMobileDevice } from "../../../lib/deviceDetection";
 import {
   Breadcrumb,
   BreadcrumbList,
