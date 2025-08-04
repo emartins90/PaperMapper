@@ -2,7 +2,7 @@ fastapi
 uvicorn[standard]
 sqlalchemy
 psycopg2-binary
-asyncpg
+asyncpg>=0.28.0
 alembic
 boto3
 python-multipart
