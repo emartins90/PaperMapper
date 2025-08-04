@@ -14,6 +14,13 @@ import {
   BreadcrumbSeparator,
 } from "../../../components/ui/breadcrumb";
 import MenuDropdown from "../../../components/MenuDropdown";
+import { LuChevronLeft } from "react-icons/lu";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "../../../components/ui/tooltip";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -112,25 +119,52 @@ export default function ProjectLayout({ children }: { children: React.ReactNode 
     <>
       {/* Top bar with breadcrumb and account button */}
       <div className="absolute top-5 left-0 z-20 w-full flex items-center justify-between px-8 h-16">
-        {/* Breadcrumb */}
+        {/* Breadcrumb - Full on large screens and mobile, chevron on medium screens */}
         <div className="bg-white rounded-xl shadow px-3 py-1 flex items-center max-w-md">
-          <Breadcrumb>
-            <BreadcrumbList className="text-sm h-12 flex items-center whitespace-nowrap overflow-hidden">
-              <BreadcrumbItem className="flex-shrink-0">
-                <BreadcrumbLink asChild>
-                  <Link href="/projects" className="font-semibold text-gray-700 hover:underline flex items-center text-sm h-12">
-                    Projects
-                  </Link>
-                </BreadcrumbLink>
-              </BreadcrumbItem>
-              <BreadcrumbSeparator className="flex-shrink-0" />
-              <BreadcrumbItem className="min-w-0 flex-1">
-                <BreadcrumbPage className="font-bold text-gray-900 text-sm h-12 flex items-center truncate" title={projectName}>
-                  {displayName || "..."}
-                </BreadcrumbPage>
-              </BreadcrumbItem>
-            </BreadcrumbList>
-          </Breadcrumb>
+          {/* Full breadcrumb - shown on large screens (xl+) and mobile (below md) */}
+          <div className="block md:hidden xl:block">
+            <Breadcrumb>
+              <BreadcrumbList className="text-sm h-12 flex items-center whitespace-nowrap overflow-hidden">
+                <BreadcrumbItem className="flex-shrink-0">
+                  <BreadcrumbLink asChild>
+                    <Link href="/projects" className="font-semibold text-gray-700 hover:underline flex items-center text-sm h-12">
+                      Projects
+                    </Link>
+                  </BreadcrumbLink>
+                </BreadcrumbItem>
+                <BreadcrumbSeparator className="flex-shrink-0" />
+                <BreadcrumbItem className="min-w-0 flex-1">
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <BreadcrumbPage className="font-bold text-gray-900 text-sm h-12 flex items-center truncate cursor-help">
+                          {displayName || "..."}
+                        </BreadcrumbPage>
+                      </TooltipTrigger>
+                      <TooltipContent 
+                        side="bottom" 
+                        align="start"
+                        sideOffset={5}
+                      >
+                        {projectName}
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </BreadcrumbItem>
+              </BreadcrumbList>
+            </Breadcrumb>
+          </div>
+          
+          {/* Chevron back button - shown only on medium screens (md to xl) */}
+          <div className="hidden md:block xl:hidden">
+            <Link 
+              href="/projects" 
+              className="flex items-center justify-center w-8 h-8 text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+              title="Back to Projects"
+            >
+              <LuChevronLeft className="w-5 h-5" />
+            </Link>
+          </div>
         </div>
         {/* Account button and menu - Hidden on mobile */}
         {!isMobile && <MenuDropdown />}
