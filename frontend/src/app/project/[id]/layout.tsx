@@ -94,7 +94,7 @@ export default function ProjectLayout({ children }: { children: React.ReactNode 
     };
   }, []); // Empty dependency array to run only once on mount
 
-  const maxLength = 28;
+  const maxLength = 20; // Reduced from 28 to be more aggressive
   const displayName = projectName.length > maxLength
     ? projectName.slice(0, maxLength) + "…"
     : projectName;
@@ -113,19 +113,21 @@ export default function ProjectLayout({ children }: { children: React.ReactNode 
       {/* Top bar with breadcrumb and account button */}
       <div className="absolute top-5 left-0 z-20 w-full flex items-center justify-between px-8 h-16">
         {/* Breadcrumb */}
-        <div className="bg-white rounded-xl shadow px-3 py-1 flex items-center">
+        <div className="bg-white rounded-xl shadow px-3 py-1 flex items-center max-w-md">
           <Breadcrumb>
-            <BreadcrumbList className="text-md h-12 flex items-center">
-              <BreadcrumbItem>
+            <BreadcrumbList className="text-sm h-12 flex items-center whitespace-nowrap overflow-hidden">
+              <BreadcrumbItem className="flex-shrink-0">
                 <BreadcrumbLink asChild>
-                  <Link href="/projects" className="font-semibold text-gray-700 hover:underline flex items-center text-md h-12">
+                  <Link href="/projects" className="font-semibold text-gray-700 hover:underline flex items-center text-sm h-12">
                     Projects
                   </Link>
                 </BreadcrumbLink>
               </BreadcrumbItem>
-              <BreadcrumbSeparator />
-              <BreadcrumbItem>
-                <BreadcrumbPage className="font-bold text-gray-900 text-md h-12 flex items-center">{displayName || "..."}</BreadcrumbPage>
+              <BreadcrumbSeparator className="flex-shrink-0" />
+              <BreadcrumbItem className="min-w-0 flex-1">
+                <BreadcrumbPage className="font-bold text-gray-900 text-sm h-12 flex items-center truncate" title={projectName}>
+                  {displayName || "..."}
+                </BreadcrumbPage>
               </BreadcrumbItem>
             </BreadcrumbList>
           </Breadcrumb>
