@@ -195,9 +195,7 @@ export const FullscreenFileViewer: React.FC<FullscreenFileViewerProps> = ({
     try {
       const fullUrl = getFullUrl(url);
       
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-      
-      const response = await fetch(`${apiUrl}${fullUrl}`, {
+      const response = await fetch(fullUrl, {
         credentials: "include", // Include authentication cookies
       });
       
