@@ -90,6 +90,18 @@ export default function ProjectSelector({ token }: { token: string }) {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [statusFilter, setStatusFilter] = useState<string[]>([]);
   
+  // Title height tracking for dynamic text sizing
+  const [titleHeights, setTitleHeights] = useState<{[key: number]: boolean}>({});
+
+  // Function to check if title is wrapped
+  const checkTitleWrap = (projectId: number, element: HTMLHeadingElement) => {
+    const isWrapped = element.scrollHeight > element.clientHeight;
+    setTitleHeights(prev => ({
+      ...prev,
+      [projectId]: isWrapped
+    }));
+  };
+  
   const router = useRouter();
 
   useEffect(() => {
@@ -777,17 +789,29 @@ export default function ProjectSelector({ token }: { token: string }) {
                             ? 'border-error-300 hover:border-error-300' 
                             : 'border-gray-200 hover:border-gray-300'
                         } hover:shadow-sm`}>
-                          <div className="flex justify-between items-start mb-4">
-                            <div className="flex items-center gap-2">
+                          <div className="flex justify-between items-start mb-3 min-h-0">
+                            <div className="flex items-start gap-2 flex-1 min-w-0">
                               {project.status === 'ready_to_write' && (
-                                <LuNotebookPen className="w-5 h-5 text-blue-600" />
+                                <LuNotebookPen className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
                               )}
-                              <h3 className="font-bold text-gray-900 text-lg">{project.name}</h3>
+                              <h3 
+                                className={`font-bold text-gray-900 leading-tight line-clamp-2 min-w-0 ${
+                                  titleHeights[project.id] ? 'text-base' : 'text-lg'
+                                }`}
+                                ref={(el) => {
+                                  if (el) {
+                                    // Check if title is wrapped after a brief delay to ensure rendering
+                                    setTimeout(() => checkTitleWrap(project.id, el), 0);
+                                  }
+                                }}
+                              >
+                                {project.name}
+                              </h3>
                             </div>
-                            <LuArrowRight className="w-5 h-5 text-gray-400 group-hover:text-gray-600 transition-colors" />
+                            <LuArrowRight className="w-5 h-5 text-gray-400 group-hover:text-gray-600 transition-colors flex-shrink-0 ml-2" />
                           </div>
                           
-                          <div className="space-y-3 flex-1">
+                          <div className="space-y-2 flex-1 min-h-0 overflow-hidden">
                             {project.class_subject && (
                               <p className="text-sm text-gray-600">
                                 {project.class_subject}
@@ -833,9 +857,9 @@ export default function ProjectSelector({ token }: { token: string }) {
                           </div>
 
                           {/* Bottom section with last edited and ellipses */}
-                          <div className="flex justify-between items-center mt-auto pt-4">
+                          <div className="flex justify-between items-center mt-auto pt-4 flex-shrink-0">
                             {project.last_edited_date && (
-                              <p className="text-xs text-gray-500">
+                              <p className="text-xs text-gray-500 truncate">
                                 Last Edited: {formatDate(project.last_edited_date)}
                               </p>
                             )}
@@ -845,7 +869,7 @@ export default function ProjectSelector({ token }: { token: string }) {
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  className="h-8 w-8 p-0"
+                                  className="h-8 w-8 p-0 flex-shrink-0"
                                   onClick={(e) => e.stopPropagation()}
                                 >
                                   <LuEllipsis className="w-4 h-4" />
