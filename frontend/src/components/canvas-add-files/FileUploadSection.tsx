@@ -1,5 +1,5 @@
 import { Button } from "../ui/button";
-import React, { useEffect } from "react";
+import React from "react";
 import { LuX } from "react-icons/lu";
 import { FaFilePdf, FaFileWord, FaFileAudio, FaFile } from "react-icons/fa6";
 import { Spinner } from "../ui/spinner";
@@ -32,44 +32,19 @@ export default function FileUploadSection({
   deletingFiles = new Set()
 }: FileUploadSectionProps) {
   
-  // Debug authentication state
-  useEffect(() => {
-    console.log('[AUTH-DEBUG] Current cookies:', document.cookie);
-    console.log('[AUTH-DEBUG] Local storage token:', localStorage.getItem('token'));
-    console.log('[AUTH-DEBUG] Local storage email:', localStorage.getItem('email'));
-    
-    // Test authentication endpoint
-    const testAuth = async () => {
-      try {
-        const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-        const response = await fetch(`${API_URL}/debug/auth`, {
-          credentials: 'include',
-        });
-        const data = await response.json();
-        console.log('[AUTH-DEBUG] Auth test result:', data);
-      } catch (error) {
-        console.log('[AUTH-DEBUG] Auth test failed:', error);
-      }
-    };
-    
-    testAuth();
-  }, []);
-
   // Prefer fileEntries if present (for new cards), else fall back to files array
   const displayFiles: FileEntry[] = fileEntries.length > 0
     ? fileEntries
-    : files.map((url) => ({ url, filename: "file", type: "" }));
+    : files.map(file => ({ url: file, filename: file.split('/').pop() || 'file', type: '' }));
 
-  // Helper to get icon and color by file type
   const getFileIcon = (filename: string) => {
     const ext = filename.split('.').pop()?.toLowerCase();
-    if (ext === "pdf") return { icon: <FaFilePdf className="text-red-500 w-5 h-5" />, color: "bg-red-100" };
-    if (["doc", "docx"].includes(ext || "")) return { icon: <FaFileWord className="text-blue-700 w-5 h-5" />, color: "bg-blue-100" };
-    if (["mp3", "wav", "m4a", "ogg"].includes(ext || "")) return { icon: <FaFileAudio className="text-purple-500 w-5 h-5" />, color: "bg-purple-100" };
-    return { icon: <FaFile className="text-gray-500 w-5 h-5" />, color: "bg-gray-100" };
+    if (ext === 'pdf') return { icon: <FaFilePdf />, color: 'bg-red-100 text-red-600' };
+    if (['doc', 'docx'].includes(ext || '')) return { icon: <FaFileWord />, color: 'bg-blue-100 text-blue-600' };
+    if (['mp3', 'wav', 'm4a', 'ogg'].includes(ext || '')) return { icon: <FaFileAudio />, color: 'bg-green-100 text-green-600' };
+    return { icon: <FaFile />, color: 'bg-gray-100 text-gray-600' };
   };
 
-  // Helper to check if file is an image
   const isImageFile = (entry: FileEntry) => {
     if (entry.url.startsWith('blob:')) {
       return entry.type.startsWith('image/');
@@ -79,12 +54,9 @@ export default function FileUploadSection({
 
   // Helper to get image source
   const getImageSrc = (entry: FileEntry) => {
-    console.log('[FILE-DEBUG] getImageSrc called with entry:', entry);
-    
     // If it's a local upload
     if (entry.url.startsWith('/uploads/')) {
       const url = `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}${entry.url}`;
-      console.log('[FILE-DEBUG] Local upload URL:', url);
       return url;
     }
     // If it's a public R2 URL, extract the filename and use the secure endpoint
@@ -95,7 +67,6 @@ export default function FileUploadSection({
       const url = process.env.NODE_ENV === 'production' 
         ? `/api/secure-files/${folder}/${filename}`
         : `/secure-files/${folder}/${filename}`;
-      console.log('[FILE-DEBUG] R2 URL converted to:', url);
       return url;
     }
     // If it's just a filename
@@ -105,11 +76,9 @@ export default function FileUploadSection({
       const url = process.env.NODE_ENV === 'production' 
         ? `/api/secure-files/${folder}/${entry.url}`
         : `/secure-files/${folder}/${entry.url}`;
-      console.log('[FILE-DEBUG] Filename converted to:', url);
       return url;
     }
     // Otherwise, return as-is
-    console.log('[FILE-DEBUG] Returning as-is:', entry.url);
     return entry.url;
   };
 

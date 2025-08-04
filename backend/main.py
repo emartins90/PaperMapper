@@ -1423,29 +1423,20 @@ async def test_upload(
         raise HTTPException(status_code=500, detail=str(e))
 
 # Add debugging to authentication
-def get_current_user_debug(current_user=Depends(get_current_user)):
-    print(f"[AUTH] User authenticated: {current_user.email} (ID: {current_user.id})")
-    return current_user
+# def get_current_user_debug(current_user=Depends(get_current_user)):
+#     print(f"[AUTH] User authenticated: {current_user.email} (ID: {current_user.id})")
+#     return current_user
 
 @app.get("/secure-files/{folder}/{filename}")
-async def get_secure_file(folder: str, filename: str, current_user=Depends(get_current_user_debug), db: AsyncSession = Depends(get_db()), request: Request = None):
-    # Debug incoming cookies
-    if request:
-        print(f"[SECURE-FILES] Incoming cookies: {request.headers.get('cookie', 'NO_COOKIES')}")
-        print(f"[SECURE-FILES] All headers: {dict(request.headers)}")
-    
+async def get_secure_file(folder: str, filename: str, current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db())):
     # Verify file ownership by checking if the file belongs to the user's projects
     r2 = R2Storage()
     key = f"{folder}/{filename}"
-    print(f"[SECURE-FILES] Requesting file: {key} for user: {current_user.email}")
-    print(f"[SECURE-FILES] User ID: {current_user.id}")
-    print(f"[SECURE-FILES] User email: {current_user.email}")
     
     try:
         # Search for the file in user's projects
         file_found = False
         
-        print(f"[SECURE-FILES] Checking claims for filename: {filename}")
         # Check claims
         claims_result = await db.execute(
             select(models.Claim).where(
@@ -1457,10 +1448,8 @@ async def get_secure_file(folder: str, filename: str, current_user=Depends(get_c
         )
         claim = claims_result.scalar_one_or_none()
         if claim:
-            print(f"[SECURE-FILES] Found file in claim ID: {claim.id}")
             file_found = True
         
-        print(f"[SECURE-FILES] Checking questions for filename: {filename}")
         # Check questions
         questions_result = await db.execute(
             select(models.Question).where(
@@ -1472,10 +1461,8 @@ async def get_secure_file(folder: str, filename: str, current_user=Depends(get_c
         )
         question = questions_result.scalar_one_or_none()
         if question:
-            print(f"[SECURE-FILES] Found file in question ID: {question.id}")
             file_found = True
         
-        print(f"[SECURE-FILES] Checking insights for filename: {filename}")
         # Check insights
         insights_result = await db.execute(
             select(models.Insight).where(
@@ -1487,10 +1474,8 @@ async def get_secure_file(folder: str, filename: str, current_user=Depends(get_c
         )
         insight = insights_result.scalar_one_or_none()
         if insight:
-            print(f"[SECURE-FILES] Found file in insight ID: {insight.id}")
             file_found = True
         
-        print(f"[SECURE-FILES] Checking thoughts for filename: {filename}")
         # Check thoughts
         thoughts_result = await db.execute(
             select(models.Thought).where(
@@ -1502,10 +1487,8 @@ async def get_secure_file(folder: str, filename: str, current_user=Depends(get_c
         )
         thought = thoughts_result.scalar_one_or_none()
         if thought:
-            print(f"[SECURE-FILES] Found file in thought ID: {thought.id}")
             file_found = True
         
-        print(f"[SECURE-FILES] Checking source materials for filename: {filename}")
         # Check source materials
         source_materials_result = await db.execute(
             select(models.SourceMaterial).where(
@@ -1517,10 +1500,8 @@ async def get_secure_file(folder: str, filename: str, current_user=Depends(get_c
         )
         source_material = source_materials_result.scalar_one_or_none()
         if source_material:
-            print(f"[SECURE-FILES] Found file in source material ID: {source_material.id}")
             file_found = True
         
-        print(f"[SECURE-FILES] Checking projects for filename: {filename}")
         # Check projects (for assignment files)
         projects_result = await db.execute(
             select(models.Project).where(
@@ -1532,24 +1513,18 @@ async def get_secure_file(folder: str, filename: str, current_user=Depends(get_c
         )
         project = projects_result.scalar_one_or_none()
         if project:
-            print(f"[SECURE-FILES] Found file in project ID: {project.id}")
             file_found = True
         
         if not file_found:
-            print(f"[SECURE-FILES] Access denied for file: {key} - user doesn't own this file")
-            print(f"[SECURE-FILES] File not found in any of user's projects")
             raise HTTPException(status_code=403, detail="Access denied - file not found in user's projects")
         
         # File access verified, now get from R2
-        print(f"[SECURE-FILES] File access verified, retrieving from R2: {key}")
         file_obj = r2.s3_client.get_object(Bucket=r2.bucket_name, Key=key)
-        print(f"[SECURE-FILES] Successfully retrieved file: {key}")
         return StreamingResponse(file_obj['Body'], media_type=file_obj['ContentType'])
         
     except HTTPException:
         raise
     except Exception as e:
-        print(f"[SECURE-FILES] Error retrieving file {key}: {str(e)}")
         raise HTTPException(status_code=404, detail=f"File not found or access denied: {str(e)}")
 
 # --- Claim File Upload/Deletion Endpoints ---
@@ -1623,24 +1598,23 @@ async def delete_claim_file(
     await db.refresh(db_claim)
     return {"ok": True, "remaining_files": new_files}
 
-# Debug endpoint to check authentication
-@app.get("/debug/auth")
-async def debug_auth(current_user=Depends(get_current_user)):
-    return {
-        "authenticated": True,
-        "user_id": current_user.id,
-        "email": current_user.email,
-        "message": "User is authenticated"
-    }
+# @app.get("/debug/auth")
+# async def debug_auth(current_user=Depends(get_current_user)):
+#     return {
+#         "authenticated": True,
+#         "user_id": current_user.id,
+#         "email": current_user.email,
+#         "message": "User is authenticated"
+#     }
 
-@app.get("/debug/auth-optional")
-async def debug_auth_optional(current_user=Depends(get_current_user_debug)):
-    return {
-        "authenticated": True,
-        "user_id": current_user.id,
-        "email": current_user.email,
-        "message": "User is authenticated (with debug)"
-    }
+# @app.get("/debug/auth-optional")
+# async def debug_auth_optional(current_user=Depends(get_current_user_debug)):
+#     return {
+#         "authenticated": True,
+#         "user_id": current_user.id,
+#         "email": current_user.email,
+#         "message": "User is authenticated (with debug)"
+#     }
 
 if __name__ == "__main__":
     import uvicorn
