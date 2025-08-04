@@ -17,6 +17,7 @@ import ReactFlow, {
 } from "reactflow";
 import "reactflow/dist/style.css";
 import { toast } from "sonner";
+import { getDeviceSpecificAction } from "@/lib/deviceDetection";
 
 import QuestionCard from "../components/canvas-cards/QuestionCard";
 import SourceMaterialCard from "../components/canvas-cards/SourceMaterialCard";
@@ -508,6 +509,10 @@ export default function CanvasInner({ projectId }: CanvasProps) {
   // Click to place node
   const onPaneClick = useCallback(async (evt: React.MouseEvent) => {
     if (!placingNodeType) return;
+    
+    // Dismiss any active toasts when placing a card
+    toast.dismiss();
+    
     // Get the exact mouse position in ReactFlow coordinates
     const clickPosition = screenToFlowPosition({
       x: evt.clientX,
@@ -725,6 +730,9 @@ export default function CanvasInner({ projectId }: CanvasProps) {
         data: { type: "source" },
       },
     ]);
+    // Show device-specific toast
+    const action = getDeviceSpecificAction();
+    toast.info(`${action.charAt(0).toUpperCase() + action.slice(1)} anywhere on the canvas to place your source material card`);
   }, [ghostNodeId]);
 
   const startPlacingQuestion = useCallback(() => {
@@ -739,6 +747,9 @@ export default function CanvasInner({ projectId }: CanvasProps) {
         data: { type: "question" },
       },
     ]);
+    // Show device-specific toast
+    const action = getDeviceSpecificAction();
+    toast.info(`${action.charAt(0).toUpperCase() + action.slice(1)} anywhere on the canvas to place your question card`);
   }, [ghostNodeId]);
 
   const startPlacingInsight = useCallback(() => {
@@ -753,6 +764,9 @@ export default function CanvasInner({ projectId }: CanvasProps) {
         data: { type: "insight" },
       },
     ]);
+    // Show device-specific toast
+    const action = getDeviceSpecificAction();
+    toast.info(`${action.charAt(0).toUpperCase() + action.slice(1)} anywhere on the canvas to place your insight card`);
   }, [ghostNodeId]);
 
   const startPlacingThought = useCallback(() => {
@@ -767,6 +781,9 @@ export default function CanvasInner({ projectId }: CanvasProps) {
         data: { type: "thought" },
       },
     ]);
+    // Show device-specific toast
+    const action = getDeviceSpecificAction();
+    toast.info(`${action.charAt(0).toUpperCase() + action.slice(1)} anywhere on the canvas to place your thought card`);
   }, [ghostNodeId]);
 
   const startPlacingClaim = useCallback(() => {
@@ -781,6 +798,9 @@ export default function CanvasInner({ projectId }: CanvasProps) {
         data: { type: "claim" },
       },
     ]);
+    // Show device-specific toast
+    const action = getDeviceSpecificAction();
+    toast.info(`${action.charAt(0).toUpperCase() + action.slice(1)} anywhere on the canvas to place your claim card`);
   }, [ghostNodeId]);
 
   const onNodesChange = useCallback(
@@ -2070,6 +2090,19 @@ export default function CanvasInner({ projectId }: CanvasProps) {
       onClick={(evt) => {
         if (placingNodeType) {
           onPaneClick(evt);
+        }
+      }}
+      onTouchStart={(evt) => {
+        if (placingNodeType) {
+          // Convert touch event to mouse event for consistency
+          const touch = evt.touches[0];
+          const mouseEvent = new MouseEvent('click', {
+            clientX: touch.clientX,
+            clientY: touch.clientY,
+            bubbles: true,
+            cancelable: true,
+          });
+          onPaneClick(mouseEvent as any);
         }
       }}
     >
