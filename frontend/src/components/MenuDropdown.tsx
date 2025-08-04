@@ -18,9 +18,8 @@ export default function MenuDropdown({ large = false }: { large?: boolean }) {
   useEffect(() => {
     if (accountOpen) {
       setLoadingOptions(true);
-      const token = localStorage.getItem("token");
       fetch(`${API_URL}/users/me/custom-options`, {
-        headers: { Authorization: token ? `Bearer ${token}` : "" },
+        credentials: "include", // Use cookie-based authentication
       })
         .then((res) => res.ok ? res.json() : Promise.reject("Failed to fetch custom options"))
         .then((data) => setCustomOptions(data))
@@ -39,11 +38,10 @@ export default function MenuDropdown({ large = false }: { large?: boolean }) {
   // Delete handler
   const handleDeleteOption = async (id: number) => {
     setDeletingId(id);
-    const token = localStorage.getItem("token");
     try {
       const res = await fetch(`${API_URL}/users/me/custom-options/${id}`, {
         method: "DELETE",
-        headers: { Authorization: token ? `Bearer ${token}` : "" },
+        credentials: "include", // Use cookie-based authentication
       });
       if (res.ok) {
         setCustomOptions((prev) => prev.filter((opt) => opt.id !== id));

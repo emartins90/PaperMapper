@@ -62,23 +62,19 @@ export default function AccountSettings({ open, onOpenChange }: AccountSettingsP
         setEmail(storedEmail);
       } else {
         // Fetch from backend if not in localStorage
-        const token = localStorage.getItem("token");
-        if (token) {
-                  fetch(`${API_URL}/users/me`, {
+        fetch(`${API_URL}/users/me`, {
           credentials: "include", // Send cookies with request
         })
-            .then((res) => res.ok ? res.json() : Promise.reject("Failed to fetch user"))
-            .then((data) => {
-              setEmail(data.email);
-              localStorage.setItem("email", data.email);
-            })
-            .catch(() => setEmail("Unknown"));
-        }
+          .then((res) => res.ok ? res.json() : Promise.reject("Failed to fetch user"))
+          .then((data) => {
+            setEmail(data.email);
+            localStorage.setItem("email", data.email);
+          })
+          .catch(() => setEmail("Unknown"));
       }
 
       // Fetch custom options
       setLoadingOptions(true);
-      const token = localStorage.getItem("token");
       fetch(`${API_URL}/users/me/custom-options`, {
         credentials: "include", // Send cookies with request
       })
@@ -96,15 +92,13 @@ export default function AccountSettings({ open, onOpenChange }: AccountSettingsP
     const value = getAddInput(type as 'sourceFunction' | 'sourceCredibility' | 'insightType' | 'class');
     if (!value.trim()) return;
     setAddingType(type);
-    const token = localStorage.getItem("token");
     try {
       const res = await fetch(`${API_URL}/users/me/custom-options`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: token ? `Bearer ${token}` : "",
         },
-        credentials: "include", // Ensure cookies/session are sent
+        credentials: "include", // Use cookie-based authentication
         body: JSON.stringify({ option_type: type, value }),
       });
       if (res.ok) {
@@ -131,15 +125,13 @@ export default function AccountSettings({ open, onOpenChange }: AccountSettingsP
   const handleSaveEdit = async (id: number, type: string) => {
     if (!editInput.trim()) return;
     setSavingEdit(true);
-    const token = localStorage.getItem("token");
     try {
       const res = await fetch(`${API_URL}/users/me/custom-options/${id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
-          Authorization: token ? `Bearer ${token}` : "",
         },
-        credentials: "include", // Ensure cookies/session are sent
+        credentials: "include", // Use cookie-based authentication
         body: JSON.stringify({ value: editInput }),
       });
       if (res.ok) {
@@ -159,12 +151,10 @@ export default function AccountSettings({ open, onOpenChange }: AccountSettingsP
   // Delete handler
   const handleDeleteOption = async (id: number) => {
     setDeletingId(id);
-    const token = localStorage.getItem("token");
     try {
       const res = await fetch(`${API_URL}/users/me/custom-options/${id}`, {
         method: "DELETE",
-        headers: { Authorization: token ? `Bearer ${token}` : "" },
-        credentials: "include", // Ensure cookies/session are sent
+        credentials: "include", // Use cookie-based authentication
       });
       if (res.ok) {
         setCustomOptions((prev) => prev.filter((opt) => opt.id !== id));
