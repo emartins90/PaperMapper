@@ -33,6 +33,7 @@ import crud
 import random
 import datetime
 from fastapi_users.router import get_auth_router
+from sqlalchemy import and_
 
 from config import settings
 
@@ -1422,15 +1423,99 @@ async def test_upload(
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/secure-files/{folder}/{filename}")
-async def get_secure_file(folder: str, filename: str, current_user=Depends(get_current_user)):
-    # TODO: Add file ownership/authorization checks here if needed
+async def get_secure_file(folder: str, filename: str, current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db())):
+    # Verify file ownership by checking if the file belongs to the user's projects
     r2 = R2Storage()
     key = f"{folder}/{filename}"
-    print(f"[SECURE-FILES] Requesting file: {key}")
+    print(f"[SECURE-FILES] Requesting file: {key} for user: {current_user.email}")
+    
     try:
+        # Search for the file in user's projects
+        file_found = False
+        
+        # Check claims
+        claims_result = await db.execute(
+            select(models.Claim).where(
+                and_(
+                    models.Claim.project.has(user_id=current_user.id),
+                    models.Claim.files.contains(filename)
+                )
+            )
+        )
+        if claims_result.scalar_one_or_none():
+            file_found = True
+        
+        # Check questions
+        questions_result = await db.execute(
+            select(models.Question).where(
+                and_(
+                    models.Question.project.has(user_id=current_user.id),
+                    models.Question.files.contains(filename)
+                )
+            )
+        )
+        if questions_result.scalar_one_or_none():
+            file_found = True
+        
+        # Check insights
+        insights_result = await db.execute(
+            select(models.Insight).where(
+                and_(
+                    models.Insight.project.has(user_id=current_user.id),
+                    models.Insight.files.contains(filename)
+                )
+            )
+        )
+        if insights_result.scalar_one_or_none():
+            file_found = True
+        
+        # Check thoughts
+        thoughts_result = await db.execute(
+            select(models.Thought).where(
+                and_(
+                    models.Thought.project.has(user_id=current_user.id),
+                    models.Thought.files.contains(filename)
+                )
+            )
+        )
+        if thoughts_result.scalar_one_or_none():
+            file_found = True
+        
+        # Check source materials
+        source_materials_result = await db.execute(
+            select(models.SourceMaterial).where(
+                and_(
+                    models.SourceMaterial.project.has(user_id=current_user.id),
+                    models.SourceMaterial.files.contains(filename)
+                )
+            )
+        )
+        if source_materials_result.scalar_one_or_none():
+            file_found = True
+        
+        # Check projects (for assignment files)
+        projects_result = await db.execute(
+            select(models.Project).where(
+                and_(
+                    models.Project.user_id == current_user.id,
+                    models.Project.assignment_file.contains(filename)
+                )
+            )
+        )
+        if projects_result.scalar_one_or_none():
+            file_found = True
+        
+        if not file_found:
+            print(f"[SECURE-FILES] Access denied for file: {key} - user doesn't own this file")
+            raise HTTPException(status_code=403, detail="Access denied - file not found in user's projects")
+        
+        # File access verified, now get from R2
         file_obj = r2.s3_client.get_object(Bucket=r2.bucket_name, Key=key)
         print(f"[SECURE-FILES] Successfully retrieved file: {key}")
         return StreamingResponse(file_obj['Body'], media_type=file_obj['ContentType'])
+        
+    except HTTPException:
+        raise
     except Exception as e:
         print(f"[SECURE-FILES] Error retrieving file {key}: {str(e)}")
         raise HTTPException(status_code=404, detail=f"File not found or access denied: {str(e)}")

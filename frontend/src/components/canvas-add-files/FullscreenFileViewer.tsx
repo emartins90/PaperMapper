@@ -169,7 +169,8 @@ export const FullscreenFileViewer: React.FC<FullscreenFileViewerProps> = ({
       const folder = cardType === "source" ? "source-materials" : `${cardType}s`;
       return `/secure-files/${folder}/${filename}`;
     }
-    // If it's just a filename
+    
+    // If it's just a filename, try to construct the secure URL
     if (!url.startsWith('http') && !url.startsWith('/')) {
       const folder = cardType === "source" ? "source-materials" : `${cardType}s`;
       return `/secure-files/${folder}/${url}`;
