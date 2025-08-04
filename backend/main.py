@@ -69,7 +69,7 @@ class UserManager(BaseUserManager[User, int]):
     def parse_id(self, value: str) -> int:
         return int(value)
 
-    async def create(self, user_create: schemas.UC, safe: bool = False, request: Optional[Request] = None) -> models.UP:
+    async def create(self, user_create: UserCreate, safe: bool = False, request: Optional[Request] = None) -> User:
         try:
             print(f"Attempting to create user with email: {user_create.email}")
             result = await super().create(user_create, safe, request)
