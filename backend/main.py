@@ -933,19 +933,97 @@ async def update_project(project_id: int, project_update: schemas.ProjectUpdate,
     return project
 
 @app.delete("/projects/{project_id}")
-async def delete_project(project_id: int, db: Session = Depends(get_sync_db), current_user: User = Depends(get_current_user)):
+async def delete_project(project_id: int, db: AsyncSession = Depends(get_db()), current_user: User = Depends(get_current_user)):
     # Find the project and verify ownership
-    result = db.execute(select(Project).where(Project.id == project_id, Project.user_id == current_user.id))
+    result = await db.execute(select(Project).where(Project.id == project_id, Project.user_id == current_user.id))
     project = result.scalar_one_or_none()
     
     if not project:
         raise HTTPException(status_code=404, detail="Project not found or you don't have permission to delete it")
     
-    # Delete the project (cascade will handle related data)
-    db.delete(project)
-    db.commit()
-    
-    return {"message": "Project deleted successfully"}
+    try:
+        # Clean up assignment file from R2
+        if project.assignment_file:
+            key = r2_storage.extract_key_from_url(project.assignment_file)
+            if key:
+                await r2_storage.delete_file(key)
+        
+        # Clean up files from source materials
+        source_materials_result = await db.execute(select(models.SourceMaterial).where(models.SourceMaterial.project_id == project_id))
+        source_materials = source_materials_result.scalars().all()
+        for sm in source_materials:
+            if sm.files:
+                file_urls = sm.files.split(',')
+                for file_url in file_urls:
+                    file_url = file_url.strip()
+                    if file_url:
+                        key = r2_storage.extract_key_from_url(file_url)
+                        if key:
+                            await r2_storage.delete_file(key)
+        
+        # Clean up files from questions
+        questions_result = await db.execute(select(models.Question).where(models.Question.project_id == project_id))
+        questions = questions_result.scalars().all()
+        for question in questions:
+            if question.files:
+                file_urls = question.files.split(',')
+                for file_url in file_urls:
+                    file_url = file_url.strip()
+                    if file_url:
+                        key = r2_storage.extract_key_from_url(file_url)
+                        if key:
+                            await r2_storage.delete_file(key)
+        
+        # Clean up files from insights
+        insights_result = await db.execute(select(models.Insight).where(models.Insight.project_id == project_id))
+        insights = insights_result.scalars().all()
+        for insight in insights:
+            if insight.files:
+                file_urls = insight.files.split(',')
+                for file_url in file_urls:
+                    file_url = file_url.strip()
+                    if file_url:
+                        key = r2_storage.extract_key_from_url(file_url)
+                        if key:
+                            await r2_storage.delete_file(key)
+        
+        # Clean up files from thoughts
+        thoughts_result = await db.execute(select(models.Thought).where(models.Thought.project_id == project_id))
+        thoughts = thoughts_result.scalars().all()
+        for thought in thoughts:
+            if thought.files:
+                file_urls = thought.files.split(',')
+                for file_url in file_urls:
+                    file_url = file_url.strip()
+                    if file_url:
+                        key = r2_storage.extract_key_from_url(file_url)
+                        if key:
+                            await r2_storage.delete_file(key)
+        
+        # Clean up files from claims
+        claims_result = await db.execute(select(models.Claim).where(models.Claim.project_id == project_id))
+        claims = claims_result.scalars().all()
+        for claim in claims:
+            if claim.files:
+                file_urls = claim.files.split(',')
+                for file_url in file_urls:
+                    file_url = file_url.strip()
+                    if file_url:
+                        key = r2_storage.extract_key_from_url(file_url)
+                        if key:
+                            await r2_storage.delete_file(key)
+        
+        # Delete the project (cascade will handle related data)
+        await db.delete(project)
+        await db.commit()
+        
+        return {"message": "Project deleted successfully"}
+    except Exception as e:
+        await db.rollback()
+        print(f"Error deleting project {project_id}: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Failed to delete project: {str(e)}")
 
 # User and auth routes
 app.include_router(
