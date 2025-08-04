@@ -1469,3 +1469,7 @@ async def delete_claim_file(
     await db.commit()
     await db.refresh(db_claim)
     return {"ok": True, "remaining_files": new_files}
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
