@@ -8,8 +8,8 @@ from config import settings
 DATABASE_URL = settings.DATABASE_URL
 DATABASE_SYNC_URL = settings.DATABASE_SYNC_URL
 
-# Use sync engine for now to test connection
-engine = create_engine(DATABASE_SYNC_URL, echo=False)
+# Use async engine for async URL
+engine = create_async_engine(DATABASE_URL, echo=False)
 SessionLocal = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
 # Always define a sync engine/session for auth and migrations
