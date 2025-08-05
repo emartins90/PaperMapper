@@ -347,22 +347,22 @@ export default function AccountSettings({ open, onOpenChange }: AccountSettingsP
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent size="lg" className="p-0 overflow-hidden h-[60vh]">
-        <div className="flex flex-col md:flex-row h-full">
+      <DialogContent size="lg" className="p-0 overflow-hidden h-[60vh] md:h-[60vh] h-screen md:h-[60vh] max-h-screen rounded-none md:rounded-lg">
+        <div className="flex flex-col md:flex-row h-full overflow-hidden">
           {/* Sidebar Tabs */}
-          <div className="md:w-56 w-full md:border-r bg-gray-50">
+          <div className="md:w-56 w-full md:border-r bg-gray-50 md:h-full overflow-hidden">
             <DrawerTabs
               tabs={TABS}
               activeTab={activeTab}
               onTabChange={setActiveTab}
-              className="flex-col md:h-full"
+              className="flex-col md:h-full overflow-hidden"
               vertical={true}
             />
           </div>
           {/* Main Content */}
-          <div className="flex-1 p-6 min-h-[320px] flex flex-col">
+          <div className="flex-1 p-6 flex flex-col h-full overflow-hidden">
             {activeTab === "account" && (
-              <div className="flex flex-col h-full">
+              <div className="flex flex-col h-full overflow-y-auto min-h-0 max-h-full">
                 <div>
                   <DialogTitle className="mb-8">Account Info</DialogTitle>
                   <div className="mb-6">
@@ -549,7 +549,7 @@ export default function AccountSettings({ open, onOpenChange }: AccountSettingsP
               </div>
             )}
               {activeTab === "classes" && (
-                <>
+                <div className="flex flex-col h-full overflow-y-auto min-h-0 max-h-full">
                   <DialogTitle className="mb-2">My Classes</DialogTitle>
                   <div className="flex gap-2 mb-4">
                     <input
@@ -574,7 +574,7 @@ export default function AccountSettings({ open, onOpenChange }: AccountSettingsP
                   ) : getOptionsByType(CLASS_TYPE).length === 0 ? (
                     <div className="text-gray-400 text-sm italic">No classes saved.</div>
                   ) : (
-                    <ul className="divide-y divide-gray-200 border border-gray-200 rounded-lg bg-white">
+                    <ul className="divide-y divide-gray-200 border border-gray-200 rounded-lg bg-white flex-1 overflow-y-auto min-h-0">
                       {getOptionsByType(CLASS_TYPE).map((opt, idx, arr) => (
                         <li key={opt.id} className="flex items-center justify-between px-3 py-2 group">
                           {editingId === opt.id ? (
@@ -642,10 +642,10 @@ export default function AccountSettings({ open, onOpenChange }: AccountSettingsP
                       ))}
                     </ul>
                   )}
-                </>
+                </div>
               )}
               {activeTab === "sourceFunctions" && (
-                <>
+                <div className="flex flex-col h-full overflow-y-auto min-h-0 max-h-full">
                   <DialogTitle className="mb-2">Custom Source Functions</DialogTitle>
                   <div className="flex gap-2 mb-4">
                     <input
@@ -670,7 +670,7 @@ export default function AccountSettings({ open, onOpenChange }: AccountSettingsP
                   ) : getOptionsByType(SOURCE_FUNCTION_TYPE).length === 0 ? (
                     <div className="text-gray-400 text-sm italic">No custom source functions saved.</div>
                   ) : (
-                    <ul className="divide-y divide-gray-200 border border-gray-200 rounded-lg bg-white">
+                    <ul className="divide-y divide-gray-200 border border-gray-200 rounded-lg bg-white flex-1 overflow-y-auto min-h-0">
                       {getOptionsByType(SOURCE_FUNCTION_TYPE).map((opt, idx, arr) => (
                         <li key={opt.id} className="flex items-center justify-between px-3 py-2 group">
                           {editingId === opt.id ? (
@@ -738,10 +738,10 @@ export default function AccountSettings({ open, onOpenChange }: AccountSettingsP
                       ))}
                     </ul>
                   )}
-                </>
+                </div>
               )}
               {activeTab === "sourceCredibilities" && (
-                <>
+                <div className="flex flex-col h-full overflow-y-auto min-h-0 max-h-full">
                   <DialogTitle className="mb-2">Custom Source Credibilities</DialogTitle>
                   <div className="flex gap-2 mb-4">
                     <input
@@ -766,7 +766,7 @@ export default function AccountSettings({ open, onOpenChange }: AccountSettingsP
                   ) : getOptionsByType(SOURCE_CREDIBILITY_TYPE).length === 0 ? (
                     <div className="text-gray-400 text-sm italic">No custom source credibilities saved.</div>
                   ) : (
-                    <ul className="divide-y divide-gray-200 border border-gray-200 rounded-lg bg-white">
+                    <ul className="divide-y divide-gray-200 border border-gray-200 rounded-lg bg-white flex-1 overflow-y-auto min-h-0">
                       {getOptionsByType(SOURCE_CREDIBILITY_TYPE).map((opt, idx, arr) => (
                         <li key={opt.id} className="flex items-center justify-between px-3 py-2 group">
                           {editingId === opt.id ? (
@@ -834,10 +834,10 @@ export default function AccountSettings({ open, onOpenChange }: AccountSettingsP
                       ))}
                     </ul>
                   )}
-                </>
+                </div>
               )}
               {activeTab === "insightTypes" && (
-                <>
+                <div className="flex flex-col h-full overflow-y-auto min-h-0 max-h-full">
                   <DialogTitle className="mb-2">Custom Insight Types</DialogTitle>
                   <div className="flex gap-2 mb-4">
                     <input
@@ -862,7 +862,7 @@ export default function AccountSettings({ open, onOpenChange }: AccountSettingsP
                   ) : getOptionsByType(INSIGHT_TYPE).length === 0 ? (
                     <div className="text-gray-400 text-sm italic">No custom insight types saved.</div>
                   ) : (
-                    <ul className="divide-y divide-gray-200 border border-gray-200 rounded-lg bg-white">
+                    <ul className="divide-y divide-gray-200 border border-gray-200 rounded-lg bg-white flex-1 overflow-y-auto min-h-0">
                       {getOptionsByType(INSIGHT_TYPE).map((opt, idx, arr) => (
                         <li key={opt.id} className="flex items-center justify-between px-3 py-2 group">
                           {editingId === opt.id ? (
@@ -930,7 +930,7 @@ export default function AccountSettings({ open, onOpenChange }: AccountSettingsP
                       ))}
                     </ul>
                   )}
-                </>
+                </div>
               )}
             </div>
           </div>
