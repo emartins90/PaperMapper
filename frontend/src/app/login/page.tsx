@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import AuthForm from "../../components/AuthForm";
+import AuthHeader from "../../components/AuthHeader";
 import { isAuthenticated } from "@/lib/auth";
 
 export default function LoginPage() {
@@ -27,7 +28,8 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center relative">
+      <AuthHeader />
       <AuthForm 
         mode="login"
         onAuth={(token) => {

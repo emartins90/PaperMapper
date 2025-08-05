@@ -236,12 +236,7 @@ export default function AuthForm({ onAuth, mode: initialMode = "login" }: AuthFo
   }
 
   return (
-    <div className="max-w-sm w-full mx-auto mt-20 p-6 bg-white rounded shadow">
-      <div className="text-center mb-6">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">PaperThread</h1>
-        <p className="text-gray-600 text-sm">Weave your research into papers</p>
-      </div>
-      
+    <div className="max-w-sm w-full mx-auto p-6 bg-white rounded shadow">
       <h2 className="text-2xl font-bold mb-4 text-center">
         {mode === "login" ? "Welcome back" : "Get started"}
       </h2>
@@ -331,6 +326,19 @@ export default function AuthForm({ onAuth, mode: initialMode = "login" }: AuthFo
         >
           {loading ? "Loading..." : mode === "login" ? "Log In" : "Sign Up"}
         </Button>
+        
+        {/* Forgot password link - only show on login */}
+        {mode === "login" && (
+          <div className="text-center mt-2">
+            <button
+              type="button"
+              className="text-blue-600 hover:underline text-sm"
+              onClick={() => router.push("/forgot-password")}
+            >
+              Forgot password?
+            </button>
+          </div>
+        )}
       </form>
       <div className="mt-4 text-center">
         {mode === "login" ? (

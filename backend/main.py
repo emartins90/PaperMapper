@@ -1383,9 +1383,11 @@ async def forgot_password(request: ForgotPasswordRequest, db: Session = Depends(
     if not user:
         # Don't reveal if user exists or not
         return {"message": "Password reset code sent"}
+    
     # Generate 6-digit code
     code = f"{random.randint(100000, 999999)}"
     expires_at = datetime.datetime.utcnow() + datetime.timedelta(minutes=10)
+    
     # Invalidate previous codes
     db.query(PasswordResetCode).filter(
         PasswordResetCode.user_id == user.id, 
@@ -1402,7 +1404,8 @@ async def forgot_password(request: ForgotPasswordRequest, db: Session = Depends(
     email_service = MailgunEmailService()
     email_sent = email_service.send_password_reset_email(user.email, code)
     
-    if not email_sent and settings.ENV == "development":
+    # Always print code in development mode
+    if settings.ENV == "development":
         print(f"Password reset code for {user.email}: {code}")
     
     return {"message": "Password reset code sent"}
@@ -1429,6 +1432,21 @@ async def reset_password(request: ResetPasswordRequest, db: Session = Depends(ge
     code_entry.used = True
     db.commit()
     return {"message": "Password reset successfully"}
+
+@app.post("/auth/validate-reset-code")
+async def validate_reset_code(request: ForgotPasswordRequest, db: Session = Depends(get_sync_db)):
+    """Validate a password reset code without resetting the password"""
+    # Find code
+    code_entry = db.query(PasswordResetCode).filter(
+        PasswordResetCode.code == request.email,  # Using email field to pass the code
+        PasswordResetCode.used == False,
+        PasswordResetCode.expires_at > datetime.datetime.utcnow()
+    ).first()
+    
+    if not code_entry:
+        raise HTTPException(status_code=400, detail="Invalid or expired code")
+    
+    return {"message": "Code is valid"}
 
 # --- Tags Endpoint ---
 @app.get("/projects/{project_id}/tags")

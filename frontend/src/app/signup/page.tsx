@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import AuthForm from "../../components/AuthForm";
+import AuthHeader from "../../components/AuthHeader";
 
 export default function SignupPage() {
   const [isLoading, setIsLoading] = useState(true);
@@ -22,7 +23,8 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center relative">
+      <AuthHeader />
       <AuthForm 
         mode="Sign Up"
         onAuth={(token) => {

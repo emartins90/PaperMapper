@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import DrawerTabs from "@/components/ui/DrawerTabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
@@ -189,7 +190,11 @@ export default function AccountSettings({ open, onOpenChange }: AccountSettingsP
         setCodeSent(true);
       } else {
         const data = await res.json();
-        setResetError(data.detail || "Couldn't send code. Please try again.");
+        if (res.status === 429) {
+          setResetError("Too many attempts. Please wait 5 minutes before trying again.");
+        } else {
+          setResetError(data.detail || "Couldn't send code. Please try again.");
+        }
       }
     } catch {
       setResetError("Couldn't send code. Please try again.");
@@ -202,14 +207,53 @@ export default function AccountSettings({ open, onOpenChange }: AccountSettingsP
   const handleResendCode = handleStartReset;
 
   // Move to password step after code entry
-  const handleCodeNext = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleCodeNext = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setResetError("");
-    if (!/^[0-9]{6}$/.test(resetCode)) {
+    setResetLoading(true);
+    
+    if (!resetCode || resetCode.trim() === "") {
       setResetError("Please enter the 6-digit code from your email.");
+      setResetLoading(false);
       return;
     }
-    setResetStep("password");
+    
+    if (!/^\d+$/.test(resetCode)) {
+      setResetError("Please enter only numbers in the code field.");
+      setResetLoading(false);
+      return;
+    }
+    
+    if (!/^[0-9]{6}$/.test(resetCode)) {
+      setResetError("Please enter the 6-digit code from your email.");
+      setResetLoading(false);
+      return;
+    }
+    
+    // Validate code against backend
+    try {
+      const res = await fetch(`${API_URL}/auth/validate-reset-code`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: resetCode }), // Using email field to pass the code
+      });
+      
+      if (res.ok) {
+        // Code is valid, proceed to password step
+        setResetStep("password");
+      } else {
+        const data = await res.json();
+        if (data.detail === "Invalid or expired code") {
+          setResetError("That code is incorrect or expired. Please try again or request a new code.");
+        } else {
+          setResetError("Invalid code. Please check and try again.");
+        }
+      }
+    } catch (error) {
+      setResetError("Failed to validate code. Please try again.");
+    } finally {
+      setResetLoading(false);
+    }
   };
 
   // Set new password
@@ -253,6 +297,8 @@ export default function AccountSettings({ open, onOpenChange }: AccountSettingsP
           setResetCode("");
           setResetNewPassword("");
           setResetConfirmPassword("");
+        } else if (res.status === 400) {
+          setResetError("Invalid code or password. Please check your information and try again.");
         } else {
           setResetError(data.detail || "Failed to reset password. Please try again.");
         }
@@ -276,20 +322,12 @@ export default function AccountSettings({ open, onOpenChange }: AccountSettingsP
   const handleDeleteAccount = async () => {
     setDeleteLoading(true);
     try {
-      console.log("AccountSettings - Starting account deletion");
-      console.log("AccountSettings - API_URL:", API_URL);
-      console.log("AccountSettings - document.cookie:", document.cookie);
-      
       const res = await fetch(`${API_URL}/users/me/delete`, {
         method: "DELETE",
         credentials: "include", // Use cookie-based authentication
       });
       
-      console.log("AccountSettings - DELETE response status:", res.status);
-      console.log("AccountSettings - DELETE response headers:", res.headers);
-      
       if (res.ok) {
-        console.log("AccountSettings - Account deletion successful");
         localStorage.removeItem("token");
         localStorage.removeItem("email");
         onOpenChange(false);
@@ -297,11 +335,9 @@ export default function AccountSettings({ open, onOpenChange }: AccountSettingsP
         toast.success("Your account has been deleted successfully.");
       } else {
         const data = await res.json();
-        console.log("AccountSettings - DELETE error response:", data);
         alert(data.detail || "Failed to delete account. Please try again.");
       }
     } catch (error) {
-      console.log("AccountSettings - DELETE request error:", error);
       alert("Failed to delete account. Please try again.");
     } finally {
       setDeleteLoading(false);
@@ -353,6 +389,13 @@ export default function AccountSettings({ open, onOpenChange }: AccountSettingsP
                       </Button>
                     </div>
                     
+                    {/* Error alert for reset password */}
+                    {resetError && (
+                      <Alert variant="destructive">
+                        <AlertDescription>{resetError}</AlertDescription>
+                      </Alert>
+                    )}
+                    
                     <div className="pt-6 border-t border-gray-200 mb-6">
                       {/* Divider moved up */}
                     </div>
@@ -371,8 +414,16 @@ export default function AccountSettings({ open, onOpenChange }: AccountSettingsP
                 )}
                 {resetStep === "code" && (
                   <div className="space-y-4 mt-4 max-w-sm">
-                    <div className="text-sm mb-2">We've sent a 6-digit code to your email. Enter it below to continue.</div>
-                    {resetError && <div className="p-2 bg-red-50 border border-red-200 rounded text-red-700 text-sm">{resetError}</div>}
+                    <Alert className="mb-4">
+                      <AlertDescription>
+                        We've sent a 6-digit code to your email. Enter it below to continue.
+                      </AlertDescription>
+                    </Alert>
+                    {resetError && (
+                      <Alert variant="destructive">
+                        <AlertDescription>{resetError}</AlertDescription>
+                      </Alert>
+                    )}
                     <form onSubmit={handleCodeNext} className="space-y-4">
                       <div className="space-y-2">
                         <Label htmlFor="resetCode">6-digit code</Label>
@@ -419,7 +470,11 @@ export default function AccountSettings({ open, onOpenChange }: AccountSettingsP
                 {resetStep === "password" && (
                   <form onSubmit={handleSetNewPassword} className="space-y-4 mt-4 max-w-sm">
                     <div className="text-sm mb-2">Enter your new password below.</div>
-                    {resetError && <div className="p-2 bg-red-50 border border-red-200 rounded text-red-700 text-sm">{resetError}</div>}
+                    {resetError && (
+                      <Alert variant="destructive">
+                        <AlertDescription>{resetError}</AlertDescription>
+                      </Alert>
+                    )}
                     <div className="space-y-2">
                       <Label htmlFor="resetNewPassword">New Password</Label>
                       <Input
