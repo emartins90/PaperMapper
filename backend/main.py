@@ -1759,6 +1759,12 @@ async def delete_user(current_user: models.User = Depends(get_current_user), db:
         for project in projects:
             db.delete(project)
         
+        # Delete password reset codes for this user
+        print(f"[DELETE] Deleting password reset codes for user")
+        password_codes = db.query(models.PasswordResetCode).filter(models.PasswordResetCode.user_id == user_to_delete.id).all()
+        for code in password_codes:
+            db.delete(code)
+        
         # Delete the user
         print(f"[DELETE] Deleting user {user_to_delete.id}")
         db.delete(user_to_delete)

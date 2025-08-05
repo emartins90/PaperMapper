@@ -15,6 +15,7 @@ class User(Base, SQLAlchemyBaseUserTable[int]):
     is_verified = Column(Boolean, default=False, nullable=False)
     projects = relationship("Project", back_populates="user")
     custom_options = relationship("UserCustomOption", back_populates="user", cascade="all, delete-orphan")
+    password_reset_codes = relationship("PasswordResetCode", cascade="all, delete-orphan")
 
 class Project(Base):
     __tablename__ = "projects"
