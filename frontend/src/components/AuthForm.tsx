@@ -173,8 +173,9 @@ export default function AuthForm({ onAuth, mode: initialMode = "login" }: AuthFo
         if (!res.ok) {
           if (res.status === 400) {
             const errorData = await res.json();
-            if (errorData.detail && errorData.detail.includes("already registered")) {
-              throw new Error("An account with this email already exists. Please try logging in instead.");
+            console.log("Registration error details:", errorData);
+            if (errorData.detail && errorData.detail.includes("REGISTER_USER_ALREADY_EXISTS")) {
+              throw new Error("An account with this email already exists. Want to log in?");
             } else {
               throw new Error("Please check your information and try again.");
             }
@@ -245,10 +246,24 @@ export default function AuthForm({ onAuth, mode: initialMode = "login" }: AuthFo
         {mode === "login" ? "Welcome back" : "Get started"}
       </h2>
       
-      {/* Error Alert for Login */}
-      {mode === "login" && error && (
+      {/* Error Alert for Login and Sign Up */}
+      {error && (
         <Alert variant="destructive" className="mb-4">
-          <AlertDescription>{error}</AlertDescription>
+          <AlertDescription>
+            {error.includes("Want to log in?") ? (
+              <>
+                An account with this email already exists.{" "}
+                <button
+                  className="underline hover:no-underline"
+                  onClick={() => router.push("/login")}
+                >
+                  Want to log in?
+                </button>
+              </>
+            ) : (
+              error
+            )}
+          </AlertDescription>
         </Alert>
       )}
       
