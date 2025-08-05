@@ -430,16 +430,16 @@ export default function CardListPanel({ nodes, onClose, onCardClick, selectedCar
                     <div 
                       key={card.id} 
                       className={`relative cursor-pointer hover:shadow-lg transition-shadow rounded-xl w-full ${
-                        isSelected ? `ring-2  ${getRingColor(card.type)}` : ''
+                        isSelected ? `ring-1  ${getRingColor(card.type)}` : ''
                       }`}
                       onClick={() => onCardClick(card.id, card.type)}
                     >
                       {/* Render the appropriate card component */}
-                      {card.type === 'source' && <SourceMaterialCard {...cardProps} showHandles={false} width="w-full" />}
-                      {card.type === 'question' && <QuestionCard {...cardProps} showHandles={false} width="w-full" />}
-                      {card.type === 'insight' && <InsightCard {...cardProps} showHandles={false} width="w-full" />}
-                      {card.type === 'thought' && <ThoughtCard {...cardProps} showHandles={false} width="w-full" />}
-                      {card.type === 'claim' && <ClaimCard {...cardProps} showHandles={false} width="w-full" />}
+                      {card.type === 'source' && <SourceMaterialCard {...cardProps} showHandles={false} width="w-full" showArrow={false} showShadow={false} />}
+                      {card.type === 'question' && <QuestionCard {...cardProps} showHandles={false} width="w-full" showArrow={false} showShadow={false} />}
+                      {card.type === 'insight' && <InsightCard {...cardProps} showHandles={false} width="w-full" showArrow={false} showShadow={false} />}
+                      {card.type === 'thought' && <ThoughtCard {...cardProps} showHandles={false} width="w-full" showArrow={false} showShadow={false} />}
+                      {card.type === 'claim' && <ClaimCard {...cardProps} showHandles={false} width="w-full" showArrow={false} showShadow={false} />}
                     </div>
                   );
                 })}

@@ -12,9 +12,10 @@ interface LinkedCardsTabProps {
   edges: any[];
   onEdgesChange?: (changes: any[]) => void;
   onClose?: () => void;
+  panelJustOpened?: boolean; // Add panelJustOpened prop
 }
 
-export default function LinkedCardsTab({ openCard, nodes, edges, onEdgesChange, onClose }: LinkedCardsTabProps) {
+export default function LinkedCardsTab({ openCard, nodes, edges, onEdgesChange, onClose, panelJustOpened }: LinkedCardsTabProps) {
   return (
     <div className="space-y-4">
       <div>
@@ -109,36 +110,39 @@ export default function LinkedCardsTab({ openCard, nodes, edges, onEdgesChange, 
                                 });
                                 window.dispatchEvent(event);
                               }, 100);
-                            }
+                            },
+                            cardId: card.id, // Add cardId to identify this card
+                            panelJustOpened: panelJustOpened, // Add panelJustOpened to prevent hover flicker
+                            // Add unlink button as part of card data
+                            actionButton: (
+                              <Button
+                                onClick={() => {
+                                  if (onEdgesChange && edge) {
+                                    onEdgesChange([{
+                                      type: 'remove',
+                                      id: edge.id
+                                    }]);
+                                  }
+                                }}
+                                variant="ghost"
+                                size="sm"
+                                className="text-red-500 hover:text-red-700 hover:bg-red-50 px-2 py-1 h-6 text-xs"
+                                title="Remove connection"
+                              >
+                                Unlink
+                              </Button>
+                            )
                           }
                         };
                         
                         return (
-                          <div key={card.id} className="relative">
-                            {/* Remove connection button */}
-                            <Button
-                              onClick={() => {
-                                if (onEdgesChange && edge) {
-                                  onEdgesChange([{
-                                    type: 'remove',
-                                    id: edge.id
-                                  }]);
-                                }
-                              }}
-                              variant="ghost"
-                              size="sm"
-                              className="absolute bottom-2 right-2 z-10 text-red-500 hover:text-red-700 hover:bg-red-50"
-                              title="Remove connection"
-                            >
-                              Unlink
-                            </Button>
-                            
+                          <div key={card.id}>
                             {/* Render the appropriate card component */}
-                            {card.type === 'source' && <SourceMaterialCard {...cardProps} showHandles={false} width="w-full" />}
-                            {card.type === 'question' && <QuestionCard {...cardProps} showHandles={false} width="w-full" />}
-                            {card.type === 'insight' && <InsightCard {...cardProps} showHandles={false} width="w-full" />}
-                            {card.type === 'thought' && <ThoughtCard {...cardProps} showHandles={false} width="w-full" />}
-                            {card.type === 'claim' && <ClaimCard {...cardProps} showHandles={false} width="w-full" />}
+                            {card.type === 'source' && <SourceMaterialCard {...cardProps} showHandles={false} width="w-full" openCard={openCard} showShadow={false} />}
+                            {card.type === 'question' && <QuestionCard {...cardProps} showHandles={false} width="w-full" openCard={openCard} showShadow={false} />}
+                            {card.type === 'insight' && <InsightCard {...cardProps} showHandles={false} width="w-full" openCard={openCard} showShadow={false} />}
+                            {card.type === 'thought' && <ThoughtCard {...cardProps} showHandles={false} width="w-full" openCard={openCard} showShadow={false} />}
+                            {card.type === 'claim' && <ClaimCard {...cardProps} showHandles={false} width="w-full" openCard={openCard} showShadow={false} />}
                           </div>
                         );
                       })}

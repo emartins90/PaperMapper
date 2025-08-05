@@ -20,9 +20,15 @@ type QuestionCardProps = {
     onFileClick?: (fileUrl: string, fileType: 'image' | 'pdf' | 'other' | 'audio') => void;
     isDeleting?: boolean;
     isSelected?: boolean;
+    cardId?: string; // Add cardId to identify this card
+    panelJustOpened?: boolean; // Add panelJustOpened to prevent hover flicker
+    actionButton?: React.ReactNode; // Add actionButton prop
   };
   showHandles?: boolean;
   width?: string;
+  openCard?: { id: string; type: string } | null; // Add openCard prop
+  showArrow?: boolean; // Add showArrow prop to control arrow visibility
+  showShadow?: boolean; // Add showShadow prop to control card shadow and hover effects
 };
 
 const handleStyle = {
@@ -41,7 +47,7 @@ const grayHandleStyle = {
   borderRadius: '50%',
 };
 
-export default function QuestionCard({ data, showHandles = true, width = 'w-96' }: QuestionCardProps) {
+export default function QuestionCard({ data, showHandles = true, width = 'w-96', openCard, showArrow = true, showShadow = true }: QuestionCardProps) {
   // Ensure tags is always an array
   const tags = Array.isArray(data.tags) ? data.tags : (data.tags ? [data.tags] : []);
 
@@ -101,10 +107,11 @@ export default function QuestionCard({ data, showHandles = true, width = 'w-96' 
 
   return (
     <div 
-      className={`rounded-xl border-2 bg-white p-4 shadow-md ${width} relative transition-all duration-200 cursor-pointer
+      className={`rounded-xl border-2 bg-white p-4 ${width} relative transition-all duration-200 cursor-pointer
+        ${showShadow ? 'shadow-md' : ''}
         ${data.isSelected 
-          ? 'border-question-400 shadow-lg shadow-question-200/50' 
-          : `${cardBorderClass} hover:border-question-300 hover:shadow-lg`
+          ? `border-question-400 ${showShadow ? 'shadow-lg shadow-question-200/50' : ''}` 
+          : `${cardBorderClass} hover:border-question-300 ${showShadow ? 'hover:shadow-lg' : ''}`
         }`}
       onClick={data.onSelect}
     >
@@ -139,9 +146,15 @@ export default function QuestionCard({ data, showHandles = true, width = 'w-96' 
             <span className="font-bold">Question</span>{data.category ? <span className="font-normal"> : {data.category}</span> : ''}
           </div>
         </div>
-        <button onClick={data.onOpen} aria-label="Open card" className="flex-shrink-0 ml-2">
-          <span className={`text-xl ${arrowColorClass}`}>↗</span>
-        </button>
+        {showArrow && (
+          <button onClick={data.onOpen} aria-label="Open card" className="flex-shrink-0 ml-2 cursor-pointer">
+            <span className={`text-xl transition-all duration-200 inline-block ${
+              openCard && data.cardId && openCard.id === data.cardId 
+                ? `text-question-600 rotate-45 ${data.panelJustOpened ? '' : 'hover:text-question-400 hover:rotate-0'}` 
+                : `${arrowColorClass} ${data.panelJustOpened ? '' : 'hover:text-question-600 hover:rotate-45'}`
+            }`}>↗</span>
+          </button>
+        )}
       </div>
       {/* Only show tags section if there are tags and not '(skipped)' */}
       {tags.length > 0 && tags[0] !== '(skipped)' && (
@@ -165,7 +178,14 @@ export default function QuestionCard({ data, showHandles = true, width = 'w-96' 
             <Tag color={getStatusColor(data.status)}>{capitalizeStatus(data.status)}</Tag>
           </div>
         )}
-
       </div>
+      
+      {/* Action button */}
+      {data.actionButton && (
+        <div className="mt-1 flex justify-end">
+          {data.actionButton}
+        </div>
+      )}
     </div>
-  );}
+  );
+}

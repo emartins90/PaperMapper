@@ -77,11 +77,11 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 // Define nodeTypes outside the component
 const nodeTypes = {
-  question: QuestionCard,
-  source: SourceMaterialCard,
-  insight: InsightCard,
-  thought: ThoughtCard,
-  claim: ClaimCard,
+  question: (props: any) => <QuestionCard {...props} openCard={props.data.openCard} />,
+  source: (props: any) => <SourceMaterialCard {...props} openCard={props.data.openCard} />,
+  insight: (props: any) => <InsightCard {...props} openCard={props.data.openCard} />,
+  thought: (props: any) => <ThoughtCard {...props} openCard={props.data.openCard} />,
+  claim: (props: any) => <ClaimCard {...props} openCard={props.data.openCard} />,
   ghost: GhostNode,
 };
 
@@ -108,6 +108,8 @@ export default function CanvasInner({ projectId }: CanvasProps) {
 
   // State for open card
   const [openCard, setOpenCard] = useState<{ id: string; type: string } | null>(null);
+  // State to track if panel just opened (to prevent hover flicker)
+  const [panelJustOpened, setPanelJustOpened] = useState(false);
   // State for drawer tabs (per card type)
   const [sourceTab, setSourceTab] = useState("info");
   const [questionTab, setQuestionTab] = useState("info");
@@ -489,22 +491,7 @@ export default function CanvasInner({ projectId }: CanvasProps) {
     setSelectedCardId(cardId);
   }, []);
 
-  // Helper to inject onOpen and onFileClick into node data
-  const nodesWithOpen = useMemo(() =>
-    nodes.map((node) => ({
-      ...node,
-      data: {
-        ...node.data,
-        onOpen: () => handleOpenCard(node.id, node.type || ''),
-        onFileClick: handleFileClick,
-        onSelect: () => handleCardSelect(node.id), // Add selection handler
-        cardType: node.type || 'source', // Add cardType to data for FileListDisplay
-        isDeleting: deletingCards.has(node.id), // Add deletion state
-        isSelected: selectedCardId === node.id, // Add selected state
-      },
-    })),
-    [nodes, handleOpenCard, handleFileClick, handleCardSelect, deletingCards, selectedCardId]
-  );
+
 
   // Mouse move handler for ghost
   const onPaneMouseMove = useCallback((evt: React.MouseEvent) => {
@@ -1970,7 +1957,40 @@ export default function CanvasInner({ projectId }: CanvasProps) {
         setOpenCard(null);
       }
     }
+    // Set flag to prevent hover flicker when closing
+    setPanelJustOpened(true);
+    setTimeout(() => setPanelJustOpened(false), 1000); // Clear flag after 500ms
   };
+
+  // Helper to inject onOpen and onFileClick into node data
+  const nodesWithOpen = useMemo(() =>
+    nodes.map((node) => ({
+      ...node,
+      data: {
+        ...node.data,
+        onOpen: () => {
+          // Toggle the side panel - open if closed, close if open
+          if (openCard?.id === node.id) {
+            handleClosePanel(); // Close if this card is already open
+          } else {
+            handleOpenCard(node.id, node.type || ''); // Open if different card or closed
+            // Set flag to prevent hover flicker
+            setPanelJustOpened(true);
+            setTimeout(() => setPanelJustOpened(false), 1000); // Clear flag after 500ms
+          }
+        },
+        onFileClick: handleFileClick,
+        onSelect: () => handleCardSelect(node.id), // Add selection handler
+        cardType: node.type || 'source', // Add cardType to data for FileListDisplay
+        isDeleting: deletingCards.has(node.id), // Add deletion state
+        isSelected: selectedCardId === node.id, // Add selected state
+        cardId: node.id, // Add cardId to identify this card
+        openCard: openCard, // Add openCard state to data
+        panelJustOpened: panelJustOpened, // Add panelJustOpened state to data
+      },
+    })),
+    [nodes, handleOpenCard, handleFileClick, handleCardSelect, deletingCards, selectedCardId, openCard, handleClosePanel, panelJustOpened]
+  );
 
   // Update node data when side panel saves changes
   const handleUpdateNodeData = (cardId: string, newData: any) => {

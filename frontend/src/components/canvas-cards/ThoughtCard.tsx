@@ -16,9 +16,15 @@ type ThoughtCardProps = {
     onFileClick?: (fileUrl: string, fileType: 'image' | 'pdf' | 'other' | 'audio') => void;
     isDeleting?: boolean;
     isSelected?: boolean;
+    cardId?: string; // Add cardId to identify this card
+    panelJustOpened?: boolean; // Add panelJustOpened to prevent hover flicker
+    actionButton?: React.ReactNode; // Add actionButton prop
   };
   showHandles?: boolean;
   width?: string;
+  openCard?: { id: string; type: string } | null; // Add openCard prop
+  showArrow?: boolean; // Add showArrow prop to control arrow visibility
+  showShadow?: boolean; // Add showShadow prop to control card shadow and hover effects
 };
 
 const handleStyle = {
@@ -29,17 +35,18 @@ const handleStyle = {
   borderRadius: '50%',
 };
 
-export default function ThoughtCard({ data, showHandles = true, width = 'w-96' }: ThoughtCardProps) {
+export default function ThoughtCard({ data, showHandles = true, width = 'w-96', openCard, showArrow = true, showShadow = true }: ThoughtCardProps) {
   // Ensure tags is always an array
   const tags = Array.isArray(data.tags) ? data.tags : (data.tags ? [data.tags] : []);
 
   const onFileClick = data.onFileClick;
   return (
     <div 
-      className={`rounded-xl border-2 bg-white p-4 shadow-md ${width} relative transition-all duration-200 cursor-pointer
+      className={`rounded-xl border-2 bg-white p-4 ${width} relative transition-all duration-200 cursor-pointer
+        ${showShadow ? 'shadow-md' : ''}
         ${data.isSelected 
-          ? 'border-thought-400 shadow-lg shadow-thought-200/50' 
-          : 'border-thought-300 hover:border-thought-400 hover:shadow-lg'
+          ? `border-thought-400 ${showShadow ? 'shadow-lg shadow-thought-200/50' : ''}` 
+          : `border-thought-300 hover:border-thought-400 ${showShadow ? 'hover:shadow-lg' : ''}`
         }`}
       onClick={data.onSelect}
     >
@@ -67,9 +74,15 @@ export default function ThoughtCard({ data, showHandles = true, width = 'w-96' }
           <LuMessageCircle className="text-thought-400" size={22} />
           Thought
         </div>
-        <button onClick={data.onOpen} aria-label="Open card">
-          <span className="text-thought-400 text-xl">↗</span>
-        </button>
+        {showArrow && (
+          <button onClick={data.onOpen} aria-label="Open card" className="cursor-pointer">
+            <span className={`text-xl transition-all duration-200 inline-block ${
+              openCard && data.cardId && openCard.id === data.cardId 
+                ? `text-thought-600 rotate-45 ${data.panelJustOpened ? '' : 'hover:text-thought-400 hover:rotate-0'}` 
+                : `text-thought-400 ${data.panelJustOpened ? '' : 'hover:text-thought-600 hover:rotate-45'}`
+            }`}>↗</span>
+          </button>
+        )}
       </div>
       {/* Only show tags section if there are tags and not '(skipped)' */}
       {tags.length > 0 && tags[0] !== '(skipped)' && (
@@ -84,6 +97,13 @@ export default function ThoughtCard({ data, showHandles = true, width = 'w-96' }
       {/* Render uploaded files (images as thumbnails, others as file names) */}
       {data.files && data.files.length > 0 && (
         <FileListDisplay files={data.files} fileEntries={data.fileEntries} onFileClick={data.onFileClick} showFilesLabel={true} cardType="thought" />
+      )}
+      
+      {/* Action button */}
+      {data.actionButton && (
+        <div className="mt-1 flex justify-end">
+          {data.actionButton}
+        </div>
       )}
     </div>
   );

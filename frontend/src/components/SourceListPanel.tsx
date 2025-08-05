@@ -1,13 +1,12 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
-import { LuX, LuFilter, LuPencil, LuTrash2, LuExternalLink } from "react-icons/lu";
+import { LuX, LuListFilter, LuPencil, LuTrash2, LuExternalLink } from "react-icons/lu";
 import { Popover, PopoverTrigger, PopoverContent } from "./ui/popover";
 import { ToggleGroup, ToggleGroupItem } from "./ui/toggle-group";
 import { Badge } from "./ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "./ui/dialog";
 import { Textarea } from "./ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Label } from "./ui/label";
 import { Combobox, useCustomOptions } from "./ui/combobox";
 import SourceMaterialCard from "./canvas-cards/SourceMaterialCard";
@@ -626,7 +625,7 @@ export default function SourceListPanel({ projectId, onClose, onSourceCardClick,
           <Popover>
             <PopoverTrigger asChild>
               <Button variant="outline" size="icon" className="relative" aria-label="Filter by tags and credibility">
-                <LuFilter size={20} />
+                <LuListFilter size={20} />
                 {activeFilterCount > 0 && (
                   <Badge className="absolute -top-2 -right-2 px-1.5 py-0.5 text-xs rounded-full" variant="default">
                     {activeFilterCount}

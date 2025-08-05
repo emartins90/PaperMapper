@@ -376,7 +376,7 @@ export default function InsightCardContent({
           )}
         </div>
       ) : insightTab === "linked" ? (
-        <LinkedCardsTab openCard={openCard} nodes={nodes} edges={edges} onEdgesChange={onEdgesChange} onClose={onClose} />
+        <LinkedCardsTab openCard={openCard} nodes={nodes} edges={edges} onEdgesChange={onEdgesChange} onClose={onClose} panelJustOpened={false} />
       ) : null}
     </div>
   );

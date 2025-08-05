@@ -473,7 +473,7 @@ export default function QuestionCardContent({
           {isSaving && <div className="text-xs text-blue-500 mt-2">Saving...</div>}
         </div>
       ) : questionTab === "linked" ? (
-        <LinkedCardsTab openCard={openCard} nodes={nodes} edges={edges} onEdgesChange={onEdgesChange} onClose={onClose} />
+        <LinkedCardsTab openCard={openCard} nodes={nodes} edges={edges} onEdgesChange={onEdgesChange} onClose={onClose} panelJustOpened={false} />
       ) : null}
     </div>
   );
