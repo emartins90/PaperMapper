@@ -82,7 +82,7 @@ export default function ClaimCard({ data, showHandles = true, width = 'w-96' }: 
           ))}
         </div>
       )}
-      <div className="text-black mb-4">{data.claim}</div>
+      <div className="text-black mb-4 break-words" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>{data.claim}</div>
       
       {/* Render uploaded files (images as thumbnails, others as file names) */}
       {data.files && data.files.length > 0 && (

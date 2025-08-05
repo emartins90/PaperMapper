@@ -81,7 +81,7 @@ export default function InsightCard({ data, showHandles = true, width = 'w-96' }
           ))}
         </div>
       )}
-      <div className="text-black mb-4">{data.insight}</div>
+      <div className="text-black mb-4 break-words" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>{data.insight}</div>
       
       {/* Render uploaded files (images as thumbnails, others as file names) */}
       {data.files && data.files.length > 0 && (

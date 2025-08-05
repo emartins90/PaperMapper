@@ -18,6 +18,7 @@ import { Check, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Spinner } from "@/components/ui/spinner";
+import { TextWithLinks } from "@/components/ui/text-with-links";
 
 interface Citation {
   id: number;
@@ -1359,12 +1360,14 @@ export default function SourceCardContent({
               {/* Show selected citation or citation input fields */}
               {selectedCitation ? (
                 <div className="space-y-2">
-                  <div className="flex items-start justify-between p-3 bg-gray-50 rounded-lg border">
+                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border">
                     <div className="flex-1 min-w-0 pr-3">
                       {selectedCitation.credibility && (
                         <p className="text-sm font-medium text-foreground mb-1">{selectedCitation.credibility}</p>
                       )}
-                      <p className="text-sm text-gray-900 break-words">{selectedCitation.text}</p>
+                      <div className="text-sm text-gray-900 break-words">
+                  <TextWithLinks text={selectedCitation.text} />
+                </div>
                     </div>
                     <div className="flex gap-1 flex-shrink-0">
                       <Button
@@ -1419,7 +1422,9 @@ export default function SourceCardContent({
                                   onSelect={() => handleCitationSelect(citation)}
                                 >
                                   <div className="flex-1">
-                                    <p className="text-sm font-medium">{citation.text}</p>
+                                    <div className="text-sm font-medium break-words" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>
+                  <TextWithLinks text={citation.text} disableLinks={true} />
+                </div>
                                     {citation.credibility && (
                                       <p className="text-xs text-gray-600">Credibility: {citation.credibility}</p>
                                     )}
@@ -1448,15 +1453,17 @@ export default function SourceCardContent({
                   {/* Citation input fields - only show for unsaved cards */}
                   {isUnsaved && (
                     <div className="space-y-3">
-                      <Textarea 
-                        id="source-citation"
-                        placeholder="Author, Title, Publication, Date, URL..."
-                        rows={3}
-                        value={sourceCitation}
-                        onChange={handleSourceCitationChange}
-                        onBlur={handleSourceCitationBlur}
-                      />
-                      <p className="text-xs text-gray-500">Include all available citation details. We'll help format this properly later.</p>
+                      <div>
+                        <Textarea 
+                          id="source-citation"
+                          placeholder="Author, Title, Publication, Date, URL, DOI..."
+                          rows={3}
+                          value={sourceCitation}
+                          onChange={handleSourceCitationChange}
+                          onBlur={handleSourceCitationBlur}
+                        />
+                        <p className="text-xs text-gray-500 mt-1">Include all available citation details.</p>
+                      </div>
               
                       <div>
                         <Label htmlFor="source-credibility" className="block text-sm font-medium text-gray-700 mb-1">Source Credibility</Label>
@@ -1556,6 +1563,8 @@ export default function SourceCardContent({
                 rows={3}
                 value={newCitationText}
                 onChange={(e) => setNewCitationText(e.target.value)}
+                className="resize-none"
+                style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}
               />
             </div>
             <div>
@@ -1640,7 +1649,8 @@ export default function SourceCardContent({
                 value={editText}
                 onChange={(e) => setEditText(e.target.value)}
                 rows={3}
-                className="w-full"
+                className="w-full resize-none"
+                style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}
               />
             </div>
 

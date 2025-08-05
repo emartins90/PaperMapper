@@ -9,6 +9,7 @@ import { CardType } from "../../components/useFileUploadHandler";
 import FileChip from "../canvas-add-files/FileChip";
 import { useCardSave } from "../shared/useCardSave";
 import { Spinner } from "../ui/spinner";
+import { TextWithLinks } from "../ui/text-with-links";
 
 interface Citation {
   id: number;
@@ -1003,7 +1004,9 @@ const ChatExperienceBase: React.FC<ChatExperienceBaseProps> = ({
                         {selectedCitation ? (
                           <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border">
                             <div className="flex-1">
-                              <p className="text-sm font-medium text-gray-900">{selectedCitation.text}</p>
+                              <div className="text-sm font-medium text-gray-900">
+                  <TextWithLinks text={selectedCitation.text} />
+                </div>
                               {selectedCitation.credibility && (
                                 <p className="text-xs text-gray-600 mt-1">Credibility: {selectedCitation.credibility}</p>
                               )}
@@ -1042,8 +1045,10 @@ const ChatExperienceBase: React.FC<ChatExperienceBaseProps> = ({
                                           onSelect={() => handleCitationSelect(citation)}
                                           className="py-3"
                                         >
-                                          <div className="flex-1">
-                                            <p className="text-sm font-medium">{citation.text}</p>
+                                                                                      <div className="flex-1">
+                                              <div className="text-sm font-medium break-words" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>
+                  <TextWithLinks text={citation.text} disableLinks={true} />
+                </div>
                                             {citation.credibility && (
                                               <p className="text-xs text-gray-600">Credibility: {citation.credibility}</p>
                                             )}
@@ -1068,7 +1073,10 @@ const ChatExperienceBase: React.FC<ChatExperienceBaseProps> = ({
                     <textarea
                       value={chatInputs[currentPrompt.id] || ""}
                       onChange={e => setChatInputs(prev => ({ ...prev, [currentPrompt.id]: e.target.value }))}
-                      placeholder={`Enter your ${promptTitles[currentPrompt.id] || currentPrompt.id.toLowerCase()}...`}
+                      placeholder={currentPrompt.id === 'sourceCitation' 
+                        ? "Enter citation text..."
+                        : `Enter your ${promptTitles[currentPrompt.id] || currentPrompt.id.toLowerCase()}...`
+                      }
                       className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 min-h-[80px] resize-y"
                     />
                         )}

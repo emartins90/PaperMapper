@@ -151,7 +151,7 @@ export default function QuestionCard({ data, showHandles = true, width = 'w-96' 
           ))}
         </div>
       )}
-      <div className="text-black mb-4">{data.question}</div>
+      <div className="text-black mb-4 break-words" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>{data.question}</div>
       
       {/* Render uploaded files (images as thumbnails, others as file names) */}
       {data.files && data.files.length > 0 && (

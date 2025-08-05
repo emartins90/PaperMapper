@@ -107,11 +107,11 @@ export default function SourceMaterialCard({ data, showHandles = true, width = '
       
       {/* Only show summary if not empty or '(skipped)' */}
       {data.summary && data.summary.trim() !== '' && data.summary !== '(skipped)' && (
-        <div className="text-black mb-4">{data.summary}</div>
+        <div className="text-black mb-4 break-words" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>{data.summary}</div>
       )}
       {/* Only show text if not empty or '(skipped)' and no summary */}
       {!data.summary && data.text && data.text.trim() !== '' && data.text !== '(skipped)' && (
-        <div className="text-black mb-4">{data.text}</div>
+        <div className="text-black mb-4 break-words" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>{data.text}</div>
       )}
 
       {/* Render uploaded files (images as thumbnails, others as file names) */}
@@ -127,7 +127,7 @@ export default function SourceMaterialCard({ data, showHandles = true, width = '
       )}
       
       <div className="mt-2 text-xs text-gray-700">
-        <span className="font-bold">Source:</span> {(data.source && data.source.trim() !== '' && data.source !== '(skipped)') ? data.source : <span className="text-gray-500">No source provided</span>}
+        <span className="font-bold">Source:</span> <span className="break-all" style={{ wordBreak: 'break-all', overflowWrap: 'break-word' }}>{(data.source && data.source.trim() !== '' && data.source !== '(skipped)') ? data.source : <span className="text-gray-500">No source provided</span>}</span>
         {data.credibility && data.credibility.trim() !== '' && data.credibility !== '(skipped)' && (
           <>
             <br />

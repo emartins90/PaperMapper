@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Label } from "./ui/label";
 import { Combobox, useCustomOptions } from "./ui/combobox";
 import SourceMaterialCard from "./canvas-cards/SourceMaterialCard";
+import { TextWithLinks } from "./ui/text-with-links";
 
 interface Citation {
   id: number;
@@ -773,7 +774,9 @@ export default function SourceListPanel({ projectId, onClose, onSourceCardClick,
                   {citation.credibility && (
                     <p className="text-sm font-medium text-foreground mb-2">{citation.credibility}</p>
                     )}
-                  <p className="text-sm text-gray-900 mb-2">{citation.text}</p>
+                  <div className="text-sm text-gray-900 mb-2">
+                    <TextWithLinks text={citation.text} />
+                  </div>
                  
                 </div>
 
@@ -923,10 +926,12 @@ export default function SourceListPanel({ projectId, onClose, onSourceCardClick,
               <Label htmlFor="new-citation-text" className="block text-sm font-medium text-gray-700 mb-1">Citation Text</Label>
               <Textarea
                 id="new-citation-text"
-                placeholder="Author, Title, Publication, Date, URL..."
+                placeholder="Author, Title, Publication, Date, URL, DOI..."
                 rows={3}
                 value={newCitationText}
                 onChange={(e) => setNewCitationText(e.target.value)}
+                className="resize-none"
+                style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}
               />
             </div>
             <div>
@@ -1012,7 +1017,9 @@ export default function SourceListPanel({ projectId, onClose, onSourceCardClick,
                 value={editText}
                 onChange={(e) => setEditText(e.target.value)}
                 rows={3}
-                className="w-full"
+                className="w-full resize-none"
+                placeholder="Author, Title, Publication, Date, URL, DOI..."
+                style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}
               />
             </div>
 
