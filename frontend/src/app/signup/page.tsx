@@ -24,7 +24,7 @@ export default function SignupPage() {
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center">
       <AuthForm 
-        mode="register"
+        mode="Sign Up"
         onAuth={(token) => {
           localStorage.setItem("token", token);
           router.replace("/projects");

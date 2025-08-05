@@ -1,33 +1,189 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { FaCircleCheck } from "react-icons/fa6";
 import { Button } from "../components/ui/button";
+import { Alert, AlertDescription } from "../components/ui/alert";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 interface AuthFormProps {
   onAuth: (token: string) => void;
-  mode?: "login" | "register";
+  mode?: "login" | "Sign Up";
+}
+
+interface PasswordRequirement {
+  id: string;
+  text: string;
+  validator: (password: string) => boolean;
 }
 
 export default function AuthForm({ onAuth, mode: initialMode = "login" }: AuthFormProps) {
-  const [mode, setMode] = useState<"login" | "register">(initialMode);
+  const [mode, setMode] = useState<"login" | "Sign Up">(initialMode);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [emailError, setEmailError] = useState("");
+  const [passwordError, setPasswordError] = useState("");
+  const [emailTouched, setEmailTouched] = useState(false);
+  const [passwordTouched, setPasswordTouched] = useState(false);
+  const [showPasswordRequirements, setShowPasswordRequirements] = useState(false);
+  const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
+  const router = useRouter();
+
+  // Show password requirements immediately for Sign Up mode
+  useEffect(() => {
+    if (mode === "Sign Up") {
+      setShowPasswordRequirements(true);
+    }
+  }, [mode]);
+
+  // Email validation regex
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+  // Password requirements
+  const passwordRequirements: PasswordRequirement[] = [
+    {
+      id: "length",
+      text: "At least 8 characters",
+      validator: (password: string) => password.length >= 8
+    },
+    {
+      id: "uppercase",
+      text: "One uppercase letter",
+      validator: (password: string) => /[A-Z]/.test(password)
+    },
+    {
+      id: "lowercase",
+      text: "One lowercase letter",
+      validator: (password: string) => /[a-z]/.test(password)
+    },
+    {
+      id: "number",
+      text: "One number",
+      validator: (password: string) => /\d/.test(password)
+    }
+  ];
+
+  const validateEmail = (email: string) => {
+    if (!email) {
+      setEmailError("");
+      return false;
+    }
+    if (!emailRegex.test(email)) {
+      setEmailError("Please enter a valid email address");
+      return false;
+    }
+    setEmailError("");
+    return true;
+  };
+
+  const validatePassword = (password: string) => {
+    if (!password) {
+      setPasswordError("");
+      return false;
+    }
+    
+    const failedRequirements = passwordRequirements.filter(req => !req.validator(password));
+    
+    if (failedRequirements.length > 0) {
+      setPasswordError(`Password requirements not met`);
+      return false;
+    }
+    
+    setPasswordError("");
+    return true;
+  };
+
+  const getPasswordRequirementStatus = (requirement: PasswordRequirement) => {
+    if (!password) return "pending";
+    const isValid = requirement.validator(password);
+    
+    // Only show red if user has attempted to submit and this requirement is not met
+    if (hasAttemptedSubmit && !isValid) {
+      return "invalid";
+    }
+    
+    return isValid ? "valid" : "pending";
+  };
+
+  const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newEmail = e.target.value;
+    setEmail(newEmail);
+    // Only validate if the field has been touched (blurred or submitted)
+    if (emailTouched) {
+      validateEmail(newEmail);
+    }
+  };
+
+  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newPassword = e.target.value;
+    setPassword(newPassword);
+    // Show password requirements for Sign Up mode
+    if (mode === "Sign Up") {
+      setShowPasswordRequirements(true);
+    }
+    // Only validate if the field has been touched (blurred or submitted) and in Sign Up mode
+    if (passwordTouched && mode === "Sign Up") {
+      validatePassword(newPassword);
+    }
+  };
+
+  const handleEmailBlur = () => {
+    setEmailTouched(true);
+    validateEmail(email);
+  };
+
+  const handlePasswordBlur = () => {
+    setPasswordTouched(true);
+    // Only validate password for Sign Up mode
+    if (mode === "Sign Up") {
+      validatePassword(password);
+    }
+  };
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    
+    // Mark fields as touched and validate before submission
+    setEmailTouched(true);
+    setPasswordTouched(true);
+    setHasAttemptedSubmit(true);
+    
+    if (!validateEmail(email)) {
+      return;
+    }
+    
+    // Only validate password for Sign Up
+    if (mode === "Sign Up" && !validatePassword(password)) {
+      return;
+    }
+    
     setLoading(true);
     setError("");
     console.log("AuthForm - API_URL:", API_URL);
     try {
-      if (mode === "register") {
+      if (mode === "Sign Up") {
         const res = await fetch(`${API_URL}/auth/register`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email, password }),
         });
-        if (!res.ok) throw new Error("Registration failed");
+        
+        if (!res.ok) {
+          if (res.status === 400) {
+            const errorData = await res.json();
+            if (errorData.detail && errorData.detail.includes("already registered")) {
+              throw new Error("An account with this email already exists. Please try logging in instead.");
+            } else {
+              throw new Error("Please check your information and try again.");
+            }
+          } else if (res.status === 422) {
+            throw new Error("Please check your information and try again.");
+          } else {
+            throw new Error("Unable to create your account. Please try again later.");
+          }
+        }
         
         // Auto-login after successful registration
         const loginRes = await fetch(`${API_URL}/auth/cookie/login`, {
@@ -36,7 +192,7 @@ export default function AuthForm({ onAuth, mode: initialMode = "login" }: AuthFo
           body: new URLSearchParams({ username: email, password }),
           credentials: "include", // Ensure cookies are set
         });
-        if (!loginRes.ok) throw new Error("Auto-login failed after registration");
+        if (!loginRes.ok) throw new Error("Account created but unable to log you in automatically. Please try logging in.");
         
         localStorage.setItem("email", email);
         localStorage.setItem("token", "cookie-auth");
@@ -48,7 +204,21 @@ export default function AuthForm({ onAuth, mode: initialMode = "login" }: AuthFo
           body: new URLSearchParams({ username: email, password }),
           credentials: "include", // Ensure cookies are set
         });
-        if (!res.ok) throw new Error("Login failed");
+        
+        console.log("Login response status:", res.status);
+        
+        if (!res.ok) {
+          if (res.status === 401) {
+            throw new Error("Incorrect email or password. Please check your information and try again.");
+          } else if (res.status === 400) {
+            // Server returns 400 for bad credentials (doesn't differentiate between email/password)
+            throw new Error("Incorrect email or password. Please check your information and try again.");
+          } else if (res.status === 500) {
+            throw new Error("Something went wrong on our end. Please try again in a moment.");
+          } else {
+            throw new Error("Unable to log you in. Please try again later.");
+          }
+        }
         
         console.log("AuthForm - login successful, cookies after login:", document.cookie);
         console.log("AuthForm - login response headers:", res.headers);
@@ -65,7 +235,7 @@ export default function AuthForm({ onAuth, mode: initialMode = "login" }: AuthFo
   }
 
   return (
-    <div className="max-w-sm mx-auto mt-20 p-6 bg-white rounded shadow">
+    <div className="max-w-sm w-full mx-auto mt-20 p-6 bg-white rounded shadow">
       <div className="text-center mb-6">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">PaperThread</h1>
         <p className="text-gray-600 text-sm">Weave your research into papers</p>
@@ -75,26 +245,76 @@ export default function AuthForm({ onAuth, mode: initialMode = "login" }: AuthFo
         {mode === "login" ? "Welcome back" : "Get started"}
       </h2>
       
+      {/* Error Alert for Login */}
+      {mode === "login" && error && (
+        <Alert variant="destructive" className="mb-4">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+      
       <form onSubmit={handleSubmit} className="space-y-4">
-        <input
-          type="email"
-          placeholder="Email"
-          className="w-full px-3 py-2 border rounded"
-          value={email}
-          onChange={e => setEmail(e.target.value)}
-          required
-        />
-        <input
-          type="password"
-          placeholder="Password"
-          className="w-full px-3 py-2 border rounded"
-          value={password}
-          onChange={e => setPassword(e.target.value)}
-          required
-        />
-        {error && <div className="text-red-500 text-sm">{error}</div>}
-        <Button type="submit" className="w-full" disabled={loading}>
-          {loading ? "Loading..." : mode === "login" ? "Login" : "Register"}
+        <div>
+          <input
+            type="email"
+            placeholder="Email"
+            className={`w-full px-3 py-2 border rounded ${
+              emailError ? "border-red-500" : "border-gray-300"
+            }`}
+            value={email}
+            onChange={handleEmailChange}
+            onBlur={handleEmailBlur}
+            required
+          />
+          {emailError && <div className="text-red-500 text-sm mt-1">{emailError}</div>}
+        </div>
+        <div>
+          <input
+            type="password"
+            placeholder="Password"
+            className={`w-full px-3 py-2 border rounded ${
+              passwordError ? "border-red-500" : "border-gray-300"
+            }`}
+            value={password}
+            onChange={handlePasswordChange}
+            onBlur={handlePasswordBlur}
+            required
+          />
+          {passwordError && <div className="text-red-500 text-sm mt-1">{passwordError}</div>}
+          
+          {/* Password Requirements Checklist - Only for Sign Up */}
+          {mode === "Sign Up" && showPasswordRequirements && (
+            <div className="mt-2 space-y-1">
+              {passwordRequirements.map((requirement) => {
+                const status = getPasswordRequirementStatus(requirement);
+                return (
+                  <div key={requirement.id} className="flex items-center text-sm">
+                    {status === "valid" ? (
+                      <FaCircleCheck className="mr-2 text-success-300" />
+                    ) : (
+                      <span className={`mr-2 ${
+                        status === "invalid" ? "text-error-500" : "text-gray-400"
+                      }`}>
+                        {status === "invalid" ? "✗" : "○"}
+                      </span>
+                    )}
+                    <span className={
+                      status === "valid" ? "text-success-500" : 
+                      status === "invalid" ? "text-error-500" : "text-gray-500"
+                    }>
+                      {requirement.text}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+        <Button 
+          type="submit" 
+          className="w-full" 
+          disabled={loading || !!emailError || (mode === "Sign Up" && !!passwordError)}
+        >
+          {loading ? "Loading..." : mode === "login" ? "Log In" : "Sign Up"}
         </Button>
       </form>
       <div className="mt-4 text-center">
@@ -103,9 +323,9 @@ export default function AuthForm({ onAuth, mode: initialMode = "login" }: AuthFo
             Don't have an account?{' '}
             <button
               className="text-blue-600 hover:underline"
-              onClick={() => { setMode("register"); setError(""); }}
+              onClick={() => router.push("/signup")}
             >
-              Register
+              Sign Up
             </button>
           </>
         ) : (
@@ -113,9 +333,9 @@ export default function AuthForm({ onAuth, mode: initialMode = "login" }: AuthFo
             Already have an account?{' '}
             <button
               className="text-blue-600 hover:underline"
-              onClick={() => { setMode("login"); setError(""); }}
+              onClick={() => router.push("/login")}
             >
-              Login
+              Log In
             </button>
           </>
         )}
