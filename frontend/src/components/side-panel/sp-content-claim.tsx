@@ -212,7 +212,7 @@ export default function ClaimCardContent({
     const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
     const claimId = cardData.claimId;
 
-    let payload = {
+    const payload = {
       project_id: projectId,
       claim_text: fields?.claim ?? claim,
       claim_type: fields?.claimType ?? claimType,

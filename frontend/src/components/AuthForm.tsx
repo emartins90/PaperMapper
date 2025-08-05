@@ -3,8 +3,13 @@ import { Button } from "../components/ui/button";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
-export default function AuthForm({ onAuth }: { onAuth: (token: string) => void }) {
-  const [mode, setMode] = useState<"login" | "register">("login");
+interface AuthFormProps {
+  onAuth: (token: string) => void;
+  mode?: "login" | "register";
+}
+
+export default function AuthForm({ onAuth, mode: initialMode = "login" }: AuthFormProps) {
+  const [mode, setMode] = useState<"login" | "register">(initialMode);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -14,6 +19,7 @@ export default function AuthForm({ onAuth }: { onAuth: (token: string) => void }
     e.preventDefault();
     setLoading(true);
     setError("");
+    console.log("AuthForm - API_URL:", API_URL);
     try {
       if (mode === "register") {
         const res = await fetch(`${API_URL}/auth/register`, {
@@ -22,8 +28,19 @@ export default function AuthForm({ onAuth }: { onAuth: (token: string) => void }
           body: JSON.stringify({ email, password }),
         });
         if (!res.ok) throw new Error("Registration failed");
-        setMode("login");
-        setError("Registration successful! Please log in.");
+        
+        // Auto-login after successful registration
+        const loginRes = await fetch(`${API_URL}/auth/cookie/login`, {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: new URLSearchParams({ username: email, password }),
+          credentials: "include", // Ensure cookies are set
+        });
+        if (!loginRes.ok) throw new Error("Auto-login failed after registration");
+        
+        localStorage.setItem("email", email);
+        localStorage.setItem("token", "cookie-auth");
+        onAuth("cookie-auth");
       } else {
         const res = await fetch(`${API_URL}/auth/cookie/login`, {
           method: "POST",
@@ -32,6 +49,10 @@ export default function AuthForm({ onAuth }: { onAuth: (token: string) => void }
           credentials: "include", // Ensure cookies are set
         });
         if (!res.ok) throw new Error("Login failed");
+        
+        console.log("AuthForm - login successful, cookies after login:", document.cookie);
+        console.log("AuthForm - login response headers:", res.headers);
+        
         localStorage.setItem("email", email);
         localStorage.setItem("token", "cookie-auth"); // Set a token for app compatibility
         onAuth("cookie-auth");

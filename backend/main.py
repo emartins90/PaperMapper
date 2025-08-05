@@ -97,7 +97,7 @@ cookie_transport = CookieTransport(
     cookie_max_age=30 * 24 * 3600,  # 30 days - users stay logged in
     cookie_secure=settings.ENV == "production",  # HTTPS only in production
     cookie_httponly=True,  # Prevent XSS
-    cookie_samesite="none",  # Allow cross-site requests
+    cookie_samesite="lax" if settings.ENV == "development" else "none",  # Lax in dev, none in prod
     cookie_domain=".paperthread-app.com" if settings.ENV == "production" else None,  # Cross-domain in production
     cookie_path="/"  # Available across entire site
 )
@@ -368,8 +368,6 @@ async def delete_question(question_id: int, db: AsyncSession = Depends(get_db())
                 if key:
                     print(f"[DELETE] Deleting file from R2: {key}")
                     await r2_storage.delete_file(key)
-                else:
-                    print(f"[DELETE] Could not extract key from URL: {file_url}")
     
     await db.delete(question)
     await db.commit()
@@ -1701,6 +1699,78 @@ async def delete_claim_file(
 #         "email": current_user.email,
 #         "message": "User is authenticated (with debug)"
 #     }
+
+@app.delete("/users/me/delete")
+async def delete_user(current_user: models.User = Depends(get_current_user), db: Session = Depends(get_sync_db)):
+    """
+    Delete the current user and all associated data.
+    This will permanently delete:
+    - User account
+    - All projects
+    - All cards, citations, source materials, questions, insights, thoughts, claims
+    - All custom options
+    - All R2 files associated with the user's projects
+    """
+    print(f"[DELETE] Endpoint reached for user deletion")
+    print(f"[DELETE] Current user: {current_user.id} ({current_user.email})")
+    
+    try:
+        print(f"[DELETE] Starting deletion for user {current_user.id} ({current_user.email})")
+        
+        # Get the user from the current session to avoid session conflicts
+        user_to_delete = db.query(models.User).filter(models.User.id == current_user.id).first()
+        if not user_to_delete:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        # Get all projects for this user to collect file URLs
+        projects = db.query(models.Project).filter(models.Project.user_id == user_to_delete.id).all()
+        print(f"[DELETE] Found {len(projects)} projects for user")
+        
+        # Collect all file URLs from projects and their associated data
+        files_to_delete = []
+        
+        for project in projects:
+            # Project assignment file
+            if project.assignment_file:
+                files_to_delete.append(project.assignment_file)
+            
+            # Files from all card types
+            for card_type in ['questions', 'insights', 'thoughts', 'claims', 'source_materials']:
+                items = getattr(project, card_type)
+                for item in items:
+                    if hasattr(item, 'files') and item.files:
+                        # Split comma-separated file URLs
+                        file_urls = item.files.split(',') if item.files else []
+                        files_to_delete.extend([url.strip() for url in file_urls if url.strip()])
+        
+        print(f"[DELETE] Found {len(files_to_delete)} files to delete from R2")
+        
+        # Delete files from R2
+        print(f"[DELETE] Deleting {len(files_to_delete)} files from R2")
+        for file_url in files_to_delete:
+            key = r2_storage.extract_key_from_url(file_url)
+            if key:
+                await r2_storage.delete_file(key)
+            else:
+                print(f"[DELETE] Could not extract key from URL: {file_url}")
+        
+        # Delete all projects first (this will cascade delete all related data)
+        print(f"[DELETE] Deleting {len(projects)} projects and all associated data")
+        for project in projects:
+            db.delete(project)
+        
+        # Delete the user
+        print(f"[DELETE] Deleting user {user_to_delete.id}")
+        db.delete(user_to_delete)
+        db.commit()
+        
+        print(f"[DELETE] Successfully deleted user {user_to_delete.id} and all associated data")
+        return {"message": "User and all associated data deleted successfully"}
+        
+    except Exception as e:
+        db.rollback()
+        print(f"[DELETE] Error deleting user {current_user.id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to delete user: {str(e)}")
 
 if __name__ == "__main__":
     import uvicorn

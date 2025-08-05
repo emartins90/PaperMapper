@@ -135,7 +135,7 @@ export const FullscreenFileViewer: React.FC<FullscreenFileViewerProps> = ({
   const handleSave = async (field: "main" | "notes", value: string) => {
     if (!cardNode || !onUpdateCard) return;
     setSaving(true);
-    let newData: any = {};
+    const newData: any = {};
     switch (cardNode.type) {
       case "source":
         if (field === "main") newData.text = value;

@@ -175,7 +175,7 @@ export default function QuestionCardContent({
       const token = localStorage.getItem("token");
       const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
       
-      let payload = {
+      const payload = {
         project_id: projectId,
         question_text: question,
         category: category,

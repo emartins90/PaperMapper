@@ -8,6 +8,12 @@ export const getToken = (): string | null => {
   return null;
 };
 
+// Check if user is authenticated
+export const isAuthenticated = (): boolean => {
+  const token = getToken();
+  return token === "cookie-auth";
+};
+
 // Create authenticated fetch headers
 export const getAuthHeaders = (): Record<string, string> => {
   const token = getToken();

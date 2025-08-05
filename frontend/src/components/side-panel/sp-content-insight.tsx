@@ -212,7 +212,7 @@ export default function InsightCardContent({
     const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
     const insightId = cardData.insightId;
 
-    let payload = {
+    const payload = {
       project_id: projectId,
       insight_text: additionalFields?.insight ?? insight,
       insight_type: additionalFields?.insightType ?? insightType,

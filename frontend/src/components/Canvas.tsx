@@ -544,7 +544,7 @@ export default function CanvasInner({ projectId }: CanvasProps) {
     const newId = crypto.randomUUID();
     
     // Always create empty card first
-    let cardId = newId;
+    const cardId = newId;
     // Only declare savedCitation and sourceMaterialId in the source branch
     if (placingNodeType === "source") {
       // For source cards, don't create backend record immediately - wait for user to save content
@@ -1036,7 +1036,7 @@ export default function CanvasInner({ projectId }: CanvasProps) {
     let backendId: number | undefined;
     let cardPayload: any = {};
     let updatedNodeData: any = {};
-    let cardType: CardType = node.type as CardType;
+    const cardType: CardType = node.type as CardType;
     let files: string[] = [];
 
     try {

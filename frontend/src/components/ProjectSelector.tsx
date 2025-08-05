@@ -107,14 +107,31 @@ export default function ProjectSelector({ token }: { token: string }) {
   async function fetchProjects() {
     setLoading(true);
     setError("");
+    console.log("ProjectSelector - fetchProjects called with token:", token);
+    console.log("ProjectSelector - API_URL:", API_URL);
+    console.log("ProjectSelector - document.cookie:", document.cookie);
+    
     try {
       const res = await fetch(`${API_URL}/projects/`, {
         credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
       });
-      if (!res.ok) throw new Error("Failed to fetch projects");
+      console.log("ProjectSelector - fetch response status:", res.status);
+      console.log("ProjectSelector - fetch response headers:", res.headers);
+      console.log("ProjectSelector - fetch response url:", res.url);
+      
+      if (!res.ok) {
+        const errorText = await res.text();
+        console.log("ProjectSelector - fetch error response:", errorText);
+        throw new Error("Failed to fetch projects");
+      }
       const data = await res.json();
+      console.log("ProjectSelector - fetch success, data:", data);
       setProjects(data);
     } catch (err: any) {
+      console.log("ProjectSelector - fetch error:", err);
       setError(err.message);
     } finally {
       setLoading(false);
