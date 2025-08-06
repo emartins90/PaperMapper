@@ -36,6 +36,7 @@ import AccountSettings from "./AccountSettings";
 import { FullscreenFileViewer } from "./canvas-add-files/FullscreenFileViewer";
 import FileChip from "./canvas-add-files/FileChip";
 import ProjectInfoModal from "./ProjectInfoModal";
+import DeleteConfirmationModal from "./DeleteConfirmationModal";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { Badge } from "./ui/badge";
 import ResourceSection, { sampleResources } from "./ResourceSection";
@@ -83,6 +84,10 @@ export default function ProjectSelector({ token }: { token: string }) {
   const [viewerFile, setViewerFile] = useState<string | null>(null);
   const [viewerType, setViewerType] = useState<'image' | 'pdf' | 'other' | 'audio'>('other');
   const [viewerCardNode, setViewerCardNode] = useState<any>(null);
+  
+  // Delete confirmation modal state
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
   
   // Sorting and filtering state
   const [sortBy, setSortBy] = useState<'due_date' | 'last_edited' | 'name'>('due_date');
@@ -164,22 +169,28 @@ export default function ProjectSelector({ token }: { token: string }) {
     }
   }
 
-  async function handleDelete(projectId: number) {
-    if (!confirm("Are you sure you want to delete this project?")) return;
+  function handleDeleteClick(project: Project) {
+    setProjectToDelete(project);
+    setIsDeleteModalOpen(true);
+  }
+
+  async function handleDeleteConfirm() {
+    if (!projectToDelete) return;
     
     setLoading(true);
     setError("");
     try {
-      const res = await fetch(`${API_URL}/projects/${projectId}`, {
+      const res = await fetch(`${API_URL}/projects/${projectToDelete.id}`, {
         method: "DELETE",
         credentials: "include",
       });
       if (!res.ok) throw new Error("Failed to delete project");
-      setProjects(projects.filter(p => p.id !== projectId));
+      setProjects(projects.filter(p => p.id !== projectToDelete.id));
     } catch (err: any) {
       setError(err.message);
     } finally {
       setLoading(false);
+      setProjectToDelete(null);
     }
   }
 
@@ -895,7 +906,7 @@ export default function ProjectSelector({ token }: { token: string }) {
                                   </DropdownMenuItem>
                                 )}
                                 <DropdownMenuItem 
-                                  onClick={(e) => { e.stopPropagation(); handleDelete(project.id); }}
+                                  onClick={(e) => { e.stopPropagation(); handleDeleteClick(project); }}
                                   className="text-red-600"
                                 >
                                   <LuTrash2 className="w-4 h-4 mr-2" />
@@ -958,6 +969,15 @@ export default function ProjectSelector({ token }: { token: string }) {
         }}
         cardType="assignments"
         cardNode={viewerCardNode}
+      />
+
+      {/* Delete Confirmation Modal */}
+      <DeleteConfirmationModal
+        open={isDeleteModalOpen}
+        onOpenChange={setIsDeleteModalOpen}
+        onConfirm={handleDeleteConfirm}
+        projectName={projectToDelete?.name || ""}
+        isLoading={loading}
       />
     </div>
   );

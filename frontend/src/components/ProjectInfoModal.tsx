@@ -285,7 +285,7 @@ export default function ProjectInfoModal({ projectId, mode, onClose }: ProjectIn
       <DialogContent className="max-w-md p-6">
         <DialogHeader>
           <DialogTitle>{mode === 'create' ? 'Create New Project' : 'Edit Project Info'}</DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="mb-2">
             {mode === 'create' ? 'Add project details and optional assignment file.' : 'Update project details and assignment file.'}
           </DialogDescription>
         </DialogHeader>

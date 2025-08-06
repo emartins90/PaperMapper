@@ -28,6 +28,10 @@ yarn-error.log*
 .env
 .env.development
 .env.production
+.env.development.local
+.env.production.local
+.env.test
+.env.test.local
 
 # Vercel
 .vercel
@@ -141,6 +145,8 @@ celerybeat.pid
 
 # Environments
 .env
+.env.*
+!.env.example
 .venv
 env/
 venv/
