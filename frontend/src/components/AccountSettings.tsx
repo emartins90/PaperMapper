@@ -347,7 +347,7 @@ export default function AccountSettings({ open, onOpenChange }: AccountSettingsP
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent size="lg" className="p-0 overflow-hidden h-[60vh] md:h-[60vh] h-screen md:h-[60vh] max-h-screen rounded-none md:rounded-lg">
+      <DialogContent size="lg" className="p-0 overflow-hidden h-[60vh] md:h-[60vh] h-[100dvh] md:h-[60vh] max-h-[100dvh] rounded-none md:rounded-lg">
         <div className="flex flex-col md:flex-row h-full overflow-hidden">
           {/* Sidebar Tabs */}
           <div className="md:w-56 w-full md:border-r bg-gray-50 md:h-full overflow-hidden">
