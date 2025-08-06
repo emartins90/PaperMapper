@@ -347,7 +347,7 @@ export default function AccountSettings({ open, onOpenChange }: AccountSettingsP
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent size="lg" className="p-0 overflow-hidden h-[60vh] md:h-[60vh] h-[100dvh] md:h-[60vh] max-h-[100dvh] rounded-none md:rounded-lg">
+      <DialogContent size="lg" className="p-0 overflow-visible h-[60vh] md:h-[60vh] h-[100dvh] md:h-[60vh] max-h-[100dvh] rounded-none md:rounded-lg">
         <div className="flex flex-col md:flex-row h-full overflow-hidden">
           {/* Sidebar Tabs */}
           <div className="md:w-56 w-full md:border-r bg-gray-50 md:h-full overflow-hidden">
@@ -360,9 +360,9 @@ export default function AccountSettings({ open, onOpenChange }: AccountSettingsP
             />
           </div>
           {/* Main Content */}
-          <div className="flex-1 p-6 flex flex-col h-full overflow-hidden">
-            {activeTab === "account" && (
-              <div className="flex flex-col h-full overflow-y-auto min-h-0 max-h-full">
+          <div className="flex-1 p-6 flex flex-col h-full overflow-visible">
+                          {activeTab === "account" && (
+                <div className="flex flex-col h-full min-h-0 max-h-full overflow-visible">
                 <div>
                   <DialogTitle className="mb-8">Account Info</DialogTitle>
                   <div className="mb-6">
@@ -549,9 +549,9 @@ export default function AccountSettings({ open, onOpenChange }: AccountSettingsP
               </div>
             )}
               {activeTab === "classes" && (
-                <div className="flex flex-col h-full overflow-y-auto min-h-0 max-h-full">
+                <div className="flex flex-col h-full min-h-0 max-h-full overflow-visible">
                   <DialogTitle className="mb-2">My Classes</DialogTitle>
-                  <div className="flex gap-2 mb-4">
+                  <div className="flex gap-2 mb-4 overflow-visible">
                     <input
                       type="text"
                       value={getAddInput(CLASS_TYPE)}
@@ -608,7 +608,7 @@ export default function AccountSettings({ open, onOpenChange }: AccountSettingsP
                             </>
                           ) : (
                             <>
-                              <span className="truncate text-sm mr-2 font-medium text-gray-800">{opt.value}</span>
+                              <span className="text-sm mr-2 font-medium text-gray-800 break-words flex-1 min-w-0">{opt.value}</span>
                               <div className="flex gap-1"> {/* Always visible now */}
                                 <Button
                                   type="button"
@@ -645,9 +645,9 @@ export default function AccountSettings({ open, onOpenChange }: AccountSettingsP
                 </div>
               )}
               {activeTab === "sourceFunctions" && (
-                <div className="flex flex-col h-full overflow-y-auto min-h-0 max-h-full">
+                <div className="flex flex-col h-full min-h-0 max-h-full overflow-visible">
                   <DialogTitle className="mb-2">Custom Source Functions</DialogTitle>
-                  <div className="flex gap-2 mb-4">
+                  <div className="flex gap-2 mb-4 overflow-visible">
                     <input
                       type="text"
                       value={getAddInput(SOURCE_FUNCTION_TYPE)}
@@ -704,7 +704,7 @@ export default function AccountSettings({ open, onOpenChange }: AccountSettingsP
                             </>
                           ) : (
                             <>
-                              <span className="truncate text-sm mr-2 font-medium text-gray-800">{opt.value}</span>
+                              <span className="text-sm mr-2 font-medium text-gray-800 break-words flex-1 min-w-0">{opt.value}</span>
                               <div className="flex gap-1"> {/* Always visible now */}
                                 <Button
                                   type="button"
@@ -741,9 +741,9 @@ export default function AccountSettings({ open, onOpenChange }: AccountSettingsP
                 </div>
               )}
               {activeTab === "sourceCredibilities" && (
-                <div className="flex flex-col h-full overflow-y-auto min-h-0 max-h-full">
+                <div className="flex flex-col h-full min-h-0 max-h-full overflow-visible">
                   <DialogTitle className="mb-2">Custom Source Credibilities</DialogTitle>
-                  <div className="flex gap-2 mb-4">
+                  <div className="flex gap-2 mb-4 overflow-visible">
                     <input
                       type="text"
                       value={getAddInput(SOURCE_CREDIBILITY_TYPE)}
@@ -800,7 +800,7 @@ export default function AccountSettings({ open, onOpenChange }: AccountSettingsP
                             </>
                           ) : (
                             <>
-                              <span className="truncate text-sm mr-2 font-medium text-gray-800">{opt.value}</span>
+                              <span className="text-sm mr-2 font-medium text-gray-800 break-words flex-1 min-w-0">{opt.value}</span>
                               <div className="flex gap-1"> {/* Always visible now */}
                                 <Button
                                   type="button"
@@ -837,7 +837,7 @@ export default function AccountSettings({ open, onOpenChange }: AccountSettingsP
                 </div>
               )}
               {activeTab === "insightTypes" && (
-                <div className="flex flex-col h-full overflow-y-auto min-h-0 max-h-full">
+                <div className="flex flex-col h-full min-h-0 max-h-full overflow-visible">
                   <DialogTitle className="mb-2">Custom Insight Types</DialogTitle>
                   <div className="flex gap-2 mb-4">
                     <input
@@ -896,7 +896,7 @@ export default function AccountSettings({ open, onOpenChange }: AccountSettingsP
                             </>
                           ) : (
                             <>
-                              <span className="truncate text-sm mr-2 font-medium text-gray-800">{opt.value}</span>
+                              <span className="text-sm mr-2 font-medium text-gray-800 break-words flex-1 min-w-0">{opt.value}</span>
                               <div className="flex gap-1"> {/* Always visible now */}
                                 <Button
                                   type="button"
