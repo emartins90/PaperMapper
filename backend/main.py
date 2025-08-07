@@ -287,13 +287,25 @@ async def upload_source_material_files(
     if db_sm is None:
         raise HTTPException(status_code=404, detail="SourceMaterial not found")
 
-    # Upload files to R2
-    upload_results = await r2_storage.upload_multiple_files(files, folder="source-materials")
+    # Calculate existing file count and size for validation
+    existing_files = db_sm.files.split(",") if db_sm.files else []
+    existing_count = len([f for f in existing_files if f.strip()])
+    
+    # Note: We can't easily calculate existing file sizes without storing them in the database
+    # For now, we'll only validate file count and individual file sizes
+    existing_size = 0  # TODO: Store file sizes in database for accurate validation
+
+    # Upload files to R2 with validation
+    upload_results = await r2_storage.upload_multiple_files(
+        files, 
+        folder="source-materials",
+        existing_count=existing_count,
+        existing_size=existing_size
+    )
     uploaded_urls = [result["file_url"] for result in upload_results]
     uploaded_filenames = [result["filename"] for result in upload_results]
 
     # Update the files field (append new files)
-    existing_files = db_sm.files.split(",") if db_sm.files else []
     all_files = existing_files + uploaded_urls
     db_sm.files = ",".join([f.strip() for f in all_files if f.strip()])
     
@@ -390,13 +402,25 @@ async def upload_question_files(
     if db_question is None:
         raise HTTPException(status_code=404, detail="Question not found")
 
-    # Upload files to R2
-    upload_results = await r2_storage.upload_multiple_files(files, folder="questions")
+    # Calculate existing file count and size for validation
+    existing_files = db_question.files.split(",") if db_question.files else []
+    existing_count = len([f for f in existing_files if f.strip()])
+    
+    # Note: We can't easily calculate existing file sizes without storing them in the database
+    # For now, we'll only validate file count and individual file sizes
+    existing_size = 0  # TODO: Store file sizes in database for accurate validation
+
+    # Upload files to R2 with validation
+    upload_results = await r2_storage.upload_multiple_files(
+        files, 
+        folder="questions",
+        existing_count=existing_count,
+        existing_size=existing_size
+    )
     uploaded_urls = [result["file_url"] for result in upload_results]
     uploaded_filenames = [result["filename"] for result in upload_results]
 
     # Update the files field (append new files)
-    existing_files = db_question.files.split(",") if db_question.files else []
     all_files = existing_files + uploaded_urls
     db_question.files = ",".join([f.strip() for f in all_files if f.strip()])
     
@@ -1098,6 +1122,33 @@ async def upload_file(file: UploadFile = File(...)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"File upload failed: {str(e)}")
 
+@app.post("/upload-static-asset/")
+async def upload_static_asset(file: UploadFile = File(...)):
+    """Upload a static asset to R2 static-assets folder"""
+    try:
+        # Upload file to R2 with original filename
+        r2 = R2Storage()
+        file_extension = Path(file.filename).suffix
+        key = f"static-assets/{file.filename}"  # Keep original filename
+        
+        # Upload to R2
+        r2.s3_client.upload_fileobj(
+            file.file,
+            r2.bucket_name,
+            key,
+            ExtraArgs={
+                'ContentType': file.content_type
+            }
+        )
+        
+        return {
+            "filename": file.filename,
+            "key": key,
+            "message": "Static asset uploaded successfully"
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Static asset upload failed: {str(e)}")
+
 @app.delete("/upload/{filename}")
 async def delete_file(filename: str):
     """Delete an uploaded file"""
@@ -1196,13 +1247,25 @@ async def upload_insight_files(
     if db_insight is None:
         raise HTTPException(status_code=404, detail="Insight not found")
 
-    # Upload files to R2
-    upload_results = await r2_storage.upload_multiple_files(files, folder="insights")
+    # Calculate existing file count and size for validation
+    existing_files = db_insight.files.split(",") if db_insight.files else []
+    existing_count = len([f for f in existing_files if f.strip()])
+    
+    # Note: We can't easily calculate existing file sizes without storing them in the database
+    # For now, we'll only validate file count and individual file sizes
+    existing_size = 0  # TODO: Store file sizes in database for accurate validation
+
+    # Upload files to R2 with validation
+    upload_results = await r2_storage.upload_multiple_files(
+        files, 
+        folder="insights",
+        existing_count=existing_count,
+        existing_size=existing_size
+    )
     uploaded_urls = [result["file_url"] for result in upload_results]
     uploaded_filenames = [result["filename"] for result in upload_results]
 
     # Update the files field (append new files)
-    existing_files = db_insight.files.split(",") if db_insight.files else []
     all_files = existing_files + uploaded_urls
     db_insight.files = ",".join([f.strip() for f in all_files if f.strip()])
     
@@ -1268,13 +1331,25 @@ async def upload_thought_files(
         print(f"[UPLOAD] Thought not found for id={thought_id}")
         raise HTTPException(status_code=404, detail="Thought not found")
 
-    # Upload files to R2
-    upload_results = await r2_storage.upload_multiple_files(files, folder="thoughts")
+    # Calculate existing file count and size for validation
+    existing_files = db_thought.files.split(",") if db_thought.files else []
+    existing_count = len([f for f in existing_files if f.strip()])
+    
+    # Note: We can't easily calculate existing file sizes without storing them in the database
+    # For now, we'll only validate file count and individual file sizes
+    existing_size = 0  # TODO: Store file sizes in database for accurate validation
+
+    # Upload files to R2 with validation
+    upload_results = await r2_storage.upload_multiple_files(
+        files, 
+        folder="thoughts",
+        existing_count=existing_count,
+        existing_size=existing_size
+    )
     uploaded_urls = [result["file_url"] for result in upload_results]
     uploaded_filenames = [result["filename"] for result in upload_results]
 
     # Update the files field (append new files)
-    existing_files = db_thought.files.split(",") if db_thought.files else []
     all_files = existing_files + uploaded_urls
     db_thought.files = ",".join([f.strip() for f in all_files if f.strip()])
     
@@ -1555,6 +1630,20 @@ async def test_upload(
 #     print(f"[AUTH] User authenticated: {current_user.email} (ID: {current_user.id})")
 #     return current_user
 
+@app.get("/static-assets/{filename}")
+async def get_static_asset(filename: str):
+    """Serve static assets like hero images without authentication"""
+    r2 = R2Storage()
+    key = f"static-assets/{filename}"
+    
+    try:
+        # Get file from R2
+        file_obj = r2.s3_client.get_object(Bucket=r2.bucket_name, Key=key)
+        return StreamingResponse(file_obj['Body'], media_type=file_obj['ContentType'])
+        
+    except Exception as e:
+        raise HTTPException(status_code=404, detail=f"Static asset not found: {str(e)}")
+
 @app.get("/secure-files/{folder}/{filename}")
 async def get_secure_file(folder: str, filename: str, current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db())):
     # Verify file ownership by checking if the file belongs to the user's projects
@@ -1669,13 +1758,25 @@ async def upload_claim_files(
     if db_claim is None:
         raise HTTPException(status_code=404, detail="Claim not found")
 
-    # Upload files to R2
-    upload_results = await r2_storage.upload_multiple_files(files, folder="claims")
+    # Calculate existing file count and size for validation
+    existing_files = db_claim.files.split(",") if db_claim.files else []
+    existing_count = len([f for f in existing_files if f.strip()])
+    
+    # Note: We can't easily calculate existing file sizes without storing them in the database
+    # For now, we'll only validate file count and individual file sizes
+    existing_size = 0  # TODO: Store file sizes in database for accurate validation
+
+    # Upload files to R2 with validation
+    upload_results = await r2_storage.upload_multiple_files(
+        files, 
+        folder="claims",
+        existing_count=existing_count,
+        existing_size=existing_size
+    )
     uploaded_urls = [result["file_url"] for result in upload_results]
     uploaded_filenames = [result["filename"] for result in upload_results]
 
     # Update the files field (append new files)
-    existing_files = db_claim.files.split(",") if db_claim.files else []
     all_files = existing_files + uploaded_urls
     db_claim.files = ",".join([f.strip() for f in all_files if f.strip()])
     

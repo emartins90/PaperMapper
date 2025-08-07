@@ -1,10 +1,15 @@
 import boto3
 import os
 from typing import List, Optional
-from fastapi import UploadFile
+from fastapi import UploadFile, HTTPException
 import uuid
 from pathlib import Path
 from botocore.exceptions import ClientError
+
+# File upload limits
+MAX_FILE_SIZE = 50 * 1024 * 1024  # 50MB per file
+MAX_FILES_PER_CARD = 5  # 5 files per card
+MAX_TOTAL_SIZE_PER_CARD = 200 * 1024 * 1024  # 200MB total per card
 
 class R2Storage:
     """Handles file uploads to Cloudflare R2 storage"""
@@ -21,6 +26,32 @@ class R2Storage:
         )
         self.bucket_name = settings.R2_BUCKET_NAME
     
+    def validate_file_size(self, file: UploadFile) -> None:
+        """Validate individual file size"""
+        if file.size > MAX_FILE_SIZE:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"File '{file.filename}' is too large. Maximum size is {MAX_FILE_SIZE // (1024 * 1024)}MB"
+            )
+    
+    def validate_file_count(self, files: List[UploadFile], existing_count: int = 0) -> None:
+        """Validate total number of files per card"""
+        total_files = len(files) + existing_count
+        if total_files > MAX_FILES_PER_CARD:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Too many files. Maximum {MAX_FILES_PER_CARD} files per card. You currently have {existing_count} files and are trying to add {len(files)} more."
+            )
+    
+    def validate_total_size(self, files: List[UploadFile], existing_size: int = 0) -> None:
+        """Validate total size of all files per card"""
+        total_size = sum(file.size for file in files) + existing_size
+        if total_size > MAX_TOTAL_SIZE_PER_CARD:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Total file size too large. Maximum {MAX_TOTAL_SIZE_PER_CARD // (1024 * 1024)}MB total per card. Current total would be {total_size // (1024 * 1024)}MB."
+            )
+    
     async def upload_file(self, file: UploadFile, folder: str = "uploads") -> dict:
         """
         Upload a single file to R2
@@ -33,6 +64,9 @@ class R2Storage:
             dict: Contains file_url, key, and other metadata
         """
         try:
+            # Validate file size
+            self.validate_file_size(file)
+            
             # Generate unique filename
             file_extension = Path(file.filename).suffix
             unique_filename = f"{uuid.uuid4()}{file_extension}"
@@ -61,17 +95,27 @@ class R2Storage:
         except Exception as e:
             raise Exception(f"Failed to upload file to R2: {str(e)}")
     
-    async def upload_multiple_files(self, files: List[UploadFile], folder: str = "uploads") -> List[dict]:
+    async def upload_multiple_files(self, files: List[UploadFile], folder: str = "uploads", existing_count: int = 0, existing_size: int = 0) -> List[dict]:
         """
         Upload multiple files to R2
         
         Args:
             files: List of FastAPI UploadFile objects
             folder: R2 folder to store the files in
+            existing_count: Number of existing files on the card
+            existing_size: Total size of existing files on the card in bytes
             
         Returns:
             List[dict]: List of upload results
         """
+        # Validate file count and size before uploading
+        self.validate_file_count(files, existing_count)
+        self.validate_total_size(files, existing_size)
+        
+        # Validate individual file sizes
+        for file in files:
+            self.validate_file_size(file)
+        
         results = []
         for file in files:
             result = await self.upload_file(file, folder)
