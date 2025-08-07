@@ -467,7 +467,7 @@ export default function ProjectSelector({ token }: { token: string }) {
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-2">
               <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-                <LuFileText className="w-5 h-5 text-white" />
+                <LuFileText className="w-4 h-4 text-white" />
               </div>
               <h1 className="text-xl font-semibold text-gray-900">Paper Thread</h1>
             </div>

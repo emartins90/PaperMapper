@@ -1,5 +1,6 @@
 import React from "react";
 import { useRouter } from "next/navigation";
+import { LuFileText } from "react-icons/lu";
 
 export default function AuthHeader() {
   const router = useRouter();
@@ -10,10 +11,10 @@ export default function AuthHeader() {
       onClick={() => router.push("/")}
     >
       {/* Placeholder logo - you can replace this with your actual logo */}
-      <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-        <span className="text-white font-bold text-sm">PT</span>
-      </div>
-      <span className="text-xl font-bold text-gray-900">PaperThread</span>
+      <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+            <LuFileText className="w-4 h-4 text-white" />
+          </div>
+      <span className="text-xl font-bold text-gray-900">Paper Thread</span>
     </div>
   );
 } 

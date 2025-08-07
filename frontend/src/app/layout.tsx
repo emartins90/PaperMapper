@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "PaperThread - Weave your research into papers",
-  description: "Visual research mapping for students who struggle with traditional methods. Connect your ideas, organize your research, and write better papers.",
+  title: "Paper Thread - Write with confidence",
+  description: "Paper Thread helps high school and collegestudents plan for writing academic papers by visually organizing and connecting thoughts and information. It provides just enough structure and guidance to help students build confidence in their own thinking.",
 };
 
 export default function RootLayout({
