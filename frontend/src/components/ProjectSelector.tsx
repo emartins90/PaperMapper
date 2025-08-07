@@ -55,13 +55,6 @@ interface Project {
   assignment_filename?: string;
 }
 
-interface ProjectFormData {
-  name: string;
-  class_subject: string;
-  paper_type: string;
-  due_date: string;
-  assignment_file?: File;
-}
 
 export default function ProjectSelector({ token }: { token: string }) {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -72,13 +65,6 @@ export default function ProjectSelector({ token }: { token: string }) {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
-  const [formData, setFormData] = useState<ProjectFormData>({
-    name: "",
-    class_subject: "",
-    paper_type: "",
-    due_date: "",
-    assignment_file: undefined,
-  });
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
   const [viewerOpen, setViewerOpen] = useState(false);
   const [viewerFile, setViewerFile] = useState<string | null>(null);

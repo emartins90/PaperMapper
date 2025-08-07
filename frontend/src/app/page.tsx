@@ -3,14 +3,24 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 
 export default function Home() {
   const [isLoading, setIsLoading] = useState(true);
+  const [isScrolled, setIsScrolled] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
     // Root page should always be accessible - no redirects
     setIsLoading(false);
+
+    // Handle scroll for sticky nav
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 10);
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
   if (isLoading) {
@@ -22,97 +32,113 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div className="min-h-screen bg-gradient-to-br from-white via-white to-primary-100 relative">
+      {/* Grid of dots background */}
+      <div className="absolute inset-0 opacity-10">
+        <div className="w-full h-full" style={{
+          backgroundImage: `radial-gradient(circle, #000 1px, transparent 1px)`,
+          backgroundSize: '20px 20px'
+        }}></div>
+      </div>
+
       {/* Navigation */}
-      <nav className="px-6 py-4 flex justify-between items-center">
-        <div className="text-2xl font-bold text-gray-900">PaperThread</div>
-        <div className="space-x-4">
+      <nav className={`fixed top-0 left-0 right-0 z-50 px-8 py-6 flex justify-between items-center transition-all duration-300 ${
+        isScrolled ? 'bg-white/80 backdrop-blur-md shadow-sm' : 'bg-transparent'
+      }`}>
+        <div className="flex items-center space-x-3">
+          <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
+            <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+          </div>
+          <div className="text-2xl font-bold text-gray-900">
+            Paper Thread
+          </div>
+        </div>
+        <div className="space-x-6">
           <Link 
             href="/login"
-            className="text-gray-600 hover:text-gray-900 transition-colors"
+            className="text-gray-600 hover:text-gray-900 transition-colors font-medium"
           >
-            Login
+            Log in
           </Link>
           <Link 
             href="/signup"
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+            className="bg-primary text-white px-6 py-3 rounded-lg hover:bg-primary/90 transition-colors"
           >
-            Sign Up
+            Join the Beta
           </Link>
         </div>
       </nav>
 
       {/* Hero Section */}
-      <div className="max-w-6xl mx-auto px-6 py-20">
-        <div className="text-center">
-          <h1 className="text-5xl font-bold text-gray-900 mb-6">
-            Weave your research into papers
-          </h1>
-          <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
-            Visual research mapping for students who struggle with traditional methods. 
-            Connect your ideas, organize your research, and write better papers.
-          </p>
-          <div className="space-x-4">
-            <Link 
-              href="/signup"
-              className="bg-blue-600 text-white px-8 py-3 rounded-lg text-lg font-semibold hover:bg-blue-700 transition-colors"
-            >
-              Get Started Free
-            </Link>
-            <Link 
-              href="/login"
-              className="border border-gray-300 text-gray-700 px-8 py-3 rounded-lg text-lg font-semibold hover:bg-gray-50 transition-colors"
-            >
-              Sign In
-            </Link>
+      <div className="relative z-10 min-h-screen flex items-center">
+        <div className="max-w-6xl mx-auto px-8 py-20 w-full">
+          <div className="flex flex-col items-center text-center space-y-12">
+            {/* Content */}
+            <div className="space-y-6 max-w-4xl">
+              <div className="inline-flex items-center px-4 py-2 bg-pink-100 text-pink-700 rounded-full text-sm font-medium">
+                🚀 Beta Now Open
+              </div>
+              
+              <h1 className="text-5xl lg:text-7xl font-bold text-gray-900 leading-tight">
+                Write with Confidence
+              </h1>
+              <p className="text-xl lg:text-2xl text-gray-600 leading-relaxed">
+                From scattered thoughts to clear connections.
+              </p>
+              <p className="text-lg lg:text-xl text-gray-700 leading-relaxed max-w-3xl mx-auto">
+                Paper Thread helps students plan for papers by visually organizing and connecting thoughts and information.
+              </p>
+            </div>
+            
+            {/* Buttons */}
+            <div className="flex flex-col sm:flex-row gap-4">
+              <Link 
+                href="/signup"
+                className="bg-primary text-white px-12 py-4 rounded-lg text-xl font-semibold hover:bg-primary/90 transition-colors"
+              >
+                Join the Beta
+              </Link>
+              <Link 
+                href="/login"
+                className="border-2 border-gray-300 text-gray-700 px-12 py-4 rounded-lg text-xl font-semibold hover:border-gray-400 hover:bg-gray-50 transition-colors"
+              >
+                Sign In
+              </Link>
+            </div>
+
+            {/* Image */}
+            <div className="w-full max-w-5xl">
+              <div className="relative">
+                <div className="absolute -inset-6 bg-gradient-to-r from-primary/20 to-primary/10 rounded-3xl blur-xl"></div>
+                <div className="relative bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
+                  <Image
+                    src="/heroimage.png"
+                    alt="Paper Thread - Visual research mapping interface showing interconnected nodes for organizing research"
+                    width={1200}
+                    height={800}
+                    className="w-full h-auto rounded-lg"
+                    priority
+                  />
+                </div>
+                
+                {/* Card type color accents */}
+                <div className="absolute -top-3 -right-3 w-6 h-6 bg-orange-300 rounded-full"></div>
+                <div className="absolute -bottom-3 -left-3 w-5 h-5 bg-blue-300 rounded-full"></div>
+                <div className="absolute top-1/2 -right-6 w-3 h-3 bg-purple-300 rounded-full"></div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Features Section */}
-      <div className="max-w-6xl mx-auto px-6 py-20">
-        <div className="grid md:grid-cols-3 gap-8">
-          <div className="text-center">
-            <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </div>
-            <h3 className="text-xl font-semibold mb-2">Visual Mapping</h3>
-            <p className="text-gray-600">Create visual connections between your research ideas and sources</p>
-          </div>
-          <div className="text-center">
-            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-              </svg>
-            </div>
-            <h3 className="text-xl font-semibold mb-2">Organize Research</h3>
-            <p className="text-gray-600">Keep all your sources, notes, and ideas in one organized place</p>
-          </div>
-          <div className="text-center">
-            <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg className="w-8 h-8 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-              </svg>
-            </div>
-            <h3 className="text-xl font-semibold mb-2">Write Better Papers</h3>
-            <p className="text-gray-600">Transform your organized research into compelling academic papers</p>
-          </div>
-        </div>
-      </div>
-
-      {/* CTA Section */}
-      <div className="bg-white py-20">
-        <div className="max-w-4xl mx-auto text-center px-6">
-          <h2 className="text-3xl font-bold mb-4">Ready to improve your research process?</h2>
-          <p className="text-gray-600 mb-8">Join thousands of students who are already writing better papers</p>
-          <Link 
-            href="/signup"
-            className="bg-blue-600 text-white px-8 py-3 rounded-lg text-lg font-semibold hover:bg-blue-700 transition-colors"
-          >
-            Start Your Free Trial
-          </Link>
+      {/* Bottom Info */}
+      <div className="relative z-10 text-center py-12 text-gray-500">
+        <div className="flex items-center justify-center space-x-2">
+          <div className="w-1.5 h-1.5 bg-gray-400 rounded-full"></div>
+          <span>More info coming soon...</span>
+          <div className="w-1.5 h-1.5 bg-gray-400 rounded-full"></div>
         </div>
       </div>
     </div>
