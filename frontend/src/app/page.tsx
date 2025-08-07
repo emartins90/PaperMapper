@@ -88,7 +88,7 @@ export default function Home() {
                 From scattered thoughts to clear connections.
               </p>
               <p className="text-lg lg:text-xl text-gray-700 leading-relaxed max-w-3xl mx-auto">
-                Paper Thread helps students plan for papers by visually organizing and connecting thoughts and information.
+                Paper Thread helps students plan for papers by visually organizing and connecting thoughts and information. It provides just enough structure and guidance to help students build confidence in their own thinking.
               </p>
             </div>
             
