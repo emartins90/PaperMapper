@@ -4,10 +4,12 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
+import { Button } from "@/components/ui/button";
 
 export default function Home() {
   const [isLoading, setIsLoading] = useState(true);
   const [isScrolled, setIsScrolled] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -55,21 +57,57 @@ export default function Home() {
             Paper Thread
           </div>
         </div>
-        <div className="space-x-6">
+        
+        {/* Desktop Navigation */}
+        <div className="hidden md:flex items-center space-x-6">
           <Link 
             href="/login"
             className="text-gray-600 hover:text-gray-900 transition-colors font-medium"
           >
             Log in
           </Link>
-          <Link 
-            href="/signup"
-            className="bg-primary text-white px-6 py-3 rounded-lg hover:bg-primary/90 transition-colors"
-          >
-            Join the Beta
-          </Link>
+          <Button asChild>
+            <Link href="/signup">
+              Join the Beta
+            </Link>
+          </Button>
         </div>
+
+        {/* Mobile Menu Button */}
+        <button
+          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          className="md:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors"
+        >
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
       </nav>
+
+      {/* Mobile Menu */}
+      {isMobileMenuOpen && (
+        <div className="fixed top-0 left-0 right-0 z-40 md:hidden">
+          <div className="bg-white/95 backdrop-blur-md shadow-lg border-b border-gray-100">
+            <div className="px-8 py-4 space-y-4">
+              <Link 
+                href="/login"
+                className="block text-gray-600 hover:text-gray-900 transition-colors font-medium py-2"
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                Log in
+              </Link>
+              <Button asChild className="w-full">
+                <Link 
+                  href="/signup"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  Join the Beta
+                </Link>
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Hero Section */}
       <div className="relative z-10 min-h-screen flex items-center">
@@ -93,20 +131,11 @@ export default function Home() {
             </div>
             
             {/* Buttons */}
-            <div className="flex flex-col sm:flex-row gap-4">
-              <Link 
-                href="/signup"
-                className="bg-primary text-white px-12 py-4 rounded-lg text-xl font-semibold hover:bg-primary/90 transition-colors"
-              >
-                Join the Beta
-              </Link>
-              <Link 
-                href="/login"
-                className="border-2 border-gray-300 text-gray-700 px-12 py-4 rounded-lg text-xl font-semibold hover:border-gray-400 hover:bg-gray-50 transition-colors"
-              >
-                Sign In
-              </Link>
-            </div>
+              <Button asChild size="xl">
+                <Link href="/signup">
+                  Join the Beta
+                </Link>
+              </Button>
 
             {/* Image */}
             <div className="w-full max-w-5xl">
