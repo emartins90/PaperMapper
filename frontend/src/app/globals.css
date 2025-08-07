@@ -2,9 +2,7 @@
 @import "tw-animate-css";
 @import '../components/rich-text-editor/_variables.scss';
 @import '../components/rich-text-editor/_keyframe-animations.scss';
-/* ---break--- 
-  */
-@custom-variant dark (&:is(.dark *));
+
 
 /* Custom truncation class */
 .truncate-40-chars {
@@ -13,9 +11,6 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-
-
-
 
 
 @theme inline {

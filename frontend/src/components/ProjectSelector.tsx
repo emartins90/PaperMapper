@@ -779,6 +779,26 @@ export default function ProjectSelector({ token }: { token: string }) {
                   <div className="text-center py-8">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
                   </div>
+                ) : filteredProjects.length === 0 ? (
+                  // Empty state
+                  <div className="text-center py-16">
+                    <div className="max-w-md mx-auto">
+                      <div className="w-24 h-24 mx-auto mb-6 bg-gray-100 rounded-full flex items-center justify-center">
+                        <LuFileText className="w-12 h-12 text-gray-400" />
+                      </div>
+                      <h3 className="text-xl font-semibold text-gray-900 mb-2">No projects yet</h3>
+                      <p className="text-gray-600 mb-8">
+                        Create your first project to get started with your research and writing.
+                      </p>
+                      <Button 
+                        onClick={handleCreate} 
+                        className="bg-gray-800 hover:bg-gray-900"
+                        size="lg"
+                      >
+                        <LuPlus className="w-5 h-5 mr-2" /> Create Your First Project
+                      </Button>
+                    </div>
+                  </div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                     {filteredProjects.map((project) => (
