@@ -56,7 +56,9 @@ class SourceMaterialBase(BaseModel):
     citation_id: Optional[int] = None
     project_id: int
     content: Optional[str] = None
+    content_formatted: Optional[str] = None  # HTML content from rich text editor
     summary: Optional[str] = None
+    summary_formatted: Optional[str] = None  # HTML content from rich text editor for summary
     tags: Optional[List[str]] = None
     argument_type: Optional[str] = None
     function: Optional[str] = None
@@ -131,6 +133,7 @@ class UserCustomOptionRead(UserCustomOptionBase):
 class QuestionBase(BaseModel):
     project_id: int
     question_text: str
+    question_text_formatted: Optional[str] = None  # HTML content from rich text editor
     category: Optional[str] = None  # e.g., Clarify a concept, Challenge an assumption, etc. (custom allowed)
     status: Optional[str] = None    # e.g., unexplored, needs sources, in progress, answered, not relevant
     priority: Optional[str] = None  # e.g., high, medium, low
@@ -149,6 +152,7 @@ class Question(QuestionBase):
 class QuestionUpdate(BaseModel):
     project_id: Optional[int] = None
     question_text: Optional[str] = None
+    question_text_formatted: Optional[str] = None  # HTML content from rich text editor
     category: Optional[str] = None
     status: Optional[str] = None
     priority: Optional[str] = None
@@ -159,6 +163,7 @@ class QuestionUpdate(BaseModel):
 class InsightBase(BaseModel):
     project_id: int
     insight_text: str
+    insight_text_formatted: Optional[str] = None  # HTML content from rich text editor
     sources_linked: Optional[str] = None  # e.g., "3 Sources Linked"
     files: Optional[str] = None  # Comma-separated string
     file_filenames: Optional[str] = None  # Comma-separated string of original filenames
@@ -171,6 +176,7 @@ class InsightCreate(InsightBase):
 class InsightUpdate(BaseModel):
     project_id: Optional[int] = None
     insight_text: Optional[str] = None
+    insight_text_formatted: Optional[str] = None  # HTML content from rich text editor
     sources_linked: Optional[str] = None
     files: Optional[str] = None
     file_filenames: Optional[str] = None
@@ -185,6 +191,7 @@ class Insight(InsightBase):
 class ThoughtBase(BaseModel):
     project_id: int
     thought_text: str
+    thought_text_formatted: Optional[str] = None  # HTML content from rich text editor
     tags: Optional[List[str]] = None  # Comma-separated string
     files: Optional[str] = None  # Comma-separated string
     file_filenames: Optional[str] = None  # Comma-separated string of original filenames
@@ -195,6 +202,7 @@ class ThoughtCreate(ThoughtBase):
 class ThoughtUpdate(BaseModel):
     project_id: Optional[int] = None
     thought_text: Optional[str] = None
+    thought_text_formatted: Optional[str] = None  # HTML content from rich text editor
     files: Optional[str] = None
     file_filenames: Optional[str] = None
     tags: Optional[List[str]] = None
@@ -207,6 +215,7 @@ class Thought(ThoughtBase):
 class ClaimBase(BaseModel):
     project_id: int
     claim_text: str
+    claim_text_formatted: Optional[str] = None  # HTML content from rich text editor
     claim_type: Optional[str] = None  # Hypothesis, Thesis, Conclusion, Proposal
     tags: Optional[List[str]] = None  # Comma-separated string
     files: Optional[str] = None  # Comma-separated string
@@ -223,6 +232,7 @@ class Claim(ClaimBase):
 class ClaimUpdate(BaseModel):
     project_id: Optional[int] = None
     claim_text: Optional[str] = None
+    claim_text_formatted: Optional[str] = None  # HTML content from rich text editor
     claim_type: Optional[str] = None
     files: Optional[str] = None
     file_filenames: Optional[str] = None

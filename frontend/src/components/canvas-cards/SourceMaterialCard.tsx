@@ -8,8 +8,8 @@ import { Spinner } from "../ui/spinner";
 type SourceMaterialCardProps = {
   data: {
     tags: string[] | undefined;
-    text: string;
     summary?: string;
+    summaryFormatted?: string;
     thesisSupport: string;
     source: string;
     credibility: string;
@@ -120,11 +120,11 @@ export default function SourceMaterialCard({ data, showHandles = true, width = '
       
       {/* Only show summary if not empty or '(skipped)' */}
       {data.summary && data.summary.trim() !== '' && data.summary !== '(skipped)' && (
-        <div className="text-black mb-4 break-words" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>{data.summary}</div>
-      )}
-      {/* Only show text if not empty or '(skipped)' and no summary */}
-      {!data.summary && data.text && data.text.trim() !== '' && data.text !== '(skipped)' && (
-        <div className="text-black mb-4 break-words" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>{data.text}</div>
+        <div 
+          className="rich-text-display text-black mb-4 break-words" 
+          style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}
+          dangerouslySetInnerHTML={{ __html: data.summaryFormatted || data.summary }}
+        />
       )}
 
       {/* Render uploaded files (images as thumbnails, others as file names) */}

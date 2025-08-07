@@ -54,7 +54,9 @@ class SourceMaterial(Base):
     citation_id = Column(Integer, ForeignKey("citations.id"))
     project_id = Column(Integer, ForeignKey("projects.id"))
     content = Column(String, nullable=True)
+    content_formatted = Column(String, nullable=True)  # HTML content from rich text editor
     summary = Column(String, nullable=True)
+    summary_formatted = Column(String, nullable=True)  # HTML content from rich text editor for summary
     tags = Column(ARRAY(String), nullable=True)
     argument_type = Column(String, nullable=True)
     function = Column(String, nullable=True)
@@ -110,6 +112,7 @@ class Question(Base):
     id = Column(Integer, primary_key=True, index=True)
     project_id = Column(Integer, ForeignKey("projects.id"))
     question_text = Column(String, nullable=False)
+    question_text_formatted = Column(String, nullable=True)  # HTML content from rich text editor
     category = Column(String, nullable=True)  # e.g., Clarify a concept, Challenge an assumption, etc. (custom allowed)
     status = Column(String, nullable=True)    # e.g., unexplored, needs sources, in progress, answered, not relevant
     priority = Column(String, nullable=True)  # e.g., high, medium, low
@@ -123,6 +126,7 @@ class Insight(Base):
     id = Column(Integer, primary_key=True, index=True)
     project_id = Column(Integer, ForeignKey("projects.id"))
     insight_text = Column(String, nullable=False)
+    insight_text_formatted = Column(String, nullable=True)  # HTML content from rich text editor
     sources_linked = Column(String, nullable=True)  # e.g., "3 Sources Linked"
     files = Column(String, nullable=True)  # Store as comma-separated for now
     file_filenames = Column(String, nullable=True)  # Store original filenames as comma-separated
@@ -135,6 +139,7 @@ class Thought(Base):
     id = Column(Integer, primary_key=True, index=True)
     project_id = Column(Integer, ForeignKey("projects.id"))
     thought_text = Column(String, nullable=False)
+    thought_text_formatted = Column(String, nullable=True)  # HTML content from rich text editor
     tags = Column(ARRAY(String), nullable=True)  # Store as comma-separated for now
     files = Column(String, nullable=True)  # Store as comma-separated for now
     file_filenames = Column(String, nullable=True)  # Store original filenames as comma-separated
@@ -145,6 +150,7 @@ class Claim(Base):
     id = Column(Integer, primary_key=True, index=True)
     project_id = Column(Integer, ForeignKey("projects.id"))
     claim_text = Column(String, nullable=False)
+    claim_text_formatted = Column(String, nullable=True)  # HTML content from rich text editor
     claim_type = Column(String, nullable=True)  # Hypothesis, Thesis, Conclusion, Proposal
     tags = Column(ARRAY(String), nullable=True)  # Store as comma-separated for now
     files = Column(String, nullable=True)  # Store as comma-separated for now

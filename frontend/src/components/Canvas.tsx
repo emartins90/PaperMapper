@@ -185,6 +185,10 @@ export default function CanvasInner({ projectId }: CanvasProps) {
               });
               if (smRes.ok) {
                 const sourceMaterial = await smRes.json();
+                console.log("=== DEBUG: Loading source material ===");
+                console.log("sourceMaterial:", sourceMaterial);
+                console.log("content_formatted:", sourceMaterial.content_formatted);
+                console.log("summary_formatted:", sourceMaterial.summary_formatted);
                 
                 // If there's a citation ID, fetch the citation text
                 let citationText = "";
@@ -217,10 +221,12 @@ export default function CanvasInner({ projectId }: CanvasProps) {
                 cardData = {
                   tags: Array.isArray(sourceMaterial.tags) ? sourceMaterial.tags : (sourceMaterial.tags ? [sourceMaterial.tags] : []),
                   text: sourceMaterial.content || "",
+                  contentFormatted: sourceMaterial.content_formatted || "",
                   thesisSupport: sourceMaterial.argument_type || "",
                   source: citationText || sourceMaterial.source || "",
                   credibility: citationCredibility || sourceMaterial.credibility || "",
                   summary: sourceMaterial.summary,
+                  summaryFormatted: sourceMaterial.summary_formatted || "",
                   sourceFunction: sourceMaterial.function,
                   additionalNotes: sourceMaterial.notes || "",
                   sourceMaterialId: sourceMaterial.id,
@@ -229,6 +235,10 @@ export default function CanvasInner({ projectId }: CanvasProps) {
                   files: fileUrls,
                   fileEntries: fileEntries,
                 };
+                console.log("=== DEBUG: cardData created ===");
+                console.log("cardData:", cardData);
+                console.log("contentFormatted:", (cardData as any).contentFormatted);
+                console.log("summaryFormatted:", (cardData as any).summaryFormatted);
               }
             } catch (err) {
               console.error("Failed to load source material:", err);
@@ -254,6 +264,7 @@ export default function CanvasInner({ projectId }: CanvasProps) {
                 cardData = {
                   tags: Array.isArray(question.tags) ? question.tags : (question.tags ? [question.tags] : []),
                   question: question.question_text || "",
+                  questionFormatted: question.question_text_formatted || "",
                   category: question.category || "",
                   status: question.status || "unexplored",
                   priority: question.priority || "",
@@ -294,6 +305,7 @@ export default function CanvasInner({ projectId }: CanvasProps) {
                 cardData = {
                   tags: Array.isArray(insight.tags) ? insight.tags : (insight.tags ? [insight.tags] : []),
                   insight: insight.insight_text || "",
+                  insightFormatted: insight.insight_text_formatted || "",
                   sourcesLinked: insight.sources_linked || "0 Sources Linked",
                   insightType: insight.insight_type || "",
                   insightId: insight.id,
@@ -332,6 +344,7 @@ export default function CanvasInner({ projectId }: CanvasProps) {
                 cardData = {
                   tags: Array.isArray(thought.tags) ? thought.tags : (thought.tags ? [thought.tags] : []),
                   thought: thought.thought_text || "",
+                  thoughtFormatted: thought.thought_text_formatted || "",
                   thoughtId: thought.id,
                   projectId: thought.project_id,
                   files: fileUrls,
@@ -367,6 +380,7 @@ export default function CanvasInner({ projectId }: CanvasProps) {
                 cardData = {
                   tags: Array.isArray(claim.tags) ? claim.tags : (claim.tags ? [claim.tags] : []),
                   claim: claim.claim_text || "",
+                  claimFormatted: claim.claim_text_formatted || "",
                   claimType: claim.claim_type || undefined,
                   claimId: claim.id,
                   projectId: claim.project_id,

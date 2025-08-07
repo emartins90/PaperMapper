@@ -9,6 +9,7 @@ import LinkedCardsTab from "../LinkedCardsTab";
 import { Label } from "@/components/ui/label";
 import { MultiCombobox } from "@/components/ui/multi-combobox";
 import { Spinner } from "@/components/ui/spinner";
+import SimpleRichTextEditor from "../rich-text-editor/simple-rich-text-editor";
 
 const CLAIM_TYPES = [
   "Hypothesis",
@@ -51,6 +52,7 @@ export default function ClaimCardContent({
   projectId // Add projectId prop
 }: ClaimCardContentProps) {
   const [claim, setClaim] = React.useState(cardData?.claim || "");
+  const [claimFormatted, setClaimFormatted] = React.useState(cardData?.claimFormatted || "");
   const [claimType, setClaimType] = React.useState(cardData?.claimType || undefined);
   const [files, setFiles] = React.useState<string[]>(cardData?.files || []);
   const [fileEntries, setFileEntries] = React.useState<Array<{ url: string; filename: string; type: string }>>(cardData?.fileEntries || []);
@@ -78,6 +80,11 @@ export default function ClaimCardContent({
     onDeleteCard,
   });
 
+    const handleClaimFormattedChange = (html: string, plainText: string) => {
+    setClaimFormatted(html);
+    setClaim(plainText);
+  };
+
   // Get all existing tags from all cards
   const getAllExistingTags = () => {
     const allTags = new Set<string>();
@@ -92,23 +99,25 @@ export default function ClaimCardContent({
 
   React.useEffect(() => {
     setClaim(cardData?.claim || "");
+    setClaimFormatted(cardData?.claimFormatted || "");
     setClaimType(cardData?.claimType !== undefined ? cardData.claimType : undefined);
     setFiles(cardData?.files || []);
     setFileEntries(cardData?.fileEntries || []);
     setPendingFiles(cardData?.pendingFiles || []);
     setTags(Array.isArray(cardData?.tags) ? cardData.tags : []);
-  }, [openCard?.id]);
+  }, [cardData]);
 
   // Update form data for parent component when fields change
   React.useEffect(() => {
     if (onFormDataChange) {
       onFormDataChange({
         claimText: claim,
+        claimTextFormatted: claimFormatted,
         claimType: claimType,
         uploadedFiles: pendingFiles,
       });
     }
-  }, [claim, claimType, pendingFiles, onFormDataChange]);
+  }, [claim, claimFormatted, claimType, pendingFiles, onFormDataChange]);
 
   // Handle pending node updates
   React.useEffect(() => {
@@ -194,6 +203,7 @@ export default function ClaimCardContent({
         cardId: openCard.id,
         chatAnswers: {
           claimText: claim,
+          claimTextFormatted: claimFormatted,
           claimType: claimType,
         },
         uploadedFiles: pendingFiles,
@@ -215,6 +225,7 @@ export default function ClaimCardContent({
     const payload = {
       project_id: projectId,
       claim_text: fields?.claim ?? claim,
+      claim_text_formatted: claimFormatted,
       claim_type: fields?.claimType ?? claimType,
       files: files.join(','),
       ...fields
@@ -240,6 +251,7 @@ export default function ClaimCardContent({
     if (onUpdateNodeData && openCard) {
       onUpdateNodeData(openCard.id, {
         claim: payload.claim_text,
+        claimFormatted: claimFormatted,
         claimType: payload.claim_type,
         tags: payload.tags, // Update tags in node data
       });
@@ -276,17 +288,13 @@ export default function ClaimCardContent({
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Claim</label>
-            <textarea
-              className="w-full p-2 border border-gray-300 rounded-md text-sm"
+            <SimpleRichTextEditor
+              value={claimFormatted || claim}
+              onChange={handleClaimFormattedChange}
               placeholder="Enter the claim..."
-              rows={3}
-              value={claim}
-              onChange={e => setClaim(e.target.value)}
-              onBlur={() => {
-                if (openCard && !isUnsaved) {
-                  saveAllFields({ claim });
-                }
-              }}
+              cardType="claim"
+              showSaveButton={!!cardData?.claimId}
+              onSave={() => saveAllFields()}
             />
           </div>
           

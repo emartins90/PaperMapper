@@ -8,6 +8,7 @@ import { Spinner } from "../ui/spinner";
 type InsightCardProps = {
   data: {
     insight: string;
+    insightFormatted?: string;
     insightType?: string;
     sourcesLinked?: string;
     tags?: string[] | string;
@@ -94,7 +95,11 @@ export default function InsightCard({ data, showHandles = true, width = 'w-96', 
           ))}
         </div>
       )}
-      <div className="text-black mb-4 break-words" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>{data.insight}</div>
+      <div 
+        className="text-black mb-4 break-words rich-text-display" 
+        style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}
+        dangerouslySetInnerHTML={{ __html: data.insightFormatted || data.insight }}
+      />
       
       {/* Render uploaded files (images as thumbnails, others as file names) */}
       {data.files && data.files.length > 0 && (

@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Combobox, useCustomOptions } from "@/components/ui/combobox";
 import { MultiCombobox } from "@/components/ui/multi-combobox";
 import { Spinner } from "@/components/ui/spinner";
+import SimpleRichTextEditor from "../rich-text-editor/simple-rich-text-editor";
 
 const QUESTION_CATEGORIES = [
   "Clarify a concept",
@@ -73,6 +74,7 @@ export default function QuestionCardContent({
   projectId // Add projectId prop
 }: QuestionCardContentProps) {
   const [question, setQuestion] = React.useState(cardData?.question || "");
+  const [questionFormatted, setQuestionFormatted] = React.useState(cardData?.questionFormatted || "");
   const [category, setCategory] = React.useState(cardData?.category || "");
   const [customCategory, setCustomCategory] = React.useState("");
   const [status, setStatus] = React.useState(cardData?.status || "unexplored");
@@ -94,6 +96,19 @@ export default function QuestionCardContent({
   // Check if card is unsaved
   const isUnsaved = !cardData?.questionId;
 
+  // Update fields when component mounts or card changes
+  useEffect(() => {
+    setQuestion(cardData?.question || "");
+    setQuestionFormatted(cardData?.questionFormatted || "");
+    setCategory(cardData?.category || "");
+    setStatus(cardData?.status || "unexplored");
+    setPriority(cardData?.priority || "");
+    setTags(Array.isArray(cardData?.tags) ? cardData.tags : []);
+    setFiles(cardData?.files || []);
+    setFileEntries(cardData?.fileEntries || []);
+    setPendingFiles(cardData?.pendingFiles || []);
+  }, [cardData]);
+
   // Use the shared save hook
   const { saveCard, isSaving: isSavingFromHook } = useCardSave({
     cardId: openCard?.id || "",
@@ -107,6 +122,11 @@ export default function QuestionCardContent({
   const questionFunctionOptions = useCustomOptions("questionFunction");
 
   // Get all existing tags from all cards
+  const handleQuestionFormattedChange = (html: string, plainText: string) => {
+    setQuestionFormatted(html);
+    setQuestion(plainText);
+  };
+
   const getAllExistingTags = () => {
     const allTags = new Set<string>();
     nodes.forEach(node => {
@@ -118,29 +138,21 @@ export default function QuestionCardContent({
     return Array.from(allTags).sort();
   };
 
-  React.useEffect(() => {
-    setQuestion(cardData?.question || "");
-    setCategory(cardData?.category || "");
-    setStatus(cardData?.status || "unexplored");
-    setPriority(cardData?.priority || "");
-    setFiles(cardData?.files || []);
-    setFileEntries(cardData?.fileEntries || []);
-    setPendingFiles(cardData?.pendingFiles || []);
-    setTags(Array.isArray(cardData?.tags) ? cardData.tags : []);
-  }, [openCard?.id]);
+
 
   // Update form data for parent component when fields change
   React.useEffect(() => {
     if (onFormDataChange) {
       onFormDataChange({
         questionText: question,
+        questionTextFormatted: questionFormatted,
         category: category === "Custom..." ? customCategory : category,
         status: status,
         priority: priority,
         uploadedFiles: pendingFiles,
       });
     }
-  }, [question, category, customCategory, status, priority, pendingFiles, onFormDataChange]);
+  }, [question, questionFormatted, category, customCategory, status, priority, pendingFiles, onFormDataChange]);
 
   // Handle pending node updates
   React.useEffect(() => {
@@ -157,6 +169,7 @@ export default function QuestionCardContent({
     if (onUpdateNodeData) {
       onUpdateNodeData(openCard?.id || "", {
         question: question,
+        questionFormatted: questionFormatted,
         category: category,
         status: status,
         priority: priority,
@@ -178,12 +191,14 @@ export default function QuestionCardContent({
       const payload = {
         project_id: projectId,
         question_text: question,
+        question_text_formatted: questionFormatted,
         category: category,
         status: status,
         priority: priority,
         files: files.join(','),
         ...additionalFields
       };
+
       payload.tags = Array.isArray(payload.tags) ? payload.tags : tags;
       const response = await fetch(`${API_URL}/questions/${cardData.questionId}`, {
         method: "PUT",
@@ -198,6 +213,8 @@ export default function QuestionCardContent({
         const errorText = await response.text();
         throw new Error(`Failed to save changes: ${response.status} ${errorText}`);
       }
+
+
     } catch (error) {
       console.error("Error saving changes:", error);
       alert("Failed to save changes: " + (error as Error).message);
@@ -283,6 +300,7 @@ export default function QuestionCardContent({
         cardId: openCard.id,
         chatAnswers: {
           questionText: question,
+          questionTextFormatted: questionFormatted,
           category: category === "Custom..." ? customCategory : category,
           status: status,
           priority: priority,
@@ -295,23 +313,21 @@ export default function QuestionCardContent({
     }
   };
 
+
+
   return (
     <div className="flex-1 p-6 overflow-y-auto">
       {questionTab === "info" ? (
         <div className="space-y-4">
           <div>
             <Label htmlFor="question-text" className="block text-sm font-medium text-gray-700 mb-1">Question Text</Label>
-            <Textarea
-              id="question-text"
+            <SimpleRichTextEditor
+              value={questionFormatted || question}
+              onChange={handleQuestionFormattedChange}
               placeholder="Enter your research or essay question..."
-              rows={3}
-              value={question}
-              onChange={e => setQuestion(e.target.value)}
-              onBlur={() => {
-                if (!isUnsaved) {
-                  saveAllFields({ question });
-                }
-              }}
+              cardType="question"
+              showSaveButton={!!cardData?.questionId}
+              onSave={() => saveAllFields()}
             />
           </div>
           <div>

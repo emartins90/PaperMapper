@@ -19,6 +19,7 @@ import { cn } from "@/lib/utils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Spinner } from "@/components/ui/spinner";
 import { TextWithLinks } from "@/components/ui/text-with-links";
+import SimpleRichTextEditor from "@/components/rich-text-editor/simple-rich-text-editor";
 
 interface Citation {
   id: number;
@@ -76,7 +77,9 @@ export default function SourceCardContent({
   // Add state for all editable fields
   const [sourceCitation, setSourceCitation] = useState(cardData?.source || "");
   const [summary, setSummary] = useState(cardData?.summary || "");
+  const [summaryFormatted, setSummaryFormatted] = useState(cardData?.summaryFormatted || "");
   const [sourceContent, setSourceContent] = useState(cardData?.text || "");
+  const [sourceContentFormatted, setSourceContentFormatted] = useState(cardData?.contentFormatted || "");
   const [tags, setTags] = useState<string[]>(Array.isArray(cardData?.tags) ? cardData.tags : []);
   const [argumentType, setArgumentType] = useState(cardData?.thesisSupport || "");
   const [sourceFunction, setSourceFunction] = useState(cardData?.sourceFunction || "");
@@ -99,18 +102,7 @@ export default function SourceCardContent({
   
   // Track local citation state to handle immediate UI updates
   const [localCitationId, setLocalCitationId] = useState<number | null>(cardData?.citationId || null);
-  
-  // Track if we're in the middle of removing a citation
-  const isRemovingRef = useRef(false);
-  
-  // Track when we last removed a citation to prevent useEffect from re-setting it
-  const lastRemovalTimeRef = useRef<number>(0);
-  
-  // Track the last card ID to reset timestamp when switching cards
-  const lastCardIdRef = useRef<string | undefined>(undefined);
-  
-  // Track if we've explicitly removed a citation for the current card
-  const removedCitationForCardRef = useRef<Set<string>>(new Set());
+
   
   // Track if we need to refresh citation data from database
   const [shouldRefreshCitation, setShouldRefreshCitation] = useState(false);
@@ -240,7 +232,9 @@ export default function SourceCardContent({
     setNotes(cardData?.additionalNotes || "");
     setSourceCitation(cardData?.source || "");
     setSummary(cardData?.summary || "");
+    setSummaryFormatted(cardData?.summaryFormatted || "");
     setSourceContent(cardData?.text || "");
+    setSourceContentFormatted(cardData?.contentFormatted || "");
     setTags(Array.isArray(cardData?.tags) ? cardData.tags : []);
     setArgumentType(cardData?.thesisSupport || "");
     setSourceFunction(cardData?.sourceFunction || "");
@@ -273,7 +267,9 @@ export default function SourceCardContent({
     if (onFormDataChange) {
       onFormDataChange({
         sourceContent: sourceContent,
+        sourceContentFormatted: sourceContentFormatted,
         summary: summary,
+        summaryFormatted: summaryFormatted,
         topicalTags: tags,
         argumentType: argumentType,
         sourceFunction: sourceFunction,
@@ -283,7 +279,7 @@ export default function SourceCardContent({
         uploadedFiles: pendingFiles,
       });
     }
-  }, [sourceContent, summary, tags, argumentType, sourceFunction, credibility, sourceCitation, selectedCitation, pendingFiles, onFormDataChange]);
+  }, [sourceContent, sourceContentFormatted, summary, summaryFormatted, tags, argumentType, sourceFunction, credibility, sourceCitation, selectedCitation, pendingFiles, onFormDataChange]);
 
   // Update files when cardData changes
   useEffect(() => {
@@ -307,7 +303,9 @@ export default function SourceCardContent({
       onUpdateNodeData(openCard?.id || "", {
         source: sourceCitation,
         summary: summary,
+        summaryFormatted: summaryFormatted,
         text: sourceContent,
+        contentFormatted: sourceContentFormatted,
         tags: tags,
         thesisSupport: argumentType,
         sourceFunction: sourceFunction,
@@ -336,7 +334,9 @@ export default function SourceCardContent({
         project_id: cardData.projectId,
         citation_id: cardData.citationId,
         content: sourceContent,
+        content_formatted: sourceContentFormatted,
         summary: summary,
+        summary_formatted: summaryFormatted,
         tags: tags,
         argument_type: argumentType,
         function: sourceFunction,
@@ -376,6 +376,7 @@ export default function SourceCardContent({
       onUpdateNodeData(openCard?.id || "", {
         source: sourceCitation,
         summary: summary,
+        summaryFormatted: summaryFormatted,
         text: sourceContent,
         tags: tagsToSave,
         thesisSupport: argumentType,
@@ -405,9 +406,11 @@ export default function SourceCardContent({
         body: JSON.stringify({
           project_id: cardData.projectId,
           citation_id: cardData.citationId,
-          content: sourceContent,
-          summary: summary,
-          tags: tagsToSave,
+                  content: sourceContent,
+        content_formatted: sourceContentFormatted,
+        summary: summary,
+        summary_formatted: summaryFormatted,
+        tags: tagsToSave,
           argument_type: argumentType,
           function: sourceFunction,
           files: files.join(','),
@@ -438,6 +441,7 @@ export default function SourceCardContent({
       onUpdateNodeData(openCard?.id || "", {
         source: sourceCitation,
         summary: summary,
+        summaryFormatted: summaryFormatted,
         text: sourceContent,
         tags: tags,
         thesisSupport: argumentTypeToSave,
@@ -467,10 +471,12 @@ export default function SourceCardContent({
         body: JSON.stringify({
           project_id: cardData.projectId,
           citation_id: cardData.citationId,
-          content: sourceContent,
-          summary: summary,
-          tags: tags,
-          argument_type: argumentTypeToSave,
+                  content: sourceContent,
+        content_formatted: sourceContentFormatted,
+        summary: summary,
+        summary_formatted: summaryFormatted,
+        tags: tags,
+        argument_type: argumentTypeToSave,
           function: sourceFunction,
           files: files.join(','),
           notes: notes,
@@ -500,6 +506,7 @@ export default function SourceCardContent({
       onUpdateNodeData(openCard?.id || "", {
         source: sourceCitation,
         summary: summary,
+        summaryFormatted: summaryFormatted,
         text: sourceContent,
         tags: tags,
         thesisSupport: argumentType,
@@ -529,11 +536,13 @@ export default function SourceCardContent({
         body: JSON.stringify({
           project_id: cardData.projectId,
           citation_id: cardData.citationId,
-          content: sourceContent,
-          summary: summary,
-          tags: tags,
-          argument_type: argumentType,
-          function: sourceFunctionToSave,
+                  content: sourceContent,
+        content_formatted: sourceContentFormatted,
+        summary: summary,
+        summary_formatted: summaryFormatted,
+        tags: tags,
+        argument_type: argumentType,
+        function: sourceFunctionToSave,
           files: files.join(','),
           notes: notes,
         }),
@@ -597,7 +606,9 @@ export default function SourceCardContent({
           project_id: cardData.projectId,
           citation_id: cardData.citationId,
           content: sourceContent,
+          content_formatted: sourceContentFormatted,
           summary: summary,
+          summary_formatted: summaryFormatted,
           tags: tags,
           argument_type: argumentType,
           function: sourceFunction,
@@ -638,7 +649,9 @@ export default function SourceCardContent({
           project_id: cardData.projectId,
           citation_id: cardData.citationId,
           content: sourceContent,
+          content_formatted: sourceContentFormatted,
           summary: summary,
+          summary_formatted: summaryFormatted,
           tags: tags,
           argument_type: argumentType,
           function: sourceFunction,
@@ -825,8 +838,14 @@ export default function SourceCardContent({
     setSummary(e.target.value);
   };
 
-  const handleSourceContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setSourceContent(e.target.value);
+  const handleSummaryFormattedChange = (html: string, plainText: string) => {
+    setSummaryFormatted(html);
+    setSummary(plainText);
+  };
+
+  const handleSourceContentChange = (html: string, plainText: string) => {
+    setSourceContentFormatted(html);
+    setSourceContent(plainText);
   };
 
   // Handle field blur (save when user leaves the field, only for saved cards)
@@ -860,7 +879,9 @@ export default function SourceCardContent({
         cardId: openCard.id,
         chatAnswers: {
           sourceContent: sourceContent,
+          sourceContentFormatted: sourceContentFormatted,
           summary: summary,
+          summaryFormatted: summaryFormatted,
           topicalTags: tags.join(", "),
           argumentType: argumentType,
           sourceFunction: sourceFunction,
@@ -915,7 +936,9 @@ export default function SourceCardContent({
             project_id: cardData.projectId,
             citation_id: citation.id, // Associate the citation
             content: sourceContent,
+            content_formatted: sourceContentFormatted,
             summary: summary,
+            summary_formatted: summaryFormatted,
             tags: tags,
             argument_type: argumentType,
             function: sourceFunction,
@@ -990,7 +1013,9 @@ export default function SourceCardContent({
             project_id: cardData.projectId,
             citation_id: null, // Remove the citation reference
             content: sourceContent,
+            content_formatted: sourceContentFormatted,
             summary: summary,
+            summary_formatted: summaryFormatted,
             tags: tags,
             argument_type: argumentType,
             function: sourceFunction,
@@ -1084,7 +1109,9 @@ export default function SourceCardContent({
           project_id: cardData.projectId,
           citation_id: newCitation.id, // Associate the new citation
           content: sourceContent,
+          content_formatted: sourceContentFormatted,
           summary: summary,
+          summary_formatted: summaryFormatted,
           tags: tags,
           argument_type: argumentType,
           function: sourceFunction,
@@ -1201,15 +1228,14 @@ export default function SourceCardContent({
         <div className="space-y-4">
           <div>
             <Label htmlFor="source-content" className="block text-sm font-medium text-gray-700 mb-1">Detailed Source Material</Label>
-            <Textarea
-              id="source-content"
-              className="resize-none min-h-[120px] max-h-64 overflow-auto"
-              style={{ minHeight: '120px', maxHeight: '16rem' }}
-              placeholder="Type or paste the full text content, quotes, or relevant excerpts from your source..."
-              rows={5}
-              value={sourceContent}
+            <SimpleRichTextEditor
+              value={sourceContentFormatted}
               onChange={handleSourceContentChange}
-              onBlur={handleSourceContentBlur}
+              placeholder="Type or paste the full text content, quotes, or relevant excerpts from your source..."
+              className="min-h-[120px] max-h-[600px]"
+              cardType="source"
+              showSaveButton={!!cardData?.sourceMaterialId}
+              onSave={() => saveAllFields()}
             />
           </div>
           
@@ -1240,7 +1266,7 @@ export default function SourceCardContent({
             <Label htmlFor="source-notes" className="block text-sm font-medium text-gray-600 mb-1">Additional Notes</Label>
             <Textarea
               id="source-notes"
-              className="min-h-[80px] resize-y"
+              className="min-h-[80px] max-h-[400px] resize-y overflow-auto"
               placeholder="Add any personal notes, thoughts, or connections to other sources..."
               rows={3}
               value={notes}
@@ -1342,13 +1368,14 @@ export default function SourceCardContent({
           
           <div>
             <Label htmlFor="source-summary" className="block text-sm font-medium text-gray-700 mb-1">Summary</Label>
-            <Textarea 
-              id="source-summary"
+            <SimpleRichTextEditor
+              value={summaryFormatted}
+              onChange={handleSummaryFormattedChange}
               placeholder="Write a brief summary (2-3 sentences) of the key points..."
-              rows={3}
-              value={summary}
-              onChange={handleSummaryChange}
-              onBlur={handleSummaryBlur}
+              className="min-h-[80px] max-h-[200px] resize-y overflow-auto"
+              cardType="source"
+              showSaveButton={!!cardData?.sourceMaterialId}
+              onSave={() => saveAllFields()}
             />
             <p className="text-xs text-gray-500 mt-1">Focus on the most relevant information for your research question.</p>
           </div>

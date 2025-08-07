@@ -10,6 +10,7 @@ import FileChip from "../canvas-add-files/FileChip";
 import { useCardSave } from "../shared/useCardSave";
 import { Spinner } from "../ui/spinner";
 import { TextWithLinks } from "../ui/text-with-links";
+import SimpleRichTextEditor from "../rich-text-editor/simple-rich-text-editor";
 
 interface Citation {
   id: number;
@@ -74,6 +75,9 @@ const ChatExperienceBase: React.FC<ChatExperienceBaseProps> = ({
   const [cardSaved, setCardSaved] = useState(false);
   const [deletingTags, setDeletingTags] = useState<Set<string>>(new Set());
   
+  // Rich text editor state
+  const [formattedContent, setFormattedContent] = useState<{ [key: string]: string }>({});
+  
   // Citation selection state
   const [selectedCitation, setSelectedCitation] = useState<Citation | null>(null);
   const [citations, setCitations] = useState<Citation[]>([]);
@@ -117,6 +121,7 @@ const ChatExperienceBase: React.FC<ChatExperienceBaseProps> = ({
     setCurrentTags([]);
     setTagInput("");
     setChatInputs({});
+    setFormattedContent({});
     setChatHistory([{ role: "system", text: prompts[0].prompt }]);
     setFilesByPrompt({}); // Reset filesByPrompt on cardId change
     setCardSaved(false); // Reset saved state
@@ -475,6 +480,12 @@ const ChatExperienceBase: React.FC<ChatExperienceBaseProps> = ({
     setFilteredTagSuggestions(filtered);
   };
 
+  // Rich text editor handlers
+  const handleRichTextChange = (promptId: string, html: string, plainText: string) => {
+    setFormattedContent(prev => ({ ...prev, [promptId]: html }));
+    setChatInputs(prev => ({ ...prev, [promptId]: plainText }));
+  };
+
   // Handle final submission for all card types using shared save hook
   const handleFinalSubmit = async () => {
     // Include tags in the final submission
@@ -482,6 +493,33 @@ const ChatExperienceBase: React.FC<ChatExperienceBaseProps> = ({
     if (currentTags.length > 0) {
       finalAnswers.topicalTags = currentTags;
     }
+    
+    // Include formatted content for all card types
+    if (chatType === 'source') {
+      if (formattedContent.sourceContent) {
+        finalAnswers.sourceContentFormatted = formattedContent.sourceContent;
+      }
+      if (formattedContent.summary) {
+        finalAnswers.summaryFormatted = formattedContent.summary;
+      }
+    } else if (chatType === 'thought') {
+      if (formattedContent.thoughtText) {
+        finalAnswers.thoughtTextFormatted = formattedContent.thoughtText;
+      }
+    } else if (chatType === 'question') {
+      if (formattedContent.questionText) {
+        finalAnswers.questionTextFormatted = formattedContent.questionText;
+      }
+    } else if (chatType === 'insight') {
+      if (formattedContent.insightText) {
+        finalAnswers.insightTextFormatted = formattedContent.insightText;
+      }
+    } else if (chatType === 'claim') {
+      if (formattedContent.claimText) {
+        finalAnswers.claimTextFormatted = formattedContent.claimText;
+      }
+    }
+    
     // Aggregate all files from filesByPrompt
     const allFiles: File[] = Object.values(filesByPrompt).flat();
     
@@ -522,6 +560,24 @@ const ChatExperienceBase: React.FC<ChatExperienceBaseProps> = ({
     // For insight and thought cards, update chatAnswers with current input
     if (chatType === 'insight' || chatType === 'thought') {
       updatedChatAnswers[currentPrompt.id] = chatInputs[currentPrompt.id] || "";
+    }
+    
+    // Include formatted content for all card types
+    if (chatType === 'thought' && formattedContent.thoughtText) {
+      updatedChatAnswers.thoughtTextFormatted = formattedContent.thoughtText;
+    } else if (chatType === 'question' && formattedContent.questionText) {
+      updatedChatAnswers.questionTextFormatted = formattedContent.questionText;
+    } else if (chatType === 'insight' && formattedContent.insightText) {
+      updatedChatAnswers.insightTextFormatted = formattedContent.insightText;
+    } else if (chatType === 'claim' && formattedContent.claimText) {
+      updatedChatAnswers.claimTextFormatted = formattedContent.claimText;
+    } else if (chatType === 'source') {
+      if (formattedContent.sourceContent) {
+        updatedChatAnswers.sourceContentFormatted = formattedContent.sourceContent;
+      }
+      if (formattedContent.summary) {
+        updatedChatAnswers.summaryFormatted = formattedContent.summary;
+      }
     }
     
     // Set topicalTags as array
@@ -566,6 +622,7 @@ const ChatExperienceBase: React.FC<ChatExperienceBaseProps> = ({
     question: 'questionText',
     insight: 'insightText',
     thought: 'thoughtText',
+    claim: 'claimText',
   };
 
   return (
@@ -608,7 +665,25 @@ const ChatExperienceBase: React.FC<ChatExperienceBaseProps> = ({
                           <React.Fragment key={i}>{line}{i < para.split(/\n/).length - 1 && <br />}</React.Fragment>
                         ))}</p>
                       ))
-                    : msg.text && <div>{msg.text}</div>
+                    : msg.text && (
+                        // Check if this is a rich text field and display formatted content
+                        (() => {
+                          const promptIdx = Math.floor((i - 1) / 2);
+                          if (promptIdx >= 0 && promptIdx < prompts.length) {
+                            const promptId = prompts[promptIdx].id;
+                            const formattedHtml = formattedContent[promptId];
+                            if (formattedHtml && (promptId === 'sourceContent' || promptId === 'summary' || promptId === 'claimText')) {
+                              return (
+                                <div 
+                                  className="rich-text-display"
+                                  dangerouslySetInnerHTML={{ __html: formattedHtml }}
+                                />
+                              );
+                            }
+                          }
+                          return <div>{msg.text}</div>;
+                        })()
+                      )
                   }
                   {/* If user message and files were uploaded for this prompt, show them */}
                   {msg.role === "user" && promptId && filesByPrompt[promptId] && filesByPrompt[promptId].length > 0 && (
@@ -843,20 +918,22 @@ const ChatExperienceBase: React.FC<ChatExperienceBaseProps> = ({
                   );
                 }
               } else if (currentPrompt.id === mainTextPromptId[chatType]) {
-                // Textarea + file upload for the main text prompt of each card type
+                // Rich text editor + file upload for the main text prompt of each card type
                 return (
                   <div className="space-y-4">
-                    <textarea
-                      value={chatInputs[currentPrompt.id] || ""}
-                      onChange={e => setChatInputs(prev => ({ ...prev, [currentPrompt.id]: e.target.value }))}
+                    <SimpleRichTextEditor
+                      value={formattedContent[currentPrompt.id] || ""}
+                      onChange={(html, plainText) => handleRichTextChange(currentPrompt.id, html, plainText)}
                       placeholder={
                         chatType === 'source' ? "Paste or type the content from your source..." :
                         chatType === 'question' ? "Type your research question here..." :
                         chatType === 'insight' ? "Describe the insight or pattern you noticed..." :
                         chatType === 'thought' ? "Share your thought..." :
+                        chatType === 'claim' ? "Enter your claim..." :
                         ""
                       }
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 min-h-[120px] resize-y"
+                      className="min-h-[120px] max-h-[400px]"
+                      cardType={chatType}
                     />
                     <div className="flex items-center gap-2">
                       <input
@@ -1084,12 +1161,23 @@ const ChatExperienceBase: React.FC<ChatExperienceBaseProps> = ({
                     )}
                     
                     {/* Regular textarea for other prompts */}
-                    {currentPrompt.id !== 'sourceCitation' && (
+                    {currentPrompt.id !== 'sourceCitation' && currentPrompt.id !== 'summary' && (
                       <textarea
                         value={chatInputs[currentPrompt.id] || ""}
                         onChange={e => setChatInputs(prev => ({ ...prev, [currentPrompt.id]: e.target.value }))}
                         placeholder={`Enter your ${promptTitles[currentPrompt.id] || currentPrompt.id.toLowerCase()}...`}
                         className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 min-h-[80px] resize-y"
+                      />
+                    )}
+                    
+                    {/* Rich text editor for summary field */}
+                    {currentPrompt.id === 'summary' && chatType === 'source' && (
+                      <SimpleRichTextEditor
+                        value={formattedContent[currentPrompt.id] || ""}
+                        onChange={(html, plainText) => handleRichTextChange(currentPrompt.id, html, plainText)}
+                        placeholder={`Enter your ${promptTitles[currentPrompt.id] || currentPrompt.id.toLowerCase()}...`}
+                        className="min-h-[80px] max-h-[200px]"
+                        cardType={chatType}
                       />
                     )}
                   </div>
@@ -1111,10 +1199,21 @@ const ChatExperienceBase: React.FC<ChatExperienceBaseProps> = ({
                 const allFiles: File[] = Object.values(filesByPrompt).flat();
                 const hasFiles = isSourceContent && allFiles.length > 0;
                 
+                // Check if this is a rich text field
+                const isRichTextField = prompt.id === 'sourceContent' || prompt.id === 'summary';
+                const formattedHtml = formattedContent[prompt.id];
+                
                 return (
                   <div key={index} className="flex flex-col">
                     <span className="text-sm font-medium text-gray-700">{promptTitles[prompt.id]}:</span>
-                    <span className="text-sm text-gray-900">{answer}</span>
+                    {isRichTextField && formattedHtml ? (
+                      <div 
+                        className="rich-text-display text-sm text-gray-900"
+                        dangerouslySetInnerHTML={{ __html: formattedHtml }}
+                      />
+                    ) : (
+                      <span className="text-sm text-gray-900">{answer}</span>
+                    )}
                     {hasFiles && (
                       <div className="mt-2 space-y-1">
                         {/* Images as small thumbnails - same as chat responses */}

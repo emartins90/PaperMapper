@@ -9,6 +9,7 @@ import LinkedCardsTab from "../LinkedCardsTab";
 import { Label } from "@/components/ui/label";
 import { MultiCombobox } from "@/components/ui/multi-combobox";
 import { Spinner } from "@/components/ui/spinner";
+import SimpleRichTextEditor from "../rich-text-editor/simple-rich-text-editor";
 
 interface ThoughtCardContentProps {
   cardData: any;
@@ -44,6 +45,7 @@ export default function ThoughtCardContent({
   projectId // Add projectId prop
 }: ThoughtCardContentProps) {
   const [thought, setThought] = React.useState(cardData?.thought || "");
+  const [thoughtFormatted, setThoughtFormatted] = React.useState(cardData?.thoughtFormatted || "");
   const [files, setFiles] = React.useState<string[]>(cardData?.files || []);
   const [fileEntries, setFileEntries] = React.useState<Array<{ url: string; filename: string; type: string }>>(cardData?.fileEntries || []);
   const [isUploading, setIsUploading] = React.useState(false);
@@ -82,8 +84,15 @@ export default function ThoughtCardContent({
     return Array.from(allTags).sort();
   };
 
+  // Rich text editor handler
+  const handleThoughtFormattedChange = (html: string, plainText: string) => {
+    setThoughtFormatted(html);
+    setThought(plainText);
+  };
+
   React.useEffect(() => {
     setThought(cardData?.thought || "");
+    setThoughtFormatted(cardData?.thoughtFormatted || "");
     setFiles(cardData?.files || []);
     setFileEntries(cardData?.fileEntries || []);
     setPendingFiles(cardData?.pendingFiles || []);
@@ -95,10 +104,11 @@ export default function ThoughtCardContent({
     if (onFormDataChange) {
       onFormDataChange({
         thoughtText: thought,
+        thoughtTextFormatted: thoughtFormatted,
         uploadedFiles: pendingFiles,
       });
     }
-  }, [thought, pendingFiles, onFormDataChange]);
+  }, [thought, thoughtFormatted, pendingFiles, onFormDataChange]);
 
   // Handle pending node updates
   React.useEffect(() => {
@@ -189,6 +199,7 @@ export default function ThoughtCardContent({
         cardId: openCard.id,
         chatAnswers: {
           thoughtText: thought,
+          thoughtTextFormatted: thoughtFormatted,
         },
         uploadedFiles: pendingFiles,
       });
@@ -198,23 +209,60 @@ export default function ThoughtCardContent({
     }
   };
 
+  // Save all fields to backend for saved cards
+  const saveAllFields = async () => {
+    if (!cardData?.thoughtId) return; // Only for saved cards
+
+    const token = localStorage.getItem("token");
+    const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+    const thoughtId = cardData.thoughtId;
+
+    const payload = {
+      project_id: projectId,
+      thought_text: thought,
+      thought_text_formatted: thoughtFormatted,
+      tags: tags,
+    };
+
+    const response = await fetch(`${API_URL}/thoughts/${thoughtId}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: token ? `Bearer ${token}` : "",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      alert(`Failed to save changes: ${response.status} ${errorText}`);
+      return;
+    }
+
+    // Update node data
+    if (onUpdateNodeData && openCard) {
+      onUpdateNodeData(openCard.id, {
+        thought: thought,
+        thoughtFormatted: thoughtFormatted,
+        tags: tags,
+      });
+    }
+  };
+
   return (
     <div className="flex-1 p-6 overflow-y-auto">
       {thoughtTab === "info" ? (
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Thought</label>
-            <textarea
-              className="w-full p-2 border border-gray-300 rounded-md text-sm"
+            <SimpleRichTextEditor
+              value={thoughtFormatted}
+              onChange={handleThoughtFormattedChange}
               placeholder="Share your thought..."
-              rows={3}
-              value={thought}
-              onChange={e => setThought(e.target.value)}
-              onBlur={() => {
-                if (openCard && !isUnsaved) {
-                  onUpdateNodeData?.(openCard.id, { thought });
-                }
-              }}
+              className="min-h-[120px] max-h-[400px]"
+              cardType="thought"
+              showSaveButton={!!cardData?.thoughtId}
+              onSave={() => saveAllFields()}
             />
           </div>
           

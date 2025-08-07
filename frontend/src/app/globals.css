@@ -1,5 +1,7 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+@import '../components/rich-text-editor/_variables.scss';
+@import '../components/rich-text-editor/_keyframe-animations.scss';
 /* ---break--- 
   */
 @custom-variant dark (&:is(.dark *));

@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Combobox, useCustomOptions } from "@/components/ui/combobox";
 import { MultiCombobox } from "@/components/ui/multi-combobox";
 import { Spinner } from "@/components/ui/spinner";
+import SimpleRichTextEditor from "../rich-text-editor/simple-rich-text-editor";
 
 interface InsightCardContentProps {
   cardData: any;
@@ -47,6 +48,7 @@ export default function InsightCardContent({
   projectId // Add this
 }: InsightCardContentProps) {
   const [insight, setInsight] = React.useState(cardData?.insight || "");
+  const [insightFormatted, setInsightFormatted] = React.useState(cardData?.insightFormatted || "");
   const [insightType, setInsightType] = React.useState(cardData?.insightType || "");
   const [files, setFiles] = React.useState<string[]>(cardData?.files || []);
   const [fileEntries, setFileEntries] = React.useState<Array<{ url: string; filename: string; type: string }>>(cardData?.fileEntries || []);
@@ -76,6 +78,11 @@ export default function InsightCardContent({
 
   const insightTypeOptions = useCustomOptions("insightType");
 
+  const handleInsightFormattedChange = (html: string, plainText: string) => {
+    setInsightFormatted(html);
+    setInsight(plainText);
+  };
+
   // Get all existing tags from all cards
   const getAllExistingTags = () => {
     const allTags = new Set<string>();
@@ -90,12 +97,13 @@ export default function InsightCardContent({
 
   React.useEffect(() => {
     setInsight(cardData?.insight || "");
+    setInsightFormatted(cardData?.insightFormatted || "");
     setInsightType(cardData?.insightType || "");
     setFiles(cardData?.files || []);
     setFileEntries(cardData?.fileEntries || []);
     setPendingFiles(cardData?.pendingFiles || []);
     setTags(Array.isArray(cardData?.tags) ? cardData.tags : []);
-  }, [openCard?.id]);
+  }, [cardData]);
 
   // Update form data for parent component when fields change
   React.useEffect(() => {
@@ -103,10 +111,11 @@ export default function InsightCardContent({
       onFormDataChange({
         insightType,
         insightText: insight,
+        insightTextFormatted: insightFormatted,
         uploadedFiles: pendingFiles,
       });
     }
-  }, [insight, insightType, pendingFiles, onFormDataChange]);
+  }, [insight, insightFormatted, insightType, pendingFiles, onFormDataChange]);
 
   // Handle pending node updates
   React.useEffect(() => {
@@ -195,6 +204,7 @@ export default function InsightCardContent({
         chatAnswers: {
           insightType,
           insightText: insight,
+          insightTextFormatted: insightFormatted,
         },
         uploadedFiles: pendingFiles,
       });
@@ -215,6 +225,7 @@ export default function InsightCardContent({
     const payload = {
       project_id: projectId,
       insight_text: additionalFields?.insight ?? insight,
+      insight_text_formatted: insightFormatted,
       insight_type: additionalFields?.insightType ?? insightType,
       files: files.join(','),
       ...additionalFields
@@ -240,6 +251,7 @@ export default function InsightCardContent({
     if (onUpdateNodeData && openCard) {
       onUpdateNodeData(openCard.id, {
         insight: payload.insight_text,
+        insightFormatted: insightFormatted,
         insightType: payload.insight_type,
         tags: additionalFields?.tags ?? tags,
       });
@@ -300,19 +312,13 @@ export default function InsightCardContent({
           </div>
           <div>
             <Label htmlFor="insight-text" className="block text-sm font-medium text-gray-700 mb-1">Insight</Label>
-            <Textarea
-              id="insight-text"
+            <SimpleRichTextEditor
+              value={insightFormatted || insight}
+              onChange={handleInsightFormattedChange}
               placeholder="Describe the insight or pattern you noticed..."
-              rows={3}
-              value={insight}
-              onChange={e => setInsight(e.target.value)}
-              onBlur={() => {
-                if (openCard && !isUnsaved) {
-                  onUpdateNodeData?.(openCard.id, { insight });
-                  // Save to backend for existing insights
-                  saveAllFields({ insight });
-                }
-              }}
+              cardType="insight"
+              showSaveButton={!!cardData?.insightId}
+              onSave={() => saveAllFields()}
             />
           </div>
           

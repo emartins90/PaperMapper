@@ -8,6 +8,7 @@ import { Spinner } from "../ui/spinner";
 type ThoughtCardProps = {
   data: {
     thought: string;
+    thoughtFormatted?: string;
     tags?: string[] | string;
     onOpen?: () => void;
     onSelect?: () => void;
@@ -92,7 +93,11 @@ export default function ThoughtCard({ data, showHandles = true, width = 'w-96', 
           ))}
         </div>
       )}
-      <div className="text-black mb-4 break-words" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>{data.thought}</div>
+      <div 
+        className="rich-text-display text-black mb-4 break-words" 
+        style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}
+        dangerouslySetInnerHTML={{ __html: data.thoughtFormatted || data.thought }}
+      />
       
       {/* Render uploaded files (images as thumbnails, others as file names) */}
       {data.files && data.files.length > 0 && (

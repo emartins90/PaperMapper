@@ -10,6 +10,7 @@ type ClaimType = "Hypothesis" | "Thesis" | "Conclusion" | "Proposal";
 type ClaimCardProps = {
   data: {
     claim: string;
+    claimFormatted?: string;
     claimType?: string;
     tags?: string[] | string;
     onOpen?: () => void;
@@ -95,7 +96,11 @@ export default function ClaimCard({ data, showHandles = true, width = 'w-96', op
           ))}
         </div>
       )}
-      <div className="text-black mb-4 break-words" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>{data.claim}</div>
+      <div 
+        className="text-black mb-4 break-words rich-text-display" 
+        style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}
+        dangerouslySetInnerHTML={{ __html: data.claimFormatted || data.claim }}
+      />
       
       {/* Render uploaded files (images as thumbnails, others as file names) */}
       {data.files && data.files.length > 0 && (
