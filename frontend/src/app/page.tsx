@@ -59,13 +59,15 @@ export default function Home() {
         </div>
         
         {/* Desktop Navigation */}
-        <div className="hidden md:flex items-center space-x-6">
-          <Link 
-            href="/login"
-            className="text-gray-600 hover:text-gray-900 transition-colors font-medium"
-          >
-            Log in
-          </Link>
+        <div className="hidden md:flex items-center space-x-4">
+          <Button asChild variant="outline">
+            <Link 
+              href="/login"
+              className="text-gray-600 hover:text-gray-900 transition-colors font-medium"
+            >
+              Log in
+            </Link>
+          </Button>
           <Button asChild>
             <Link href="/signup">
               Join the Beta
@@ -87,15 +89,16 @@ export default function Home() {
       {/* Mobile Menu */}
       {isMobileMenuOpen && (
         <div className="fixed top-0 left-0 right-0 z-40 md:hidden">
-          <div className="bg-white/95 backdrop-blur-md shadow-lg border-b border-gray-100">
-            <div className="px-8 py-4 space-y-4">
-              <Link 
-                href="/login"
-                className="block text-gray-600 hover:text-gray-900 transition-colors font-medium py-2"
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                Log in
-              </Link>
+          <div className="bg-white/95 backdrop-blur-md shadow-lg border-b border-gray-100 pt-24">
+            <div className="px-8 py-6 space-y-4">
+              <Button asChild variant="outline" className="w-full">
+                <Link 
+                  href="/login"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  Log in
+                </Link>
+              </Button>
               <Button asChild className="w-full">
                 <Link 
                   href="/signup"
