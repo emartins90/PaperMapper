@@ -59,9 +59,7 @@ export const useCardSave = ({
             notes: "",
           };
           
-          console.log("=== DEBUG: useCardSave - source payload ===");
-          console.log("chatAnswers:", chatAnswers);
-          console.log("payload:", payload);
+         
           break;
 
         case "question":
@@ -170,8 +168,7 @@ export const useCardSave = ({
           notes: "",
         };
         
-        console.log("=== DEBUG: useCardSave - sourceMaterialPayload ===");
-        console.log("sourceMaterialPayload:", sourceMaterialPayload);
+     
         
         response = await fetch(`${API_URL}/source_materials/`, {
           method: "POST",
@@ -183,7 +180,7 @@ export const useCardSave = ({
         });
         
         // Dispatch source material update event to refresh source list
-        console.log('useCardSave: Dispatching sourceMaterialUpdate event');
+       
         window.dispatchEvent(new CustomEvent('sourceMaterialUpdate'));
       } else {
         // For other card types, use the standard approach
@@ -256,9 +253,7 @@ export const useCardSave = ({
       // Update node data with backend IDs and other data
       const nodeDataUpdate: any = {};
       
-      console.log("=== DEBUG: useCardSave - nodeDataUpdate before switch ===");
-      console.log("cardType:", cardType);
-      console.log("chatAnswers:", chatAnswers);
+   
       
       switch (cardType) {
         case "source":
@@ -276,8 +271,7 @@ export const useCardSave = ({
           nodeDataUpdate.credibility = chatAnswers.sourceCredibility || "";
           nodeDataUpdate.additionalNotes = "";
           
-          console.log("=== DEBUG: useCardSave - source nodeDataUpdate ===");
-          console.log("nodeDataUpdate:", nodeDataUpdate);
+  
           break;
 
         case "question":
@@ -346,9 +340,7 @@ export const useCardSave = ({
 
       // Update the node data
       if (onUpdateNodeData) {
-        console.log("=== DEBUG: useCardSave - calling onUpdateNodeData ===");
-        console.log("cardId:", cardId);
-        console.log("nodeDataUpdate:", nodeDataUpdate);
+        
         onUpdateNodeData(cardId, nodeDataUpdate);
       }
 

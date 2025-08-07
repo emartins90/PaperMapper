@@ -11,14 +11,12 @@ export default function ProjectsPage() {
 
   useEffect(() => {
     const currentToken = getToken();
-    console.log("Projects page - current token:", currentToken);
-    console.log("Projects page - isAuthenticated:", isAuthenticated());
+ 
     
     if (!isAuthenticated()) {
-      console.log("Projects page - redirecting to login");
+      
       router.replace("/login");
     } else {
-      console.log("Projects page - setting token and loading projects");
       setToken(currentToken);
       setIsLoading(false);
     }
@@ -29,6 +27,5 @@ export default function ProjectsPage() {
     return <div>Loading...</div>;
   }
   
-  console.log("Projects page - rendering ProjectSelector with token:", token);
   return <ProjectSelector token={token || ""} />;
 } 

@@ -161,7 +161,6 @@ export default function AuthForm({ onAuth, mode: initialMode = "login" }: AuthFo
     
     setLoading(true);
     setError("");
-    console.log("AuthForm - API_URL:", API_URL);
     try {
       if (mode === "Sign Up") {
         const res = await fetch(`${API_URL}/auth/register`, {
@@ -173,7 +172,6 @@ export default function AuthForm({ onAuth, mode: initialMode = "login" }: AuthFo
         if (!res.ok) {
           if (res.status === 400) {
             const errorData = await res.json();
-            console.log("Registration error details:", errorData);
             if (errorData.detail && errorData.detail.includes("REGISTER_USER_ALREADY_EXISTS")) {
               throw new Error("An account with this email already exists. Want to log in?");
             } else {
@@ -206,7 +204,6 @@ export default function AuthForm({ onAuth, mode: initialMode = "login" }: AuthFo
           credentials: "include", // Ensure cookies are set
         });
         
-        console.log("Login response status:", res.status);
         
         if (!res.ok) {
           if (res.status === 401) {
@@ -221,8 +218,7 @@ export default function AuthForm({ onAuth, mode: initialMode = "login" }: AuthFo
           }
         }
         
-        console.log("AuthForm - login successful, cookies after login:", document.cookie);
-        console.log("AuthForm - login response headers:", res.headers);
+   
         
         localStorage.setItem("email", email);
         localStorage.setItem("token", "cookie-auth"); // Set a token for app compatibility

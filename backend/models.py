@@ -13,6 +13,8 @@ class User(Base, SQLAlchemyBaseUserTable[int]):
     is_active = Column(Boolean, default=True, nullable=False)
     is_superuser = Column(Boolean, default=False, nullable=False)
     is_verified = Column(Boolean, default=False, nullable=False)
+    time_created = Column(DateTime, default=func.now(), nullable=False)
+    time_first_project_created = Column(DateTime, nullable=True)
     projects = relationship("Project", back_populates="user")
     custom_options = relationship("UserCustomOption", back_populates="user", cascade="all, delete-orphan")
     password_reset_codes = relationship("PasswordResetCode", cascade="all, delete-orphan")

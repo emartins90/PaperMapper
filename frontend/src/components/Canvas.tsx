@@ -185,10 +185,7 @@ export default function CanvasInner({ projectId }: CanvasProps) {
               });
               if (smRes.ok) {
                 const sourceMaterial = await smRes.json();
-                console.log("=== DEBUG: Loading source material ===");
-                console.log("sourceMaterial:", sourceMaterial);
-                console.log("content_formatted:", sourceMaterial.content_formatted);
-                console.log("summary_formatted:", sourceMaterial.summary_formatted);
+               
                 
                 // If there's a citation ID, fetch the citation text
                 let citationText = "";
@@ -235,10 +232,7 @@ export default function CanvasInner({ projectId }: CanvasProps) {
                   files: fileUrls,
                   fileEntries: fileEntries,
                 };
-                console.log("=== DEBUG: cardData created ===");
-                console.log("cardData:", cardData);
-                console.log("contentFormatted:", (cardData as any).contentFormatted);
-                console.log("summaryFormatted:", (cardData as any).summaryFormatted);
+               
               }
             } catch (err) {
               console.error("Failed to load source material:", err);
@@ -1116,7 +1110,6 @@ export default function CanvasInner({ projectId }: CanvasProps) {
           backendId = savedSM.id;
           
           // Dispatch source material update event to refresh source list
-          console.log('Canvas handleSaveCard: Dispatching sourceMaterialUpdate event');
           window.dispatchEvent(new CustomEvent('sourceMaterialUpdate'));
         }
         
@@ -1573,7 +1566,6 @@ export default function CanvasInner({ projectId }: CanvasProps) {
         const savedSM = await smRes.json();
         
         // Dispatch source material update event to refresh source list
-        console.log('Canvas handleAddCard: Dispatching sourceMaterialUpdate event');
         window.dispatchEvent(new CustomEvent('sourceMaterialUpdate'));
         
         // Create card

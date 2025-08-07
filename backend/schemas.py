@@ -12,6 +12,9 @@ class UserCreate(fa_schemas.BaseUserCreate):
 class UserUpdate(fa_schemas.BaseUserUpdate):
     pass
 
+class UserInfo(BaseModel):
+    time_first_project_created: Optional[datetime] = None
+
 class ProjectBase(BaseModel):
     name: str
     class_subject: Optional[str] = None

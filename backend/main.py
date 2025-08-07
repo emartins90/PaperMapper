@@ -887,7 +887,11 @@ async def delete_card_link(link_id: int, db: AsyncSession = Depends(get_db())):
 
 # --- Project Endpoints ---
 @app.post("/projects/", response_model=ProjectSchema, status_code=status.HTTP_201_CREATED)
-async def create_project(project: ProjectCreate, db: Session = Depends(get_sync_db), current_user: User = Depends(get_current_user)):
+def create_project(project: ProjectCreate, db: Session = Depends(get_sync_db), current_user: User = Depends(get_current_user)):
+    # Check if this is the user's first project
+    existing_projects = db.query(Project).filter(Project.user_id == current_user.id).count()
+    is_first_project = existing_projects == 0
+
     db_project = Project(
         name=project.name,
         class_subject=project.class_subject,
@@ -898,8 +902,20 @@ async def create_project(project: ProjectCreate, db: Session = Depends(get_sync_
         user_id=current_user.id
     )
     db.add(db_project)
-    db.commit()
+
+    # If this is the first project, update the user's time_first_project_created
+    if is_first_project:
+        now = datetime.datetime.utcnow()
+        # Update the user directly in the database
+        db.query(User).filter(User.id == current_user.id).update({
+            "time_first_project_created": now
+        })
+        db.commit()
+    else:
+        db.commit()
+
     db.refresh(db_project)
+
     return db_project
 
 @app.get("/projects/", response_model=List[ProjectSchema])
@@ -1343,6 +1359,13 @@ def delete_user_custom_option(option_id: int, db: Session = Depends(get_sync_db)
     db.delete(option)
     db.commit()
     return {"ok": True}
+
+@app.get("/users/me/info", response_model=schemas.UserInfo)
+def get_current_user_info(current_user: models.User = Depends(get_current_user)):
+    """Get current user's basic info including time_first_project_created"""
+    return {
+        "time_first_project_created": current_user.time_first_project_created
+    }
 
 # --- Guided Experience Endpoints ---
 @app.get("/users/me/guided-experience")

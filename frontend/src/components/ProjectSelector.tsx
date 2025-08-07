@@ -79,6 +79,7 @@ export default function ProjectSelector({ token }: { token: string }) {
   const [sortBy, setSortBy] = useState<'due_date' | 'last_edited' | 'name'>('due_date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [statusFilter, setStatusFilter] = useState<string[]>([]);
+  const [userInfo, setUserInfo] = useState<{ time_first_project_created: string | null } | null>(null);
   
 
   
@@ -86,7 +87,10 @@ export default function ProjectSelector({ token }: { token: string }) {
 
   useEffect(() => {
     fetchProjects();
+    fetchUserInfo();
   }, []);
+
+
 
   useEffect(() => {
     // Filter and sort projects
@@ -95,12 +99,27 @@ export default function ProjectSelector({ token }: { token: string }) {
     setFilteredProjects(sorted);
   }, [projects, searchTerm, sortBy, sortOrder, statusFilter]);
 
+  async function fetchUserInfo() {
+    try {
+      const res = await fetch(`${API_URL}/users/me/info`, {
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+      if (res.ok) {
+        const userData = await res.json();
+        setUserInfo({
+          time_first_project_created: userData.time_first_project_created
+        });
+      }
+    } catch (err) {
+    }
+  }
+
   async function fetchProjects() {
     setLoading(true);
     setError("");
-    console.log("ProjectSelector - fetchProjects called with token:", token);
-    console.log("ProjectSelector - API_URL:", API_URL);
-    console.log("ProjectSelector - document.cookie:", document.cookie);
     
     try {
       const res = await fetch(`${API_URL}/projects/`, {
@@ -109,20 +128,13 @@ export default function ProjectSelector({ token }: { token: string }) {
           "Content-Type": "application/json",
         },
       });
-      console.log("ProjectSelector - fetch response status:", res.status);
-      console.log("ProjectSelector - fetch response headers:", res.headers);
-      console.log("ProjectSelector - fetch response url:", res.url);
       
       if (!res.ok) {
-        const errorText = await res.text();
-        console.log("ProjectSelector - fetch error response:", errorText);
         throw new Error("Failed to fetch projects");
       }
       const data = await res.json();
-      console.log("ProjectSelector - fetch success, data:", data);
       setProjects(data);
     } catch (err: any) {
-      console.log("ProjectSelector - fetch error:", err);
       setError(err.message);
     } finally {
       setLoading(false);
@@ -382,7 +394,6 @@ export default function ProjectSelector({ token }: { token: string }) {
     };
 
     const handleRemoveFile = () => {
-      console.log('handleRemoveFile called');
       onFileRemove();
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
@@ -390,7 +401,6 @@ export default function ProjectSelector({ token }: { token: string }) {
     };
 
     const handleRemoveCurrentFile = () => {
-      console.log('handleRemoveCurrentFile called');
       onCurrentFileRemove();
     };
 
@@ -432,7 +442,6 @@ export default function ProjectSelector({ token }: { token: string }) {
             <button
               type="button"
               onClick={(e) => {
-                console.log('Delete button clicked', { file: !!file, currentFile: !!currentFile });
                 e.stopPropagation();
                 e.preventDefault();
                 if (file) {
@@ -512,259 +521,267 @@ export default function ProjectSelector({ token }: { token: string }) {
                 <div className="hidden sm:flex items-center justify-between mb-6">
                   <h2 className="text-2xl font-bold text-gray-900">My Projects</h2>
                   
-                  <div className="flex items-center space-x-4">
-                    <div className="relative">
-                      <LuSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                      <Input
-                        placeholder="Search Projects"
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="pl-10 w-64 bg-white"
-                      />
-                    </div>
-                    
-                    {/* Filter popover */}
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button variant="outline" size="icon" className="relative" aria-label="Filter and sort projects">
-                          <LuListFilter className="w-4 h-4" />
-                          {(statusFilter.length > 0 || sortBy !== 'due_date') && (
-                            <Badge className="absolute -top-2 -right-2 px-1.5 py-0.5 text-xs rounded-full" variant="default">
-                              {statusFilter.length + (sortBy !== 'due_date' ? 1 : 0)}
-                            </Badge>
-                          )}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent align="end" className="w-78 shadow-xl">
-                        <div className="max-h-180 overflow-y-auto space-y-1">
-                          {/* Sort By */}
-                          <label className="text-md font-semibold text-foreground">Sort By</label>
-                          <div className="space-y-2 mb-4 mt-2">
-                            {[
-                              { value: 'due_date', label: 'Due Date' },
-                              { value: 'last_edited', label: 'Last Edited' },
-                              { value: 'name', label: 'Name' }
-                            ].map(option => (
-                              <div key={option.value} className="flex items-center justify-between px-2 py-1 rounded hover:bg-accent">
-                                <label className="flex items-center gap-2 cursor-pointer flex-1">
+                  {!loading && filteredProjects.length > 0 && (
+                    <div className="flex items-center space-x-4">
+                      <div className="relative">
+                        <LuSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                        <Input
+                          placeholder="Search Projects"
+                          value={searchTerm}
+                          onChange={(e) => setSearchTerm(e.target.value)}
+                          className="pl-10 w-64 bg-white"
+                        />
+                      </div>
+                      
+                      {/* Filter popover */}
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button variant="outline" size="icon" className="relative" aria-label="Filter and sort projects">
+                            <LuListFilter className="w-4 h-4" />
+                            {(statusFilter.length > 0 || sortBy !== 'due_date') && (
+                              <Badge className="absolute -top-2 -right-2 px-1.5 py-0.5 text-xs rounded-full" variant="default">
+                                {statusFilter.length + (sortBy !== 'due_date' ? 1 : 0)}
+                              </Badge>
+                            )}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent align="end" className="w-78 shadow-xl">
+                          <div className="max-h-180 overflow-y-auto space-y-1">
+                            {/* Sort By */}
+                            <label className="text-md font-semibold text-foreground">Sort By</label>
+                            <div className="space-y-2 mb-4 mt-2">
+                              {[
+                                { value: 'due_date', label: 'Due Date' },
+                                { value: 'last_edited', label: 'Last Edited' },
+                                { value: 'name', label: 'Name' }
+                              ].map(option => (
+                                <div key={option.value} className="flex items-center justify-between px-2 py-1 rounded hover:bg-accent">
+                                  <label className="flex items-center gap-2 cursor-pointer flex-1">
+                                    <input
+                                      type="radio"
+                                      name="sortBy"
+                                      value={option.value}
+                                      checked={sortBy === option.value}
+                                      onChange={(e) => setSortBy(e.target.value as any)}
+                                      className="accent-primary"
+                                    />
+                                    <span className="text-md">{option.label}</span>
+                                  </label>
+                                  {sortBy === option.value && (
+                                    <div className="flex items-center gap-1">
+                                      <button
+                                        type="button"
+                                        onClick={() => setSortOrder('asc')}
+                                        className={`p-1 rounded-full ${sortOrder === 'asc' ? 'bg-gray-200' : ''}`}
+                                        aria-label="Sort ascending"
+                                      >
+                                        <LuChevronUp className="w-4 h-4 text-gray-500" />
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => setSortOrder('desc')}
+                                        className={`p-1 rounded-full ${sortOrder === 'desc' ? 'bg-gray-200' : ''}`}
+                                        aria-label="Sort descending"
+                                      >
+                                        <LuChevronDown className="w-4 h-4 text-gray-500" />
+                                      </button>
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+
+                            {/* Status Filter */}
+                            <label className="text-md font-semibold text-foreground">Status</label>
+                            <div className="space-y-2 mb-4 mt-2">
+                              {[
+                                { value: 'not_started', label: 'Not Started' },
+                                { value: 'in_progress', label: 'In Progress' },
+                                { value: 'ready_to_write', label: 'Ready to Write' },
+                                { value: 'complete', label: 'Complete' }
+                              ].map(option => (
+                                <label key={option.value} className="flex items-center gap-2 cursor-pointer px-2 py-1 rounded hover:bg-accent">
                                   <input
-                                    type="radio"
-                                    name="sortBy"
+                                    type="checkbox"
                                     value={option.value}
-                                    checked={sortBy === option.value}
-                                    onChange={(e) => setSortBy(e.target.value as any)}
+                                    checked={statusFilter.includes(option.value)}
+                                    onChange={(e) => {
+                                      const newStatusFilter = [...statusFilter];
+                                      if (e.target.checked) {
+                                        newStatusFilter.push(option.value);
+                                      } else {
+                                        newStatusFilter.splice(newStatusFilter.indexOf(option.value), 1);
+                                      }
+                                      setStatusFilter(newStatusFilter);
+                                    }}
                                     className="accent-primary"
                                   />
                                   <span className="text-md">{option.label}</span>
                                 </label>
-                                {sortBy === option.value && (
-                                  <div className="flex items-center gap-1">
-                                    <button
-                                      type="button"
-                                      onClick={() => setSortOrder('asc')}
-                                      className={`p-1 rounded-full ${sortOrder === 'asc' ? 'bg-gray-200' : ''}`}
-                                      aria-label="Sort ascending"
-                                    >
-                                      <LuChevronUp className="w-4 h-4 text-gray-500" />
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => setSortOrder('desc')}
-                                      className={`p-1 rounded-full ${sortOrder === 'desc' ? 'bg-gray-200' : ''}`}
-                                      aria-label="Sort descending"
-                                    >
-                                      <LuChevronDown className="w-4 h-4 text-gray-500" />
-                                    </button>
-                                  </div>
-                                )}
-                              </div>
-                            ))}
-                          </div>
-
-                          {/* Status Filter */}
-                          <label className="text-md font-semibold text-foreground">Status</label>
-                          <div className="space-y-2 mb-4 mt-2">
-                            {[
-                              { value: 'not_started', label: 'Not Started' },
-                              { value: 'in_progress', label: 'In Progress' },
-                              { value: 'ready_to_write', label: 'Ready to Write' },
-                              { value: 'complete', label: 'Complete' }
-                            ].map(option => (
-                              <label key={option.value} className="flex items-center gap-2 cursor-pointer px-2 py-1 rounded hover:bg-accent">
-                                <input
-                                  type="checkbox"
-                                  value={option.value}
-                                  checked={statusFilter.includes(option.value)}
-                                  onChange={(e) => {
-                                    const newStatusFilter = [...statusFilter];
-                                    if (e.target.checked) {
-                                      newStatusFilter.push(option.value);
-                                    } else {
-                                      newStatusFilter.splice(newStatusFilter.indexOf(option.value), 1);
-                                    }
-                                    setStatusFilter(newStatusFilter);
-                                  }}
-                                  className="accent-primary"
-                                />
-                                <span className="text-md">{option.label}</span>
-                              </label>
-                            ))}
-                          </div>
-
-                          {/* Clear all filters */}
-                          {(statusFilter.length > 0 || sortBy !== 'due_date') && (
-                            <div className="mt-4 pt-4 border-t">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => {
-                                  setStatusFilter([]);
-                                  setSortBy('due_date');
-                                }}
-                                className="w-full"
-                              >
-                                Clear all filters
-                              </Button>
+                              ))}
                             </div>
-                          )}
-                        </div>
-                      </PopoverContent>
-                    </Popover>
-                  </div>
+
+                            {/* Clear all filters */}
+                            {(statusFilter.length > 0 || sortBy !== 'due_date') && (
+                              <div className="mt-4 pt-4 border-t">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    setStatusFilter([]);
+                                    setSortBy('due_date');
+                                  }}
+                                  className="w-full"
+                                >
+                                  Clear all filters
+                                </Button>
+                              </div>
+                            )}
+                          </div>
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                  )}
                   
-                  <Button onClick={handleCreate} className="bg-gray-800 hover:bg-gray-900">
-                    <LuPlus className="w-4 h-4 mr-2" /> New Project
-                  </Button>
+                  {!loading && filteredProjects.length > 0 && (
+                    <Button onClick={handleCreate} className="bg-gray-800 hover:bg-gray-900">
+                      <LuPlus className="w-4 h-4 mr-2" /> New Project
+                    </Button>
+                  )}
                 </div>
 
                 {/* Small screen layout - stacked */}
                 <div className="sm:hidden">
                   <div className="flex items-center justify-between mb-6">
                     <h2 className="text-2xl font-bold text-gray-900">My Projects</h2>
-                    <Button onClick={handleCreate} className="bg-gray-800 hover:bg-gray-900">
-                      <LuPlus className="w-4 h-4 mr-2" /> New Project
-                    </Button>
+                    {!loading && filteredProjects.length > 0 && (
+                      <Button onClick={handleCreate} className="bg-gray-800 hover:bg-gray-900">
+                        <LuPlus className="w-4 h-4 mr-2" /> New Project
+                      </Button>
+                    )}
                   </div>
                   
-                  <div className="flex items-center space-x-4 mb-2">
-                    <div className="relative flex-1">
-                      <LuSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                      <Input
-                        placeholder="Search Projects"
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="pl-10 w-full bg-white"
-                      />
-                    </div>
-                    
-                    {/* Filter popover */}
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button variant="outline" size="icon" className="relative flex-shrink-0" aria-label="Filter and sort projects">
-                          <LuListFilter className="w-4 h-4" />
-                          {(statusFilter.length > 0 || sortBy !== 'due_date') && (
-                            <Badge className="absolute -top-2 -right-2 px-1.5 py-0.5 text-xs rounded-full" variant="default">
-                              {statusFilter.length + (sortBy !== 'due_date' ? 1 : 0)}
-                            </Badge>
-                          )}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent align="end" className="w-78 shadow-xl">
-                        <div className="max-h-180 overflow-y-auto space-y-1">
-                          {/* Sort By */}
-                          <label className="text-md font-semibold text-foreground">Sort By</label>
-                          <div className="space-y-2 mb-4 mt-2">
-                            {[
-                              { value: 'due_date', label: 'Due Date' },
-                              { value: 'last_edited', label: 'Last Edited' },
-                              { value: 'name', label: 'Name' }
-                            ].map(option => (
-                              <div key={option.value} className="flex items-center justify-between px-2 py-1 rounded hover:bg-accent">
-                                <label className="flex items-center gap-2 cursor-pointer flex-1">
+                  {!loading && filteredProjects.length > 0 && (
+                    <div className="flex items-center space-x-4 mb-2">
+                      <div className="relative flex-1">
+                        <LuSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                        <Input
+                          placeholder="Search Projects"
+                          value={searchTerm}
+                          onChange={(e) => setSearchTerm(e.target.value)}
+                          className="pl-10 w-full bg-white"
+                        />
+                      </div>
+                      
+                      {/* Filter popover */}
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button variant="outline" size="icon" className="relative flex-shrink-0" aria-label="Filter and sort projects">
+                            <LuListFilter className="w-4 h-4" />
+                            {(statusFilter.length > 0 || sortBy !== 'due_date') && (
+                              <Badge className="absolute -top-2 -right-2 px-1.5 py-0.5 text-xs rounded-full" variant="default">
+                                {statusFilter.length + (sortBy !== 'due_date' ? 1 : 0)}
+                              </Badge>
+                            )}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent align="end" className="w-78 shadow-xl">
+                          <div className="max-h-180 overflow-y-auto space-y-1">
+                            {/* Sort By */}
+                            <label className="text-md font-semibold text-foreground">Sort By</label>
+                            <div className="space-y-2 mb-4 mt-2">
+                              {[
+                                { value: 'due_date', label: 'Due Date' },
+                                { value: 'last_edited', label: 'Last Edited' },
+                                { value: 'name', label: 'Name' }
+                              ].map(option => (
+                                <div key={option.value} className="flex items-center justify-between px-2 py-1 rounded hover:bg-accent">
+                                  <label className="flex items-center gap-2 cursor-pointer flex-1">
+                                    <input
+                                      type="radio"
+                                      name="sortBy"
+                                      value={option.value}
+                                      checked={sortBy === option.value}
+                                      onChange={(e) => setSortBy(e.target.value as any)}
+                                      className="accent-primary"
+                                    />
+                                    <span className="text-md">{option.label}</span>
+                                  </label>
+                                  {sortBy === option.value && (
+                                    <div className="flex items-center gap-1">
+                                      <button
+                                        type="button"
+                                        onClick={() => setSortOrder('asc')}
+                                        className={`p-1 rounded-full ${sortOrder === 'asc' ? 'bg-gray-200' : ''}`}
+                                        aria-label="Sort ascending"
+                                      >
+                                        <LuChevronUp className="w-4 h-4 text-gray-500" />
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => setSortOrder('desc')}
+                                        className={`p-1 rounded-full ${sortOrder === 'desc' ? 'bg-gray-200' : ''}`}
+                                        aria-label="Sort descending"
+                                      >
+                                        <LuChevronDown className="w-4 h-4 text-gray-500" />
+                                      </button>
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+
+                            {/* Status Filter */}
+                            <label className="text-md font-semibold text-foreground">Status</label>
+                            <div className="space-y-2 mb-4 mt-2">
+                              {[
+                                { value: 'not_started', label: 'Not Started' },
+                                { value: 'in_progress', label: 'In Progress' },
+                                { value: 'ready_to_write', label: 'Ready to Write' },
+                                { value: 'complete', label: 'Complete' }
+                              ].map(option => (
+                                <label key={option.value} className="flex items-center gap-2 cursor-pointer px-2 py-1 rounded hover:bg-accent">
                                   <input
-                                    type="radio"
-                                    name="sortBy"
+                                    type="checkbox"
                                     value={option.value}
-                                    checked={sortBy === option.value}
-                                    onChange={(e) => setSortBy(e.target.value as any)}
+                                    checked={statusFilter.includes(option.value)}
+                                    onChange={(e) => {
+                                      const newStatusFilter = [...statusFilter];
+                                      if (e.target.checked) {
+                                        newStatusFilter.push(option.value);
+                                      } else {
+                                        newStatusFilter.splice(newStatusFilter.indexOf(option.value), 1);
+                                      }
+                                      setStatusFilter(newStatusFilter);
+                                    }}
                                     className="accent-primary"
                                   />
                                   <span className="text-md">{option.label}</span>
                                 </label>
-                                {sortBy === option.value && (
-                                  <div className="flex items-center gap-1">
-                                    <button
-                                      type="button"
-                                      onClick={() => setSortOrder('asc')}
-                                      className={`p-1 rounded-full ${sortOrder === 'asc' ? 'bg-gray-200' : ''}`}
-                                      aria-label="Sort ascending"
-                                    >
-                                      <LuChevronUp className="w-4 h-4 text-gray-500" />
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => setSortOrder('desc')}
-                                      className={`p-1 rounded-full ${sortOrder === 'desc' ? 'bg-gray-200' : ''}`}
-                                      aria-label="Sort descending"
-                                    >
-                                      <LuChevronDown className="w-4 h-4 text-gray-500" />
-                                    </button>
-                                  </div>
-                                )}
-                              </div>
-                            ))}
-                          </div>
-
-                          {/* Status Filter */}
-                          <label className="text-md font-semibold text-foreground">Status</label>
-                          <div className="space-y-2 mb-4 mt-2">
-                            {[
-                              { value: 'not_started', label: 'Not Started' },
-                              { value: 'in_progress', label: 'In Progress' },
-                              { value: 'ready_to_write', label: 'Ready to Write' },
-                              { value: 'complete', label: 'Complete' }
-                            ].map(option => (
-                              <label key={option.value} className="flex items-center gap-2 cursor-pointer px-2 py-1 rounded hover:bg-accent">
-                                <input
-                                  type="checkbox"
-                                  value={option.value}
-                                  checked={statusFilter.includes(option.value)}
-                                  onChange={(e) => {
-                                    const newStatusFilter = [...statusFilter];
-                                    if (e.target.checked) {
-                                      newStatusFilter.push(option.value);
-                                    } else {
-                                      newStatusFilter.splice(newStatusFilter.indexOf(option.value), 1);
-                                    }
-                                    setStatusFilter(newStatusFilter);
-                                  }}
-                                  className="accent-primary"
-                                />
-                                <span className="text-md">{option.label}</span>
-                              </label>
-                            ))}
-                          </div>
-
-                          {/* Clear all filters */}
-                          {(statusFilter.length > 0 || sortBy !== 'due_date') && (
-                            <div className="mt-4 pt-4 border-t">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => {
-                                  setStatusFilter([]);
-                                  setSortBy('due_date');
-                                }}
-                                className="w-full"
-                              >
-                                Clear all filters
-                              </Button>
+                              ))}
                             </div>
-                          )}
-                        </div>
-                      </PopoverContent>
-                    </Popover>
-                  </div>
+
+                            {/* Clear all filters */}
+                            {(statusFilter.length > 0 || sortBy !== 'due_date') && (
+                              <div className="mt-4 pt-4 border-t">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    setStatusFilter([]);
+                                    setSortBy('due_date');
+                                  }}
+                                  className="w-full"
+                                >
+                                  Clear all filters
+                                </Button>
+                              </div>
+                            )}
+                          </div>
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -779,26 +796,32 @@ export default function ProjectSelector({ token }: { token: string }) {
                   <div className="text-center py-8">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
                   </div>
-                ) : filteredProjects.length === 0 ? (
-                  // Empty state
-                  <div className="text-center py-16">
-                    <div className="max-w-md mx-auto">
-                      <div className="w-24 h-24 mx-auto mb-6 bg-gray-100 rounded-full flex items-center justify-center">
-                        <LuFileText className="w-12 h-12 text-gray-400" />
+                  ) : filteredProjects.length === 0 ? (
+                    // Empty state
+                    <div className="text-center py-6">
+                      <div className="max-w-sm mx-auto p-8 rounded-lg border border-gray-100 backdrop-blur-[1.5px]">
+                        <div className="w-20 h-20 mx-auto mb-6 bg-gray-100 rounded-full flex items-center justify-center">
+                          <LuFileText className="w-10 h-10 text-gray-400" />
+                        </div>
+                        <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                          {userInfo?.time_first_project_created ? "No projects found" : "No projects yet"}
+                        </h3>
+                        <p className="text-gray-600 mb-8">
+                          {userInfo?.time_first_project_created 
+                            ? "It looks like you don't have any projects. Create a new project to continue your research and writing."
+                            : "Create your first project to get started with your research and writing."
+                          }
+                        </p>
+                        <Button 
+                          onClick={handleCreate} 
+                          className="bg-gray-800 hover:bg-gray-900"
+                          size="lg"
+                        >
+                          <LuPlus className="w-5 h-5 mr-2" /> 
+                          {userInfo?.time_first_project_created ? "Create New Project" : "Create Your First Project"}
+                        </Button>
                       </div>
-                      <h3 className="text-xl font-semibold text-gray-900 mb-2">No projects yet</h3>
-                      <p className="text-gray-600 mb-8">
-                        Create your first project to get started with your research and writing.
-                      </p>
-                      <Button 
-                        onClick={handleCreate} 
-                        className="bg-gray-800 hover:bg-gray-900"
-                        size="lg"
-                      >
-                        <LuPlus className="w-5 h-5 mr-2" /> Create Your First Project
-                      </Button>
                     </div>
-                  </div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                     {filteredProjects.map((project) => (

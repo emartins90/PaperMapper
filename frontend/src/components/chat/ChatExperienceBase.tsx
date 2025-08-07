@@ -312,7 +312,6 @@ const ChatExperienceBase: React.FC<ChatExperienceBaseProps> = ({
           if (Array.isArray(answer)) {
             answer = answer.join(", ");
           }
-          console.log(`Adding answer for prompt ${prompts[i-1].id}:`, answer);
           newHistory.push({ role: "user" as const, text: answer === "" ? "Skipped" : answer });
           newHistory.push({ role: "system" as const, text: prompts[i].prompt });
         }

@@ -78,7 +78,6 @@ export async function uploadFilesForCardType(
     return { fileUrls: newFiles, fileEntries: newFileEntries };
   } catch (err) {
     console.error("[uploadFilesForCardType] Exception:", err);
-    console.log("=== FILE UPLOAD DEBUG END (ERROR) ===");
     throw err;
   }
 }

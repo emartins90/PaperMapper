@@ -104,7 +104,6 @@ export default function SourceListPanel({ projectId, onClose, onSourceCardClick,
   // Listen for citation and source material updates to refresh the list
   useEffect(() => {
     const handleDataUpdate = (event: Event) => {
-      console.log('SourceListPanel: Received event:', event.type);
       // Refresh the data when citations or source materials are updated
       const loadData = async () => {
         try {
@@ -159,7 +158,6 @@ export default function SourceListPanel({ projectId, onClose, onSourceCardClick,
         if (!sourceMaterialsRes.ok) throw new Error("Failed to load source materials");
         const sourceMaterialsData = await sourceMaterialsRes.json();
         setSourceMaterials(sourceMaterialsData);
-        console.log('SourceListPanel: Initial load, source materials count:', sourceMaterialsData.length);
       } catch (err) {
         setError((err as Error).message);
       } finally {
