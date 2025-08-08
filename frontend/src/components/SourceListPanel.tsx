@@ -386,8 +386,51 @@ export default function SourceListPanel({ projectId, onClose, onSourceCardClick,
 
   // Handle citation deletion
   const handleDeleteCitation = (citation: Citation) => {
+    const linkedSourceMaterials = getSourceMaterialsForCitation(citation.id);
+    
+    // If no linked source materials, delete immediately without confirmation
+    if (linkedSourceMaterials.length === 0) {
+      deleteCitation(citation);
+      return;
+    }
+    
+    // Otherwise, show confirmation dialog
     setCitationToDelete(citation);
     setDeleteDialogOpen(true);
+  };
+
+  // Helper function to delete a citation
+  const deleteCitation = async (citation: Citation) => {
+    try {
+      const token = localStorage.getItem("token");
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
+      // Delete the citation
+      const response = await fetch(`${API_URL}/citations/${citation.id}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: token ? `Bearer ${token}` : "",
+        },
+      });
+
+      if (!response.ok) throw new Error("Failed to delete citation");
+
+      // Update local state
+      setCitations(prev => prev.filter(c => c.id !== citation.id));
+
+      // Dispatch citation delete event to immediately update the UI
+      window.dispatchEvent(new CustomEvent('citationDelete', { 
+        detail: { citationId: citation.id } 
+      }));
+
+      // Dispatch citation update event to refresh source list
+      window.dispatchEvent(new CustomEvent('citationUpdate'));
+
+      toast.success("Citation deleted successfully");
+    } catch (err) {
+      console.error("Failed to delete citation:", err);
+      toast.error("Failed to delete citation: " + (err as Error).message);
+    }
   };
 
   const confirmDeleteCitation = async () => {
@@ -427,18 +470,10 @@ export default function SourceListPanel({ projectId, onClose, onSourceCardClick,
         }
       }
 
-      // Delete the citation
-      const response = await fetch(`${API_URL}/citations/${citationToDelete.id}`, {
-        method: "DELETE",
-        headers: {
-          Authorization: token ? `Bearer ${token}` : "",
-        },
-      });
+      // Delete the citation using the helper function
+      await deleteCitation(citationToDelete);
 
-      if (!response.ok) throw new Error("Failed to delete citation");
-
-      // Update local state
-      setCitations(prev => prev.filter(c => c.id !== citationToDelete.id));
+      // Handle source materials deletion if needed
       if (deleteMode === 'citation_and_sources') {
         const sourceMaterialsToDelete = getSourceMaterialsForCitation(citationToDelete.id);
         setSourceMaterials(prev => prev.filter(sm => !sourceMaterialsToDelete.some(smd => smd.id === sm.id)));
@@ -456,14 +491,6 @@ export default function SourceListPanel({ projectId, onClose, onSourceCardClick,
           }
         });
       }
-
-      // Dispatch citation delete event to immediately update the UI
-      window.dispatchEvent(new CustomEvent('citationDelete', { 
-        detail: { citationId: citationToDelete.id } 
-      }));
-
-      // Dispatch citation update event to refresh source list
-      window.dispatchEvent(new CustomEvent('citationUpdate'));
 
       setDeleteDialogOpen(false);
       setCitationToDelete(null);
