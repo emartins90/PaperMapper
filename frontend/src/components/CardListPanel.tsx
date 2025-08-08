@@ -165,7 +165,34 @@ export default function CardListPanel({ nodes, onClose, onCardClick, selectedCar
   };
 
   // Check if there are any cards
-  if (filteredNodes.length === 0) {
+  const hasNoCardsInProject = nodes.length === 0;
+  const hasNoFilteredResults = filteredNodes.length === 0 && nodes.length > 0;
+  
+  if (hasNoCardsInProject) {
+    return (
+      <div className="fixed left-0 top-0 h-full w-86 bg-white shadow-lg border-r border-gray-200 z-[100] overflow-y-auto">
+        <div className="sticky top-0 z-10 bg-white p-4 border-b border-gray-200 flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-gray-900">Card List</h2>
+          <Button variant="ghost" size="sm" onClick={onClose}>
+            <LuX size={20} />
+          </Button>
+        </div>
+        <div className="p-4">
+          <div className="text-center py-8">
+            <div className="text-gray-400 mb-2">
+              <svg className="mx-auto h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+            </div>
+            <p className="text-sm text-gray-500 mb-2">No cards yet</p>
+            <p className="text-xs text-gray-400">Add a card to get started</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+  
+  if (hasNoFilteredResults) {
     return (
       <div className="fixed left-0 top-0 h-full w-86 bg-white shadow-lg border-r border-gray-200 z-[100] overflow-y-auto">
         <div className="sticky top-0 z-10 bg-white p-4 border-b border-gray-200 flex items-center justify-between">
@@ -206,7 +233,7 @@ export default function CardListPanel({ nodes, onClose, onCardClick, selectedCar
               </svg>
             </div>
             <p className="text-sm text-gray-500 mb-2">No cards found</p>
-            <p className="text-xs text-gray-400">Try a different search term</p>
+            <p className="text-xs text-gray-400">Try a different search term or filter</p>
           </div>
         </div>
       </div>
