@@ -3,6 +3,8 @@ import React from "react";
 import { LuX } from "react-icons/lu";
 import { FaFilePdf, FaFileWord, FaFileAudio, FaFile } from "react-icons/fa6";
 import { Spinner } from "../ui/spinner";
+import { validateFiles, formatFileSize, MAX_FILES_PER_CARD } from "@/lib/utils";
+import { toast } from "sonner";
 
 type FileEntry = { url: string; filename: string; type: string };
 
@@ -82,6 +84,24 @@ export default function FileUploadSection({
     return entry.url;
   };
 
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newFiles = Array.from(e.target.files || []);
+    
+    // Validate the new files
+    const validation = validateFiles(newFiles, displayFiles.length);
+    
+    if (!validation.isValid) {
+      // Show error messages
+      validation.errors.forEach(error => {
+        toast.error(error);
+      });
+      return;
+    }
+    
+    // Call the original onFileUpload if validation passes
+    onFileUpload(e);
+  };
+
   return (
     <div>
       <label className="block text-sm font-medium text-gray-700 mb-1">Files & Images</label>
@@ -90,7 +110,7 @@ export default function FileUploadSection({
           type="file"
           accept={accept}
           className="hidden"
-          onChange={onFileUpload}
+          onChange={handleFileUpload}
           multiple
           ref={fileInputRef}
         />
@@ -99,7 +119,7 @@ export default function FileUploadSection({
           variant="outline"
           className="px-3 py-2"
           onClick={() => fileInputRef.current?.click()}
-          disabled={isUploading}
+          disabled={isUploading || displayFiles.length >= MAX_FILES_PER_CARD}
         >
           {isUploading ? (
             <>
@@ -110,6 +130,11 @@ export default function FileUploadSection({
             "+ Add Files & Images"
           )}
         </Button>
+        {displayFiles.length > 0 && (
+          <span className="text-xs text-gray-500 ml-2 self-center">
+            {displayFiles.length}/{MAX_FILES_PER_CARD} files
+          </span>
+        )}
       </div>
       {displayFiles && displayFiles.length > 0 && (
         <div className="mt-2">

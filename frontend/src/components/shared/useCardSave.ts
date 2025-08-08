@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { uploadFilesForCardType, CardType } from "../useFileUploadHandler";
 
 interface UseCardSaveProps {
@@ -27,12 +27,39 @@ export const useCardSave = ({
   onDeleteCard,
 }: UseCardSaveProps) => {
   const [isSaving, setIsSaving] = useState(false);
+  const [unsavedFiles, setUnsavedFiles] = useState<File[]>([]);
+
+  // Cleanup function to revoke object URLs for unsaved files
+  const cleanupUnsavedFiles = () => {
+    unsavedFiles.forEach(file => {
+      if (file instanceof File && file.type.startsWith('image/')) {
+        // Revoke any object URLs that might have been created for image previews
+        // This prevents memory leaks from blob URLs
+        try {
+          URL.revokeObjectURL(URL.createObjectURL(file));
+        } catch (e) {
+          // Ignore errors from revoking URLs
+        }
+      }
+    });
+    setUnsavedFiles([]);
+  };
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      cleanupUnsavedFiles();
+    };
+  }, []);
 
   const saveCard = async (data: SaveCardData) => {
     const { cardId, chatAnswers, uploadedFiles } = data;
     setIsSaving(true);
 
     try {
+      // Track unsaved files for cleanup
+      setUnsavedFiles(uploadedFiles);
+
       const token = localStorage.getItem("token");
       const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -349,12 +376,16 @@ export const useCardSave = ({
         onAddCard(cardId);
       }
 
+      // Clean up unsaved files after successful save
+      cleanupUnsavedFiles();
+
       return { ...createdCard, cardId: savedCard.id };
 
     } catch (error) {
       console.error(`[useCardSave] Error saving ${cardType} card:`, error);
       
-      // If save fails, delete the unsaved card
+      // If save fails, delete the unsaved card and cleanup files
+      cleanupUnsavedFiles();
       if (onDeleteCard) {
         onDeleteCard(cardId);
       }
@@ -368,5 +399,6 @@ export const useCardSave = ({
   return {
     saveCard,
     isSaving,
+    cleanupUnsavedFiles,
   };
 }; 

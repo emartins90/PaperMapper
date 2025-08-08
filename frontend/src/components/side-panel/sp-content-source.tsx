@@ -15,8 +15,9 @@ import { Button } from "@/components/ui/button";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from "@/components/ui/command";
 import { Check, X } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, validateFiles } from "@/lib/utils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { toast } from "sonner";
 import { Spinner } from "@/components/ui/spinner";
 import { TextWithLinks } from "@/components/ui/text-with-links";
 import SimpleRichTextEditor from "@/components/rich-text-editor/simple-rich-text-editor";
@@ -710,6 +711,20 @@ export default function SourceCardContent({
   // Handle file upload
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || !openCard) return;
+    
+    const newFiles = Array.from(e.target.files);
+    
+    // Validate the new files
+    const validation = validateFiles(newFiles, files.length);
+    
+    if (!validation.isValid) {
+      // Show error messages
+      validation.errors.forEach(error => {
+        toast.error(error);
+      });
+      return;
+    }
+    
     setIsUploading(true);
     try {
       // If we have a backend ID, upload to backend
@@ -717,7 +732,7 @@ export default function SourceCardContent({
         const result = await uploadFilesForCardType(
           "source",
           cardData.sourceMaterialId,
-          Array.from(e.target.files),
+          newFiles,
           files,
           (newFiles, newFileEntries) => {
             setFiles(newFiles);
@@ -731,8 +746,6 @@ export default function SourceCardContent({
         );
       } else {
         // For new cards, store files locally as File objects
-        const newFiles = Array.from(e.target.files);
-    
         const updatedPendingFiles = [...pendingFiles, ...newFiles];
         setPendingFiles(updatedPendingFiles);
         onUpdateNodeData?.(openCard.id, { 

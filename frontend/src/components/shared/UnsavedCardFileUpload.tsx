@@ -1,8 +1,10 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import FileChip from "@/components/canvas-add-files/FileChip";
+import { validateFiles, formatFileSize, MAX_FILES_PER_CARD } from "@/lib/utils";
+import { toast } from "sonner";
 
 interface UnsavedCardFileUploadProps {
   files: File[];
@@ -16,16 +18,65 @@ const UnsavedCardFileUpload: React.FC<UnsavedCardFileUploadProps> = ({
   className = "",
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const objectUrlsRef = useRef<Set<string>>(new Set());
+
+  // Cleanup object URLs on unmount
+  useEffect(() => {
+    return () => {
+      objectUrlsRef.current.forEach(url => {
+        try {
+          URL.revokeObjectURL(url);
+        } catch (e) {
+          // Ignore errors from revoking URLs
+        }
+      });
+      objectUrlsRef.current.clear();
+    };
+  }, []);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newFiles = Array.from(e.target.files || []);
+    
+    // Validate the new files
+    const validation = validateFiles(newFiles, files.length);
+    
+    if (!validation.isValid) {
+      // Show error messages
+      validation.errors.forEach(error => {
+        toast.error(error);
+      });
+      return;
+    }
+    
     const updatedFiles = [...files, ...newFiles];
     onFilesChange(updatedFiles);
   };
 
   const handleDeleteFile = (fileIndex: number) => {
+    const fileToDelete = files[fileIndex];
+    
+    // If it's an image file, revoke the object URL
+    if (fileToDelete.type.startsWith('image/')) {
+      // Find and revoke the object URL for this file
+      objectUrlsRef.current.forEach(url => {
+        try {
+          URL.revokeObjectURL(url);
+        } catch (e) {
+          // Ignore errors from revoking URLs
+        }
+      });
+      objectUrlsRef.current.clear();
+    }
+    
     const updatedFiles = files.filter((_, index) => index !== fileIndex);
     onFilesChange(updatedFiles);
+  };
+
+  // Helper function to create and track object URLs for images
+  const createImageUrl = (file: File): string => {
+    const url = URL.createObjectURL(file);
+    objectUrlsRef.current.add(url);
+    return url;
   };
 
   return (
@@ -44,12 +95,13 @@ const UnsavedCardFileUpload: React.FC<UnsavedCardFileUploadProps> = ({
           variant="outline"
           onClick={() => fileInputRef.current?.click()}
           className="text-sm"
+          disabled={files.length >= MAX_FILES_PER_CARD}
         >
           + Add Files & Images
         </Button>
         {files.length > 0 && (
           <span className="text-xs text-gray-500">
-            {files.length} file{files.length > 1 ? 's' : ''} selected
+            {files.length}/{MAX_FILES_PER_CARD} files selected
           </span>
         )}
       </div>
@@ -59,7 +111,7 @@ const UnsavedCardFileUpload: React.FC<UnsavedCardFileUploadProps> = ({
         <div className="space-y-2">
           {/* Images as previews */}
           {files.filter(f => f.type.startsWith('image/')).map((file, idx) => {
-            const url = URL.createObjectURL(file);
+            const url = createImageUrl(file);
             return (
               <div key={idx} className="relative">
                 <img
@@ -77,6 +129,9 @@ const UnsavedCardFileUpload: React.FC<UnsavedCardFileUploadProps> = ({
                     <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
                   </svg>
                 </button>
+                <div className="absolute bottom-1 left-1 bg-black bg-opacity-50 text-white text-xs px-2 py-1 rounded">
+                  {formatFileSize(file.size)}
+                </div>
               </div>
             );
           })}
@@ -99,6 +154,7 @@ const UnsavedCardFileUpload: React.FC<UnsavedCardFileUploadProps> = ({
                   </div>
                   <div>
                     <p className="text-sm font-medium text-gray-900" style={{ maxWidth: '240px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{file.name}</p>
+                    <p className="text-xs text-gray-500">{formatFileSize(file.size)}</p>
                   </div>
                 </div>
                 <button

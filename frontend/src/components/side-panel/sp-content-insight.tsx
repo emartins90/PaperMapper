@@ -13,6 +13,8 @@ import { Combobox, useCustomOptions } from "@/components/ui/combobox";
 import { MultiCombobox } from "@/components/ui/multi-combobox";
 import { Spinner } from "@/components/ui/spinner";
 import SimpleRichTextEditor from "../rich-text-editor/simple-rich-text-editor";
+import { validateFiles } from "@/lib/utils";
+import { toast } from "sonner";
 
 interface InsightCardContentProps {
   cardData: any;
@@ -129,6 +131,20 @@ export default function InsightCardContent({
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || !openCard) return;
+    
+    const newFiles = Array.from(e.target.files);
+    
+    // Validate the new files
+    const validation = validateFiles(newFiles, files.length);
+    
+    if (!validation.isValid) {
+      // Show error messages
+      validation.errors.forEach(error => {
+        toast.error(error);
+      });
+      return;
+    }
+    
     setIsUploading(true);
     try {
       // If we have a backend ID, upload to backend
@@ -136,7 +152,7 @@ export default function InsightCardContent({
         const result = await uploadFilesForCardType(
           "insight",
           cardData.insightId,
-          Array.from(e.target.files),
+          newFiles,
           files,
           (newFiles, newFileEntries) => {
             setFiles(newFiles);
@@ -150,8 +166,6 @@ export default function InsightCardContent({
         );
       } else {
         // For new cards, store files locally as File objects
-        const newFiles = Array.from(e.target.files);
-    
         const updatedPendingFiles = [...pendingFiles, ...newFiles];
         setPendingFiles(updatedPendingFiles);
         onUpdateNodeData?.(openCard.id, { 

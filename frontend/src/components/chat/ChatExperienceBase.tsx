@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from "@/components/ui/command";
 import { Check, X } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, validateFiles } from "@/lib/utils";
 import { toast } from "sonner";
 import { CardType } from "../../components/useFileUploadHandler";
 import FileChip from "../canvas-add-files/FileChip";
@@ -74,6 +74,7 @@ const ChatExperienceBase: React.FC<ChatExperienceBaseProps> = ({
   const [filesByPrompt, setFilesByPrompt] = useState<{ [promptId: string]: File[] }>({});
   const [cardSaved, setCardSaved] = useState(false);
   const [deletingTags, setDeletingTags] = useState<Set<string>>(new Set());
+  const objectUrlsRef = useRef<Set<string>>(new Set());
   
   // Rich text editor state
   const [formattedContent, setFormattedContent] = useState<{ [key: string]: string }>({});
@@ -126,6 +127,16 @@ const ChatExperienceBase: React.FC<ChatExperienceBaseProps> = ({
     setFilesByPrompt({}); // Reset filesByPrompt on cardId change
     setCardSaved(false); // Reset saved state
     setSelectedCitation(null); // Reset selected citation
+    
+    // Cleanup object URLs when card changes
+    objectUrlsRef.current.forEach(url => {
+      try {
+        URL.revokeObjectURL(url);
+      } catch (e) {
+        // Ignore errors from revoking URLs
+      }
+    });
+    objectUrlsRef.current.clear();
   }, [cardId]);
 
   // Fetch custom options from backend
@@ -207,6 +218,20 @@ const ChatExperienceBase: React.FC<ChatExperienceBaseProps> = ({
       fetchCitations();
     }
   }, [projectId, chatType]);
+
+  // Cleanup object URLs on unmount
+  useEffect(() => {
+    return () => {
+      objectUrlsRef.current.forEach(url => {
+        try {
+          URL.revokeObjectURL(url);
+        } catch (e) {
+          // Ignore errors from revoking URLs
+        }
+      });
+      objectUrlsRef.current.clear();
+    };
+  }, []);
 
   // Listen for citation updates
   useEffect(() => {
@@ -408,6 +433,18 @@ const ChatExperienceBase: React.FC<ChatExperienceBaseProps> = ({
   // File upload handler
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
+    
+    // Validate the new files
+    const validation = validateFiles(files, uploadedFiles.length);
+    
+    if (!validation.isValid) {
+      // Show error messages
+      validation.errors.forEach(error => {
+        toast.error(error);
+      });
+      return;
+    }
+    
     setUploadedFiles(prev => {
       const newFiles = [...prev, ...files];
       uploadedFilesRef.current = newFiles; // Keep ref in sync
@@ -416,6 +453,21 @@ const ChatExperienceBase: React.FC<ChatExperienceBaseProps> = ({
   };
   // Delete uploaded file
   const handleDeleteImage = (imageIndex: number) => {
+    const fileToDelete = uploadedFiles[imageIndex];
+    
+    // If it's an image file, revoke the object URL
+    if (fileToDelete.type.startsWith('image/')) {
+      // Find and revoke the object URL for this file
+      objectUrlsRef.current.forEach(url => {
+        try {
+          URL.revokeObjectURL(url);
+        } catch (e) {
+          // Ignore errors from revoking URLs
+        }
+      });
+      objectUrlsRef.current.clear();
+    }
+    
     setUploadedFiles(prev => {
       const newFiles = prev.filter((_, index) => index !== imageIndex);
       uploadedFilesRef.current = newFiles; // Keep ref in sync
@@ -948,11 +1000,12 @@ const ChatExperienceBase: React.FC<ChatExperienceBaseProps> = ({
                         variant="outline"
                         onClick={() => fileInputRef.current?.click()}
                         className="text-sm"
+                        disabled={uploadedFiles.length >= 5}
                       >
                         + Add Files & Images
                       </Button>
                       {uploadedFiles.length > 0 && (
-                        <span className="text-xs text-gray-500">{uploadedFiles.length} file{uploadedFiles.length > 1 ? 's' : ''} selected</span>
+                        <span className="text-xs text-gray-500">{uploadedFiles.length}/5 files selected</span>
                       )}
                     </div>
                     {/* Show uploaded files/images */}
@@ -960,7 +1013,11 @@ const ChatExperienceBase: React.FC<ChatExperienceBaseProps> = ({
                       <div className="mt-2">
                         {/* Images as previews */}
                         {uploadedFiles.filter(f => f.type.startsWith('image/')).map((file, idx) => {
-                          const url = URL.createObjectURL(file);
+                          const url = (() => {
+                            const objectUrl = URL.createObjectURL(file);
+                            objectUrlsRef.current.add(objectUrl);
+                            return objectUrl;
+                          })();
                           return (
                             <div key={idx} className="relative mb-3">
                               <img
