@@ -574,64 +574,7 @@ export default function SourceListPanel({ projectId, onClose, onSourceCardClick,
   // Check if there are no results for current search/filters
   const hasNoSearchResults = filteredCitations.length === 0 && filteredUncitedSourceMaterials.length === 0;
   
-  if (hasNoSearchResults) {
-    return (
-      <div className="fixed left-0 top-0 h-full w-86 bg-white shadow-lg border-r border-gray-200 z-[100] overflow-y-auto">
-        <div className="sticky top-0 z-10 bg-white p-4 border-b border-gray-200 flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-gray-900">Source List</h2>
-          <Button variant="ghost" size="sm" onClick={onClose}>
-            <LuX size={20} />
-          </Button>
-        </div>
 
-        <div className="p-4">
-          <div className="relative">
-            <Input
-              type="text"
-              className="pr-8"
-              placeholder="Search citations and sources..."
-              value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
-              autoFocus
-            />
-            {searchTerm && (
-              <Button
-                type="button"
-                size="sm"
-                variant="ghost"
-                className="absolute right-1 top-1/2 -translate-y-1/2 p-1 h-6 w-6"
-                onClick={() => setSearchTerm("")}
-                tabIndex={-1}
-                aria-label="Clear search"
-              >
-                <LuX size={16} />
-              </Button>
-            )}
-          </div>
-          
-          {/* Show different messages based on whether there's data or not */}
-          <div className="text-center py-8">
-            <div className="text-gray-400 mb-2">
-              <svg className="mx-auto h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-            </div>
-            {!hasAnyData ? (
-              <>
-                <p className="text-sm text-gray-500 mb-2">No citations or sources yet</p>
-                <p className="text-xs text-gray-400">Add your first citation to get started</p>
-              </>
-            ) : (
-              <>
-                <p className="text-sm text-gray-500 mb-2">No results found</p>
-                <p className="text-xs text-gray-400">Try adjusting your search or filters</p>
-              </>
-            )}
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <>
@@ -657,8 +600,60 @@ export default function SourceListPanel({ projectId, onClose, onSourceCardClick,
           </Button>
         </div>
 
-        {/* Search and filter bar */}
-        <div className="px-4 pb-0 mb-3 flex items-center gap-2">
+        {/* Show empty state when there are no search results */}
+        {hasNoSearchResults ? (
+          <div className="p-4">
+            {/* Only show search bar if there's data but no search results */}
+            {hasAnyData && (
+              <div className="relative">
+                <Input
+                  type="text"
+                  className="pr-8"
+                  placeholder="Search citations and sources..."
+                  value={searchTerm}
+                  onChange={e => setSearchTerm(e.target.value)}
+                  autoFocus
+                />
+                {searchTerm && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    className="absolute right-1 top-1/2 -translate-y-1/2 p-1 h-6 w-6"
+                    onClick={() => setSearchTerm("")}
+                    tabIndex={-1}
+                    aria-label="Clear search"
+                  >
+                    <LuX size={16} />
+                  </Button>
+                )}
+              </div>
+            )}
+            
+            {/* Show different messages based on whether there's data or not */}
+            <div className="text-center py-8">
+              <div className="text-gray-400 mb-2">
+                <svg className="mx-auto h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+              </div>
+              {!hasAnyData ? (
+                <>
+                  <p className="text-sm text-gray-500 mb-2">No citations or sources yet</p>
+                  <p className="text-xs text-gray-400">Add your first citation to get started</p>
+                </>
+              ) : (
+                <>
+                  <p className="text-sm text-gray-500 mb-2">No results found</p>
+                  <p className="text-xs text-gray-400">Try adjusting your search or filters</p>
+                </>
+              )}
+            </div>
+          </div>
+        ) : (
+          <>
+            {/* Search and filter bar */}
+            <div className="px-4 pb-0 mb-3 flex items-center gap-2">
           <div className="relative flex-1">
             <Input
               type="text"
@@ -973,6 +968,8 @@ export default function SourceListPanel({ projectId, onClose, onSourceCardClick,
               })}
             </div>
           </div>
+        )}
+          </>
         )}
       </div>
 
