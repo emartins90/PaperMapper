@@ -3,6 +3,7 @@ import { useRouter } from "next/navigation";
 import { FaCircleCheck } from "react-icons/fa6";
 import { Button } from "../components/ui/button";
 import { Alert, AlertDescription } from "../components/ui/alert";
+import { hasCookieConsent } from "@/lib/cookieUtils";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -144,6 +145,12 @@ export default function AuthForm({ onAuth, mode: initialMode = "login" }: AuthFo
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    
+    // Check cookie consent before proceeding
+    if (!hasCookieConsent()) {
+      setError("Please accept cookies to continue. Cookies are required for authentication.");
+      return;
+    }
     
     // Mark fields as touched and validate before submission
     setEmailTouched(true);

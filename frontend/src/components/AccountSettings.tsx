@@ -13,6 +13,7 @@ import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { Edit, Trash2 } from "lucide-react";
+import CookieSettings from "./CookieSettings";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -32,6 +33,7 @@ const TABS = [
   { id: "sourceFunctions", label: "Custom Source Functions" },
   { id: "sourceCredibilities", label: "Custom Source Credibilities" },
   { id: "insightTypes", label: "Custom Insight Types" },
+  { id: "cookies", label: "Cookie Settings" },
 ];
 
 export default function AccountSettings({ open, onOpenChange }: AccountSettingsProps) {
@@ -930,6 +932,14 @@ export default function AccountSettings({ open, onOpenChange }: AccountSettingsP
                       ))}
                     </ul>
                   )}
+                </div>
+              )}
+              {activeTab === "cookies" && (
+                <div className="flex flex-col h-full min-h-0 max-h-full overflow-visible">
+                  <DialogTitle className="mb-2">Cookie Settings</DialogTitle>
+                  <div className="flex-1 overflow-y-auto min-h-0">
+                    <CookieSettings />
+                  </div>
                 </div>
               )}
             </div>
