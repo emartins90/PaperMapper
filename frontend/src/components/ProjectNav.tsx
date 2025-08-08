@@ -8,6 +8,7 @@ import TabSwitcher from "@/components/ui/TabSwitcher";
 import CardListPanel from "./CardListPanel";
 import SourceListPanel from "./SourceListPanel";
 import ProjectInfoModal from "./ProjectInfoModal";
+import { toast } from "sonner";
 
 interface ProjectNavProps {
   nodes: any[];
@@ -35,6 +36,16 @@ export default function ProjectNav({ nodes: initialNodes, onCardClick, projectId
       window.removeEventListener('nodesUpdate', handleNodesUpdate as EventListener);
     };
   }, []);
+
+  const handleTabChange = (tab: "gather" | "outline") => {
+    if (tab === "outline") {
+      toast.info("The Outline feature is coming soon! Stay tuned for updates.", {
+        duration: 3000,
+      });
+      return; // Don't actually change the tab
+    }
+    setActiveTab(tab);
+  };
 
   const handleCardListClick = () => {
     setShowCardList(true);
@@ -104,7 +115,7 @@ export default function ProjectNav({ nodes: initialNodes, onCardClick, projectId
           </Button>
         </div>
         <div className="self-stretch w-px bg-gray-200 mx-4" />
-        <TabSwitcher activeTab={activeTab} onTabChange={setActiveTab} />
+        <TabSwitcher activeTab={activeTab} onTabChange={handleTabChange} />
       </div>
 
       {showCardList && (
