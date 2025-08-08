@@ -81,6 +81,8 @@ export default function ProjectSelector({ token }: { token: string }) {
   const [statusFilter, setStatusFilter] = useState<string[]>([]);
   const [classFilter, setClassFilter] = useState<string[]>([]);
   const [userInfo, setUserInfo] = useState<{ time_first_project_created: string | null } | null>(null);
+  const [updatingProjectId, setUpdatingProjectId] = useState<number | null>(null);
+  const [showSpinner, setShowSpinner] = useState<number | null>(null);
   
 
   
@@ -147,8 +149,14 @@ export default function ProjectSelector({ token }: { token: string }) {
   }
 
   async function handleStatusUpdate(projectId: number, status: string) {
-    setLoading(true);
+    setUpdatingProjectId(projectId);
     setError("");
+    
+    // Start a timer to show spinner after 200ms
+    const spinnerTimer = setTimeout(() => {
+      setShowSpinner(projectId);
+    }, 200);
+    
     try {
       const res = await fetch(`${API_URL}/projects/${projectId}`, {
         method: "PUT",
@@ -164,7 +172,9 @@ export default function ProjectSelector({ token }: { token: string }) {
     } catch (err: any) {
       setError(err.message);
     } finally {
-      setLoading(false);
+      clearTimeout(spinnerTimer);
+      setUpdatingProjectId(null);
+      setShowSpinner(null);
     }
   }
 
@@ -936,7 +946,7 @@ export default function ProjectSelector({ token }: { token: string }) {
                           hasUpcomingDueDate(project.due_date, project.status) 
                             ? 'border-error-300 hover:border-error-300' 
                             : 'border-gray-200 hover:border-gray-300'
-                        } hover:shadow-sm`}>
+                        } hover:shadow-sm ${showSpinner === project.id ? 'opacity-75' : ''}`}>
                           <div className="flex justify-between items-start mb-3 min-h-0">
                             <div className="flex items-start gap-2 flex-1 min-w-0">
                               {project.status === 'ready_to_write' && (
@@ -946,7 +956,11 @@ export default function ProjectSelector({ token }: { token: string }) {
                                 {project.name}
                               </h3>
                             </div>
-                            <LuArrowRight className="w-5 h-5 text-gray-400 group-hover:text-gray-600 transition-colors flex-shrink-0 ml-2" />
+                            {showSpinner === project.id ? (
+                              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600 flex-shrink-0 ml-2" />
+                            ) : (
+                              <LuArrowRight className="w-5 h-5 text-gray-400 group-hover:text-gray-600 transition-colors flex-shrink-0 ml-2" />
+                            )}
                           </div>
                           
                           <div className="space-y-2 flex-1 min-h-0 overflow-hidden">
@@ -1019,20 +1033,45 @@ export default function ProjectSelector({ token }: { token: string }) {
                                   Edit Info
                                 </DropdownMenuItem>
                                 {project.status !== "ready_to_write" && project.status !== "complete" && (
-                                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleStatusUpdate(project.id, "ready_to_write"); }}>
-                                    <LuNotebookPen className="w-4 h-4 mr-2" />
+                                  <DropdownMenuItem 
+                                    onClick={(e) => { 
+                                      e.stopPropagation(); 
+                                      console.log('Starting status update for project:', project.id);
+                                      handleStatusUpdate(project.id, "ready_to_write"); 
+                                    }}
+                                    disabled={updatingProjectId === project.id}
+                                  >
+                                    {showSpinner === project.id ? (
+                                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2" />
+                                    ) : (
+                                      <LuNotebookPen className="w-4 h-4 mr-2" />
+                                    )}
                                     Mark as Ready to Write
                                   </DropdownMenuItem>
                                 )}
                                 {project.status === "ready_to_write" && (
-                                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleStatusUpdate(project.id, "in_progress"); }}>
-                                    <LuX className="w-4 h-4 mr-2" />
+                                  <DropdownMenuItem 
+                                    onClick={(e) => { e.stopPropagation(); handleStatusUpdate(project.id, "in_progress"); }}
+                                    disabled={updatingProjectId === project.id}
+                                  >
+                                    {showSpinner === project.id ? (
+                                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2" />
+                                    ) : (
+                                      <LuX className="w-4 h-4 mr-2" />
+                                    )}
                                     Remove Ready to Write
                                   </DropdownMenuItem>
                                 )}
                                 {project.status !== "complete" && (
-                                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleStatusUpdate(project.id, "complete"); }}>
-                                    <LuCircleCheck className="w-4 h-4 mr-2" />
+                                  <DropdownMenuItem 
+                                    onClick={(e) => { e.stopPropagation(); handleStatusUpdate(project.id, "complete"); }}
+                                    disabled={updatingProjectId === project.id}
+                                  >
+                                    {showSpinner === project.id ? (
+                                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2" />
+                                    ) : (
+                                      <LuCircleCheck className="w-4 h-4 mr-2" />
+                                    )}
                                     Mark as Complete
                                   </DropdownMenuItem>
                                 )}
