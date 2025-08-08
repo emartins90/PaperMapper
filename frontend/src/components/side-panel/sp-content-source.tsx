@@ -1353,7 +1353,7 @@ export default function SourceCardContent({
               placeholder="Select or type source function..."
               allowCustom={true}
             />
-            <p className="text-xs text-gray-500 mt-1">How does this source contribute to your research?</p>
+            <p className="text-xs text-gray-500 mt-1">How does this source contribute to your paper?</p>
           </div>
           
           <div>
@@ -1402,7 +1402,7 @@ export default function SourceCardContent({
               showSaveButton={!!cardData?.sourceMaterialId}
               onSave={() => saveAllFields()}
             />
-            <p className="text-xs text-gray-500 mt-1">Focus on the most relevant information for your research question.</p>
+            <p className="text-xs text-gray-500 mt-1">Focus on the most relevant information for your questions.</p>
           </div>
           
           <div className="border-t border-gray-200 pt-4">

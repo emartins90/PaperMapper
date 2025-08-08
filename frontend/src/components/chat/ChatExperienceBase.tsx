@@ -987,7 +987,7 @@ const ChatExperienceBase: React.FC<ChatExperienceBaseProps> = ({
                       onChange={(html, plainText) => handleRichTextChange(currentPrompt.id, html, plainText)}
                       placeholder={
                         chatType === 'source' ? "Paste or type the content from your source..." :
-                        chatType === 'question' ? "Type your research question here..." :
+                        chatType === 'question' ? "Type your question here..." :
                         chatType === 'insight' ? "Describe the insight or pattern you noticed..." :
                         chatType === 'thought' ? "Share your thought..." :
                         chatType === 'claim' ? "Enter your claim..." :

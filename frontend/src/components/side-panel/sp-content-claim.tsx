@@ -9,6 +9,7 @@ import LinkedCardsTab from "../LinkedCardsTab";
 import { Label } from "@/components/ui/label";
 import { MultiCombobox } from "@/components/ui/multi-combobox";
 import { Spinner } from "@/components/ui/spinner";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import SimpleRichTextEditor from "../rich-text-editor/simple-rich-text-editor";
 import { validateFiles } from "@/lib/utils";
 import { toast } from "sonner";
@@ -284,27 +285,25 @@ export default function ClaimCardContent({
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Claim Type</label>
-            <select
-              className="w-full p-2 border border-gray-300 rounded-md text-sm"
+            <Select
               value={claimType || ""}
-              onChange={e => {
-                const value = e.target.value || undefined;
-                setClaimType(value);
+              onValueChange={(value) => {
+                const finalValue = value || undefined;
+                setClaimType(finalValue);
                 if (openCard && !isUnsaved) {
-                  saveAllFields({ claimType: value });
-                }
-              }}
-              onBlur={() => {
-                if (openCard && !isUnsaved) {
-                  saveAllFields({ claimType });
+                  saveAllFields({ claimType: finalValue });
                 }
               }}
             >
-              <option value="">Select type...</option>
-              {CLAIM_TYPES.map(type => (
-                <option key={type} value={type}>{type}</option>
-              ))}
-            </select>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select type..." />
+              </SelectTrigger>
+              <SelectContent>
+                {CLAIM_TYPES.map(type => (
+                  <SelectItem key={type} value={type}>{type}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Claim</label>

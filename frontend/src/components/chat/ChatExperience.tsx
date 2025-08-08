@@ -6,19 +6,19 @@ import { CardType } from "../useFileUploadHandler";
 const sourcePrompts = [
   { 
     id: "sourceFunction", 
-    prompt: "Let's start by understanding what role this source plays in your research! Is it providing evidence, defining a concept, giving background info, or something else?",
+    prompt: "Let's start by understanding what role this source plays in your paper! Is it providing evidence, defining a concept, giving background info, or something else?",
     options: ["Evidence", "Definition", "Background Info", "Data Point", "Theory", "Concept"],
     hasCustomOption: true
   },
   { 
     id: "sourceContent", 
-    prompt: "Perfect! Now let's add the content from your source. Paste or type the relevant text, quotes, or excerpts from your source. You can also upload images or files if needed. This will be the foundation of your research - no need to be perfect, just get the key content in here!",
+    prompt: "Perfect! Now let's add the content from your source. Paste or type the relevant text, quotes, or excerpts from your source. You can also upload images or files if needed. This will be the foundation of your paper - no need to be perfect, just get the key content in here!",
     options: [],
     hasCustomOption: false
   },
   { 
     id: "summary", 
-    prompt: "Excellent! Now let's create a brief summary of the key points. Based on the content you just added, write 2-3 sentences that capture what's most important for your research. Focus on what stood out to you!",
+    prompt: "Excellent! Now let's create a brief summary of the key points. Based on the content you just added, write 2-3 sentences that capture what's most important for your paper. Focus on what stood out to you!",
     options: [],
     hasCustomOption: false
   },
@@ -30,7 +30,7 @@ const sourcePrompts = [
   },
   { 
     id: "argumentType", 
-    prompt: "Nice work! Now let's think about how this source relates to your research. Does it support your main argument, go against it, or stay neutral?",
+    prompt: "Nice work! Now let's think about how this source supports your paper. Does it support your main argument, go against it, or stay neutral?",
     options: ["Thesis-supporting", "Counter-evidence", "Neutral to thesis"],
     hasCustomOption: false
   },

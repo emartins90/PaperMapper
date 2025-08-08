@@ -4,7 +4,7 @@ import { CardType } from "../useFileUploadHandler";
 const claimPrompts = [
   {
     id: "claimType",
-    prompt: "Is this a claim you're making to guide your research, or a conclusion you've reached after investigating?\n\nChoose the type that best fits where you are in your thinking.",
+    prompt: "Is this a claim you're making to guide your paper, or a conclusion you've reached after investigating?\n\nChoose the type that best fits where you are in your thinking.",
     options: [
       {
         group: "Initial Claim",

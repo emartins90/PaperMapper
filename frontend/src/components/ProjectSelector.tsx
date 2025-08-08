@@ -892,8 +892,8 @@ export default function ProjectSelector({ token }: { token: string }) {
                       </h3>
                       <p className="text-gray-600 mb-8">
                         {userInfo?.time_first_project_created 
-                          ? "It looks like you don't have any projects. Create a new project to continue your research and writing."
-                          : "Create your first project to get started with your research and writing."
+                          ? "It looks like you don't have any projects. Create a new project to continue."
+                          : "Create your first project to get start making connections."
                         }
                       </p>
                       <Button 
