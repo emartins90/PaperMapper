@@ -79,6 +79,7 @@ export default function ProjectSelector({ token }: { token: string }) {
   const [sortBy, setSortBy] = useState<'due_date' | 'last_edited' | 'name'>('due_date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [statusFilter, setStatusFilter] = useState<string[]>([]);
+  const [classFilter, setClassFilter] = useState<string[]>([]);
   const [userInfo, setUserInfo] = useState<{ time_first_project_created: string | null } | null>(null);
   
 
@@ -97,7 +98,7 @@ export default function ProjectSelector({ token }: { token: string }) {
     const filtered = filterProjects(projects);
     const sorted = sortProjects(filtered);
     setFilteredProjects(sorted);
-  }, [projects, searchTerm, sortBy, sortOrder, statusFilter]);
+  }, [projects, searchTerm, sortBy, sortOrder, statusFilter, classFilter]);
 
   async function fetchUserInfo() {
     try {
@@ -274,6 +275,14 @@ export default function ProjectSelector({ token }: { token: string }) {
     return 'other';
   }
 
+  // Helper to get unique classes from projects
+  function getUniqueClasses(): string[] {
+    const classes = projects
+      .map(project => project.class_subject)
+      .filter((classSubject): classSubject is string => !!classSubject);
+    return [...new Set(classes)].sort();
+  }
+
   // Handler for file click
   function handleFileClick(fileUrl: string, project: Project) {
     const filename = fileUrl.split('/').pop() || '';
@@ -353,6 +362,11 @@ export default function ProjectSelector({ token }: { token: string }) {
     return projectsToFilter.filter(project => {
       // Status filter
       if (statusFilter.length > 0 && !statusFilter.includes(project.status || '')) {
+        return false;
+      }
+
+      // Class filter
+      if (classFilter.length > 0 && project.class_subject && !classFilter.includes(project.class_subject)) {
         return false;
       }
 
@@ -521,7 +535,7 @@ export default function ProjectSelector({ token }: { token: string }) {
                 <div className="hidden sm:flex items-center justify-between mb-6">
                   <h2 className="text-2xl font-bold text-gray-900">My Projects</h2>
                   
-                  {!loading && filteredProjects.length > 0 && (
+                  {!loading && projects.length > 0 && (
                     <div className="flex items-center space-x-4">
                       <div className="relative">
                         <LuSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
@@ -538,9 +552,9 @@ export default function ProjectSelector({ token }: { token: string }) {
                         <PopoverTrigger asChild>
                           <Button variant="outline" size="icon" className="relative" aria-label="Filter and sort projects">
                             <LuListFilter className="w-4 h-4" />
-                            {(statusFilter.length > 0 || sortBy !== 'due_date') && (
+                            {(statusFilter.length > 0 || classFilter.length > 0 || sortBy !== 'due_date') && (
                               <Badge className="absolute -top-2 -right-2 px-1.5 py-0.5 text-xs rounded-full" variant="default">
-                                {statusFilter.length + (sortBy !== 'due_date' ? 1 : 0)}
+                                {statusFilter.length + classFilter.length + (sortBy !== 'due_date' ? 1 : 0)}
                               </Badge>
                             )}
                           </Button>
@@ -591,6 +605,35 @@ export default function ProjectSelector({ token }: { token: string }) {
                               ))}
                             </div>
 
+                            {/* Class Filter */}
+                            {getUniqueClasses().length > 0 && (
+                              <>
+                                <label className="text-md font-semibold text-foreground">Class/Subject</label>
+                                <div className="space-y-2 mb-4 mt-2">
+                                  {getUniqueClasses().map(className => (
+                                    <label key={className} className="flex items-center gap-2 cursor-pointer px-2 py-1 rounded hover:bg-accent">
+                                      <input
+                                        type="checkbox"
+                                        value={className}
+                                        checked={classFilter.includes(className)}
+                                        onChange={(e) => {
+                                          const newClassFilter = [...classFilter];
+                                          if (e.target.checked) {
+                                            newClassFilter.push(className);
+                                          } else {
+                                            newClassFilter.splice(newClassFilter.indexOf(className), 1);
+                                          }
+                                          setClassFilter(newClassFilter);
+                                        }}
+                                        className="accent-primary"
+                                      />
+                                      <span className="text-md">{className}</span>
+                                    </label>
+                                  ))}
+                                </div>
+                              </>
+                            )}
+
                             {/* Status Filter */}
                             <label className="text-md font-semibold text-foreground">Status</label>
                             <div className="space-y-2 mb-4 mt-2">
@@ -622,13 +665,14 @@ export default function ProjectSelector({ token }: { token: string }) {
                             </div>
 
                             {/* Clear all filters */}
-                            {(statusFilter.length > 0 || sortBy !== 'due_date') && (
+                            {(statusFilter.length > 0 || classFilter.length > 0 || sortBy !== 'due_date') && (
                               <div className="mt-4 pt-4 border-t">
                                 <Button
                                   variant="outline"
                                   size="sm"
                                   onClick={() => {
                                     setStatusFilter([]);
+                                    setClassFilter([]);
                                     setSortBy('due_date');
                                   }}
                                   className="w-full"
@@ -643,7 +687,7 @@ export default function ProjectSelector({ token }: { token: string }) {
                     </div>
                   )}
                   
-                  {!loading && filteredProjects.length > 0 && (
+                  {!loading && projects.length > 0 && (
                     <Button onClick={handleCreate} className="bg-gray-800 hover:bg-gray-900">
                       <LuPlus className="w-4 h-4 mr-2" /> New Project
                     </Button>
@@ -654,14 +698,14 @@ export default function ProjectSelector({ token }: { token: string }) {
                 <div className="sm:hidden">
                   <div className="flex items-center justify-between mb-6">
                     <h2 className="text-2xl font-bold text-gray-900">My Projects</h2>
-                    {!loading && filteredProjects.length > 0 && (
+                    {!loading && projects.length > 0 && (
                       <Button onClick={handleCreate} className="bg-gray-800 hover:bg-gray-900">
                         <LuPlus className="w-4 h-4 mr-2" /> New Project
                       </Button>
                     )}
                   </div>
                   
-                  {!loading && filteredProjects.length > 0 && (
+                  {!loading && projects.length > 0 && (
                     <div className="flex items-center space-x-4 mb-2">
                       <div className="relative flex-1">
                         <LuSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
@@ -678,9 +722,9 @@ export default function ProjectSelector({ token }: { token: string }) {
                         <PopoverTrigger asChild>
                           <Button variant="outline" size="icon" className="relative flex-shrink-0" aria-label="Filter and sort projects">
                             <LuListFilter className="w-4 h-4" />
-                            {(statusFilter.length > 0 || sortBy !== 'due_date') && (
+                            {(statusFilter.length > 0 || classFilter.length > 0 || sortBy !== 'due_date') && (
                               <Badge className="absolute -top-2 -right-2 px-1.5 py-0.5 text-xs rounded-full" variant="default">
-                                {statusFilter.length + (sortBy !== 'due_date' ? 1 : 0)}
+                                {statusFilter.length + classFilter.length + (sortBy !== 'due_date' ? 1 : 0)}
                               </Badge>
                             )}
                           </Button>
@@ -731,6 +775,35 @@ export default function ProjectSelector({ token }: { token: string }) {
                               ))}
                             </div>
 
+                            {/* Class Filter */}
+                            {getUniqueClasses().length > 0 && (
+                              <>
+                                <label className="text-md font-semibold text-foreground">Class/Subject</label>
+                                <div className="space-y-2 mb-4 mt-2">
+                                  {getUniqueClasses().map(className => (
+                                    <label key={className} className="flex items-center gap-2 cursor-pointer px-2 py-1 rounded hover:bg-accent">
+                                      <input
+                                        type="checkbox"
+                                        value={className}
+                                        checked={classFilter.includes(className)}
+                                        onChange={(e) => {
+                                          const newClassFilter = [...classFilter];
+                                          if (e.target.checked) {
+                                            newClassFilter.push(className);
+                                          } else {
+                                            newClassFilter.splice(newClassFilter.indexOf(className), 1);
+                                          }
+                                          setClassFilter(newClassFilter);
+                                        }}
+                                        className="accent-primary"
+                                      />
+                                      <span className="text-md">{className}</span>
+                                    </label>
+                                  ))}
+                                </div>
+                              </>
+                            )}
+
                             {/* Status Filter */}
                             <label className="text-md font-semibold text-foreground">Status</label>
                             <div className="space-y-2 mb-4 mt-2">
@@ -762,13 +835,14 @@ export default function ProjectSelector({ token }: { token: string }) {
                             </div>
 
                             {/* Clear all filters */}
-                            {(statusFilter.length > 0 || sortBy !== 'due_date') && (
+                            {(statusFilter.length > 0 || classFilter.length > 0 || sortBy !== 'due_date') && (
                               <div className="mt-4 pt-4 border-t">
                                 <Button
                                   variant="outline"
                                   size="sm"
                                   onClick={() => {
                                     setStatusFilter([]);
+                                    setClassFilter([]);
                                     setSortBy('due_date');
                                   }}
                                   className="w-full"
@@ -796,32 +870,60 @@ export default function ProjectSelector({ token }: { token: string }) {
                   <div className="text-center py-8">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
                   </div>
-                  ) : filteredProjects.length === 0 ? (
-                    // Empty state
-                    <div className="text-center py-6">
-                      <div className="max-w-sm mx-auto p-8 rounded-lg border border-gray-100 backdrop-blur-[1.5px]">
-                        <div className="w-20 h-20 mx-auto mb-6 bg-gray-100 rounded-full flex items-center justify-center">
-                          <LuFileText className="w-10 h-10 text-gray-400" />
-                        </div>
-                        <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                          {userInfo?.time_first_project_created ? "No projects found" : "No projects yet"}
-                        </h3>
-                        <p className="text-gray-600 mb-8">
-                          {userInfo?.time_first_project_created 
-                            ? "It looks like you don't have any projects. Create a new project to continue your research and writing."
-                            : "Create your first project to get started with your research and writing."
-                          }
-                        </p>
-                        <Button 
-                          onClick={handleCreate} 
-                          className="bg-gray-800 hover:bg-gray-900"
-                          size="lg"
-                        >
-                          <LuPlus className="w-5 h-5 mr-2" /> 
-                          {userInfo?.time_first_project_created ? "Create New Project" : "Create Your First Project"}
-                        </Button>
+                ) : projects.length === 0 ? (
+                  // No projects - differentiate between never created and had projects before
+                  <div className="text-center py-6">
+                    <div className="max-w-sm mx-auto p-8 rounded-lg border border-gray-100 backdrop-blur-[1.5px]">
+                      <div className="w-20 h-20 mx-auto mb-6 bg-gray-100 rounded-full flex items-center justify-center">
+                        <LuFileText className="w-10 h-10 text-gray-400" />
                       </div>
+                      <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                        {userInfo?.time_first_project_created ? "No projects found" : "No projects yet"}
+                      </h3>
+                      <p className="text-gray-600 mb-8">
+                        {userInfo?.time_first_project_created 
+                          ? "It looks like you don't have any projects. Create a new project to continue your research and writing."
+                          : "Create your first project to get started with your research and writing."
+                        }
+                      </p>
+                      <Button 
+                        onClick={handleCreate} 
+                        className="bg-gray-800 hover:bg-gray-900"
+                        size="lg"
+                      >
+                        <LuPlus className="w-5 h-5 mr-2" /> 
+                        {userInfo?.time_first_project_created ? "Create New Project" : "Create Your First Project"}
+                      </Button>
                     </div>
+                  </div>
+                ) : filteredProjects.length === 0 ? (
+                  // Projects exist but none match filters/search
+                  <div className="text-center py-6">
+                    <div className="max-w-sm mx-auto p-8 rounded-lg border border-gray-100 backdrop-blur-[1.5px]">
+                      <div className="w-20 h-20 mx-auto mb-6 bg-gray-100 rounded-full flex items-center justify-center">
+                        <LuSearch className="w-10 h-10 text-gray-400" />
+                      </div>
+                      <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                        No projects found
+                      </h3>
+                      <p className="text-gray-600 mb-8">
+                        Try adjusting your search or filters to find what you're looking for.
+                      </p>
+                      <Button 
+                        onClick={() => {
+                          setSearchTerm("");
+                          setStatusFilter([]);
+                          setClassFilter([]);
+                          setSortBy('due_date');
+                        }}
+                        variant="outline"
+                        size="lg"
+                      >
+                        <LuX className="w-5 h-5 mr-2" /> 
+                        Clear All Filters
+                      </Button>
+                    </div>
+                  </div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                     {filteredProjects.map((project) => (
