@@ -188,7 +188,7 @@ export default function TermsOfServicePage() {
           <h2 className="text-2xl font-semibold mb-4">Governing Law</h2>
           
           <p className="mb-4">
-            These Terms shall be governed by and construed in accordance with the laws of [Your State/Country], without regard to its conflict of law provisions.
+            These Terms shall be governed by and construed in accordance with the laws of Ohio, United States, without regard to its conflict of law provisions.
           </p>
         </section>
 
