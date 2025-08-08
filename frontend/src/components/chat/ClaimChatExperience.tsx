@@ -19,13 +19,13 @@ const claimPrompts = [
   },
   {
     id: "claimText",
-    prompt: "What is your claim? (e.g., a hypothesis, thesis, conclusion, or proposal)",
+    prompt: "What is your claim? It doesn't need to be perfect right now. You can always edit it later.",
     options: [],
     hasCustomOption: false
   },
   {
     id: "topicalTags",
-    prompt: "Great! Now let's add some tags to help you find and organize this claim later. Think of 2-4 words or short phrases that capture the main themes. Examples: 'Teen Anxiety', 'Social Media', 'Body Image'. Don't overthink it - just go with what feels right!",
+    prompt: "Great! If you want, add some tags to help you track topics across your project. Otherwise, just hit done to create you claim.\n\nex. 'Decision Making', 'Climate Impact', 'Technology', etc.",
     options: [],
     hasCustomOption: false
   }

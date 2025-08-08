@@ -1353,7 +1353,7 @@ export default function SourceCardContent({
               placeholder="Select or type source function..."
               allowCustom={true}
             />
-            <p className="text-xs text-gray-500 mt-1">How does this source contribute to your paper?</p>
+            <p className="text-xs text-gray-500 mt-1">What role does this source play in your paper?</p>
           </div>
           
           <div>
@@ -1373,6 +1373,8 @@ export default function SourceCardContent({
                 <SelectItem value="Neutral to thesis">Neutral to thesis</SelectItem>
               </SelectContent>
             </Select>
+            <p className="text-xs text-gray-500 mt-1">Does this source support or contradict your initial claims?</p>
+
           </div>
           
           <div>
@@ -1581,6 +1583,8 @@ export default function SourceCardContent({
                 </div>
               )}
             </div>
+            <p className="text-xs text-gray-500 mt-1">Think about where this source came from.</p>
+
           </div>
 
           {/* Save button for unsaved cards - only show if showSaveButton is true */}

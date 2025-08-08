@@ -341,17 +341,6 @@ export default function QuestionCardContent({
       {questionTab === "info" ? (
         <div className="space-y-4">
           <div>
-            <Label htmlFor="question-text" className="block text-sm font-medium text-gray-700 mb-1">Question Text</Label>
-            <SimpleRichTextEditor
-              value={questionFormatted || question}
-              onChange={handleQuestionFormattedChange}
-              placeholder="Enter your research or essay question..."
-              cardType="question"
-              showSaveButton={!!cardData?.questionId}
-              onSave={() => saveAllFields()}
-            />
-          </div>
-          <div>
             <Label htmlFor="question-category" className="block text-sm font-medium text-gray-700 mb-1">Function / Category</Label>
             <Combobox
               options={[
@@ -406,6 +395,19 @@ export default function QuestionCardContent({
               }}
               placeholder="Select or type category..."
               allowCustom={true}
+            />
+           <p className="text-xs text-gray-500 mt-1">What role does this question play in your paper?</p>
+
+          </div>
+          <div>
+            <Label htmlFor="question-text" className="block text-sm font-medium text-gray-700 mb-1">Question Text</Label>
+            <SimpleRichTextEditor
+              value={questionFormatted || question}
+              onChange={handleQuestionFormattedChange}
+              placeholder="Enter your research or essay question..."
+              cardType="question"
+              showSaveButton={!!cardData?.questionId}
+              onSave={() => saveAllFields()}
             />
           </div>
           <div>

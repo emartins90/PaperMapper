@@ -9,7 +9,7 @@ import LinkedCardsTab from "../LinkedCardsTab";
 import { Label } from "@/components/ui/label";
 import { MultiCombobox } from "@/components/ui/multi-combobox";
 import { Spinner } from "@/components/ui/spinner";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from "@/components/ui/select";
 import SimpleRichTextEditor from "../rich-text-editor/simple-rich-text-editor";
 import { validateFiles } from "@/lib/utils";
 import { toast } from "sonner";
@@ -20,6 +20,9 @@ const CLAIM_TYPES = [
   "Conclusion",
   "Proposal"
 ];
+
+const INITIAL_CLAIM_TYPES = ["Hypothesis", "Thesis"];
+const RESULTING_CLAIM_TYPES = ["Conclusion", "Proposal"];
 
 interface ClaimCardContentProps {
   cardData: any;
@@ -299,9 +302,18 @@ export default function ClaimCardContent({
                 <SelectValue placeholder="Select type..." />
               </SelectTrigger>
               <SelectContent>
-                {CLAIM_TYPES.map(type => (
-                  <SelectItem key={type} value={type}>{type}</SelectItem>
-                ))}
+                <SelectGroup>
+                  <SelectLabel>Initial Claim</SelectLabel>
+                  {INITIAL_CLAIM_TYPES.map(type => (
+                    <SelectItem key={type} value={type}>{type}</SelectItem>
+                  ))}
+                </SelectGroup>
+                <SelectGroup>
+                  <SelectLabel>Resulting Claim</SelectLabel>
+                  {RESULTING_CLAIM_TYPES.map(type => (
+                    <SelectItem key={type} value={type}>{type}</SelectItem>
+                  ))}
+                </SelectGroup>
               </SelectContent>
             </Select>
           </div>

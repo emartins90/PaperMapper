@@ -324,7 +324,9 @@ export default function InsightCardContent({
               placeholder="Select or type insight type..."
               allowCustom={true}
             />
+             <p className="text-xs text-gray-500 mt-1">What role does this insight play in your paper?</p>
           </div>
+          
           <div>
             <Label htmlFor="insight-text" className="block text-sm font-medium text-gray-700 mb-1">Insight</Label>
             <SimpleRichTextEditor
