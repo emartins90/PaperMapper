@@ -173,7 +173,13 @@ export default function InsightCardContent({
         });
       }
     } catch (err) {
-      alert("Failed to upload file: " + (err as Error).message);
+      console.error("File upload error:", err);
+      const errorMessage = (err as Error).message;
+      if (errorMessage === "Failed to fetch" || errorMessage.includes("fetch") || errorMessage.includes("network")) {
+        toast.error("Please check your network connection.");
+      } else {
+        toast.error("Failed to upload file: " + errorMessage);
+      }
     } finally {
       setIsUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -198,7 +204,7 @@ export default function InsightCardContent({
       setFileEntries(newFileEntries);
       onUpdateNodeData?.(openCard.id, { files: newFiles, fileEntries: newFileEntries });
     } catch (err) {
-      alert("Failed to delete file: " + (err as Error).message);
+      toast.error("Failed to delete file: " + (err as Error).message);
     } finally {
       // Remove file from deleting set
       setDeletingFiles(prev => {
@@ -216,7 +222,6 @@ export default function InsightCardContent({
       await saveCard({
         cardId: openCard.id,
         chatAnswers: {
-          insightType,
           insightText: insight,
           insightTextFormatted: insightFormatted,
         },
@@ -224,12 +229,12 @@ export default function InsightCardContent({
       });
     } catch (error) {
       console.error("Failed to save insight:", error);
-      alert("Failed to save insight: " + (error as Error).message);
+      toast.error("Failed to save insight: " + (error as Error).message);
     }
   };
 
   // Save all fields to backend for saved cards
-  const saveAllFields = async (additionalFields?: any) => {
+  const saveAllFields = async () => {
     if (!cardData?.insightId) return; // Only for saved cards
 
     const token = localStorage.getItem("token");
@@ -238,13 +243,10 @@ export default function InsightCardContent({
 
     const payload = {
       project_id: projectId,
-      insight_text: additionalFields?.insight ?? insight,
+      insight_text: insight,
       insight_text_formatted: insightFormatted,
-      insight_type: additionalFields?.insightType ?? insightType,
-      files: files.join(','),
-      ...additionalFields
+      tags: tags,
     };
-    payload.tags = Array.isArray(payload.tags) ? payload.tags : tags;
 
     const response = await fetch(`${API_URL}/insights/${insightId}`, {
       method: "PUT",
@@ -257,17 +259,16 @@ export default function InsightCardContent({
 
     if (!response.ok) {
       const errorText = await response.text();
-      alert(`Failed to save changes: ${response.status} ${errorText}`);
+      toast.error(`Failed to save changes: ${response.status} ${errorText}`);
       return;
     }
 
     // Update node data
     if (onUpdateNodeData && openCard) {
       onUpdateNodeData(openCard.id, {
-        insight: payload.insight_text,
+        insight: insight,
         insightFormatted: insightFormatted,
-        insightType: payload.insight_type,
-        tags: additionalFields?.tags ?? tags,
+        tags: tags,
       });
     }
   };
@@ -302,7 +303,7 @@ export default function InsightCardContent({
                 setInsightType(value);
                 if (openCard && !isUnsaved) {
                   onUpdateNodeData?.(openCard.id, { insightType: value });
-                  saveAllFields({ insightType: value });
+                  saveAllFields();
                 }
                 // If it's a new custom option, persist it
                 if (
@@ -344,7 +345,7 @@ export default function InsightCardContent({
               onChange={(newTags) => {
                 setTags(newTags);
                 if (!isUnsaved) {
-                  saveAllFields({ tags: newTags });
+                  saveAllFields();
                 }
               }}
               placeholder="Type a tag and press Enter..."

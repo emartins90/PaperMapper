@@ -10,6 +10,7 @@ import { Combobox, useCustomOptions } from "@/components/ui/combobox";
 import { LuTrash2, LuUpload } from "react-icons/lu";
 import FileChip from "./canvas-add-files/FileChip";
 import { FullscreenFileViewer } from "./canvas-add-files/FullscreenFileViewer";
+import { toast } from "sonner";
 
 interface Project {
   id: number;
@@ -228,7 +229,7 @@ export default function ProjectInfoModal({ projectId, mode, onClose }: ProjectIn
       onClose();
     } catch (error) {
       console.error("Failed to save project:", error);
-      alert("Failed to save project changes");
+      toast.error("Failed to save project changes");
     } finally {
       setSaving(false);
     }

@@ -356,14 +356,14 @@ export default function SourceCardContent({
       
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`Failed to save changes: ${response.status} ${errorText}`);
+        toast.error(`Failed to save changes: ${response.status} ${errorText}`);
       }
 
       // Dispatch source material update event to refresh source list
       window.dispatchEvent(new CustomEvent('sourceMaterialUpdate'));
     } catch (error) {
       console.error("Error saving changes:", error);
-      alert("Failed to save changes: " + (error as Error).message);
+      toast.error("Failed to save changes: " + (error as Error).message);
     } finally {
       // Keep the save indicator visible briefly for better UX
       setTimeout(() => setIsSaving(false), 500);
@@ -421,14 +421,14 @@ export default function SourceCardContent({
       
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`Failed to save changes: ${response.status} ${errorText}`);
+        toast.error(`Failed to save changes: ${response.status} ${errorText}`);
       }
 
       // Dispatch source material update event to refresh source list
       window.dispatchEvent(new CustomEvent('sourceMaterialUpdate'));
     } catch (error) {
       console.error("Error saving changes:", error);
-      alert("Failed to save changes: " + (error as Error).message);
+      toast.error("Failed to save changes: " + (error as Error).message);
     } finally {
       // Keep the save indicator visible briefly for better UX
       setTimeout(() => setIsSaving(false), 500);
@@ -486,14 +486,14 @@ export default function SourceCardContent({
       
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`Failed to save changes: ${response.status} ${errorText}`);
+        toast.error(`Failed to save changes: ${response.status} ${errorText}`);
       }
 
       // Dispatch source material update event to refresh source list
       window.dispatchEvent(new CustomEvent('sourceMaterialUpdate'));
     } catch (error) {
       console.error("Error saving changes:", error);
-      alert("Failed to save changes: " + (error as Error).message);
+      toast.error("Failed to save changes: " + (error as Error).message);
     } finally {
       // Keep the save indicator visible briefly for better UX
       setTimeout(() => setIsSaving(false), 500);
@@ -551,14 +551,14 @@ export default function SourceCardContent({
       
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`Failed to save changes: ${response.status} ${errorText}`);
+        toast.error(`Failed to save changes: ${response.status} ${errorText}`);
       }
 
       // Dispatch source material update event to refresh source list
       window.dispatchEvent(new CustomEvent('sourceMaterialUpdate'));
     } catch (error) {
       console.error("Error saving changes:", error);
-      alert("Failed to save changes: " + (error as Error).message);
+      toast.error("Failed to save changes: " + (error as Error).message);
     } finally {
       // Keep the save indicator visible briefly for better UX
       setTimeout(() => setIsSaving(false), 500);
@@ -620,11 +620,11 @@ export default function SourceCardContent({
       
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`Failed to save changes: ${response.status} ${errorText}`);
+        toast.error(`Failed to save changes: ${response.status} ${errorText}`);
       }
     } catch (error) {
       console.error("Error saving changes:", error);
-      alert("Failed to save changes: " + (error as Error).message);
+      toast.error("Failed to save changes: " + (error as Error).message);
     } finally {
       // Keep the save indicator visible briefly for better UX
       setTimeout(() => setIsSaving(false), 500);
@@ -662,7 +662,8 @@ export default function SourceCardContent({
       });
       
       if (!response.ok) {
-        throw new Error("Failed to save notes");
+        const errorText = await response.text();
+        toast.error(`Failed to save notes: ${response.status} ${errorText}`);
       }
     } catch (error) {
       console.error("Error saving notes:", error);
@@ -696,14 +697,14 @@ export default function SourceCardContent({
       
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`Failed to update citation: ${response.status} ${errorText}`);
+        toast.error(`Failed to update citation: ${response.status} ${errorText}`);
       }
 
       // Dispatch citation update event to refresh source list
       window.dispatchEvent(new CustomEvent('citationUpdate'));
     } catch (error) {
       console.error("Error saving citation:", error);
-      alert("Failed to save citation: " + (error as Error).message);
+      toast.error("Failed to save citation: " + (error as Error).message);
     }
   };
 
@@ -753,7 +754,8 @@ export default function SourceCardContent({
         });
       }
     } catch (err) {
-      alert("Failed to upload file: " + (err as Error).message);
+      console.error("File upload error:", err);
+      toast.error("Failed to upload file: " + (err as Error).message);
     } finally {
       setIsUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -764,11 +766,11 @@ export default function SourceCardContent({
   const handleDeleteFile = async (fileUrl: string) => {
     const filename = fileUrl.split('/').pop();
     if (!filename) {
-      alert('Could not determine filename.');
+      toast.error('Could not determine filename.');
       return;
     }
     if (!cardData || !cardData.sourceMaterialId || !cardData.projectId) {
-      alert('Source material data is missing.');
+      toast.error('Source material data is missing.');
       return;
     }
     
@@ -807,7 +809,8 @@ export default function SourceCardContent({
         body: JSON.stringify(payload),
       });
       if (!updateRes.ok) {
-        throw new Error('Failed to update source material');
+        const errorText = await updateRes.text();
+        toast.error('Failed to update source material: ' + errorText);
       }
       
       // Update the node data in the parent component to reflect the change immediately
@@ -815,7 +818,7 @@ export default function SourceCardContent({
         onUpdateNodeData(openCard?.id || "", { files: newFiles, fileEntries: newFileEntries });
       }
     } catch (err) {
-      alert('Failed to fully delete file.');
+      toast.error('Failed to fully delete file.');
     } finally {
       // Remove file from deleting set
       setDeletingFiles(prev => {
@@ -905,7 +908,7 @@ export default function SourceCardContent({
       });
     } catch (error) {
       console.error("Failed to save source:", error);
-      alert("Failed to save source: " + (error as Error).message);
+      toast.error("Failed to save source: " + (error as Error).message);
     }
   };
 
@@ -970,7 +973,7 @@ export default function SourceCardContent({
           
           if (!response.ok) {
             const errorText = await response.text();
-            throw new Error(`Failed to associate citation: ${response.status} ${errorText}`);
+            toast.error(`Failed to associate citation: ${response.status} ${errorText}`);
           }
 
           // Dispatch source material update event to refresh source list
@@ -981,7 +984,7 @@ export default function SourceCardContent({
           
         } catch (error) {
           console.error("Failed to associate citation:", error);
-          alert("Failed to associate citation: " + (error as Error).message);
+          toast.error("Failed to associate citation: " + (error as Error).message);
         }
       }
     }
@@ -1047,7 +1050,7 @@ export default function SourceCardContent({
           
           if (!response.ok) {
             const errorText = await response.text();
-            throw new Error(`Failed to remove citation: ${response.status} ${errorText}`);
+            toast.error(`Failed to remove citation: ${response.status} ${errorText}`);
           }
 
           // Dispatch source material update event to refresh source list
@@ -1058,7 +1061,7 @@ export default function SourceCardContent({
           
         } catch (error) {
           console.error("Failed to remove citation:", error);
-          alert("Failed to remove citation: " + (error as Error).message);
+          toast.error("Failed to remove citation: " + (error as Error).message);
           
           // If the database update failed, revert the UI state
           if (cardData?.citationId && citations.length > 0) {
@@ -1096,7 +1099,11 @@ export default function SourceCardContent({
         }),
       });
       
-      if (!response.ok) throw new Error("Failed to create citation");
+      if (!response.ok) {
+        const errorText = await response.text();
+        toast.error(`Failed to create citation: ${response.status} ${errorText}`);
+        return;
+      }
       
       const newCitation = await response.json();
       
@@ -1143,7 +1150,8 @@ export default function SourceCardContent({
         
         if (!sourceMaterialResponse.ok) {
           const errorText = await sourceMaterialResponse.text();
-          throw new Error(`Failed to associate citation: ${sourceMaterialResponse.status} ${errorText}`);
+          toast.error(`Failed to associate citation: ${sourceMaterialResponse.status} ${errorText}`);
+          return;
         }
 
         // Dispatch source material update event to refresh source list
@@ -1154,7 +1162,7 @@ export default function SourceCardContent({
       window.dispatchEvent(new CustomEvent('citationUpdate'));
     } catch (error) {
       console.error("Failed to create citation:", error);
-      alert("Failed to create citation: " + (error as Error).message);
+      toast.error("Failed to create citation: " + (error as Error).message);
     }
   };
 
@@ -1187,7 +1195,11 @@ export default function SourceCardContent({
         }),
       });
       
-      if (!response.ok) throw new Error("Failed to update citation");
+      if (!response.ok) {
+        const errorText = await response.text();
+        toast.error(`Failed to update citation: ${response.status} ${errorText}`);
+        return;
+      }
       
       const updatedCitation = await response.json();
       
@@ -1215,7 +1227,7 @@ export default function SourceCardContent({
       window.dispatchEvent(new CustomEvent('citationUpdate'));
     } catch (error) {
       console.error("Failed to update citation:", error);
-      alert("Failed to update citation: " + (error as Error).message);
+      toast.error("Failed to update citation: " + (error as Error).message);
     } finally {
       setIsSavingCitation(false);
     }

@@ -584,7 +584,12 @@ const ChatExperienceBase: React.FC<ChatExperienceBaseProps> = ({
       });
     } catch (error) {
       console.error("Failed to save card:", error);
-      toast.error("Failed to save card: " + (error as Error).message);
+      const errorMessage = (error as Error).message;
+      if (errorMessage === "Failed to fetch" || errorMessage.includes("fetch") || errorMessage.includes("network")) {
+        toast.error("Please check your network connection.");
+      } else {
+        toast.error("Failed to save card: " + errorMessage);
+      }
     }
   };
 
@@ -663,7 +668,12 @@ const ChatExperienceBase: React.FC<ChatExperienceBaseProps> = ({
       }
     } catch (error) {
       console.error("Failed to save card:", error);
-      toast.error("Failed to save card: " + (error as Error).message);
+      const errorMessage = (error as Error).message;
+      if (errorMessage === "Failed to fetch" || errorMessage.includes("fetch") || errorMessage.includes("network")) {
+        toast.error("Please check your network connection.");
+      } else {
+        toast.error("Failed to save card: " + errorMessage);
+      }
     }
   };
 
@@ -994,6 +1004,7 @@ const ChatExperienceBase: React.FC<ChatExperienceBaseProps> = ({
                         className="hidden"
                         onChange={handleFileUpload}
                         accept="image/*,.pdf,.doc,.docx,audio/mp3,audio/wav,audio/m4a,audio/ogg"
+                        key={cardId}
                       />
                       <Button
                         type="button"

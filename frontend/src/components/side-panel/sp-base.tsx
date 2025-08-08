@@ -13,6 +13,7 @@ import ThoughtCardContent from "./sp-content-thought";
 import ClaimCardContent from "./sp-content-claim";
 import ClaimChatExperience from "../chat/ClaimChatExperience";
 import { useCardSave } from "../shared/useCardSave";
+import { toast } from "sonner";
 
 interface SidePanelBaseProps {
   openCard: { id: string; type: string } | null;
@@ -149,7 +150,12 @@ export default function SidePanelBase({
       });
     } catch (error) {
       console.error("Failed to save card:", error);
-      alert("Failed to save card: " + (error as Error).message);
+      const errorMessage = (error as Error).message;
+      if (errorMessage === "Failed to fetch" || errorMessage.includes("fetch") || errorMessage.includes("network")) {
+        toast.error("Please check your network connection.");
+      } else {
+        toast.error("Failed to save card: " + errorMessage);
+      }
     }
   };
 

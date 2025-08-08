@@ -173,7 +173,13 @@ export default function ClaimCardContent({
         });
       }
     } catch (err) {
-      alert("Failed to upload file: " + (err as Error).message);
+      console.error("File upload error:", err);
+      const errorMessage = (err as Error).message;
+      if (errorMessage === "Failed to fetch" || errorMessage.includes("fetch") || errorMessage.includes("network")) {
+        toast.error("Please check your network connection.");
+      } else {
+        toast.error("Failed to upload file: " + errorMessage);
+      }
     } finally {
       setIsUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -198,7 +204,7 @@ export default function ClaimCardContent({
       setFileEntries(newFileEntries);
       onUpdateNodeData?.(openCard.id, { files: newFiles, fileEntries: newFileEntries });
     } catch (err) {
-      alert("Failed to delete file: " + (err as Error).message);
+      toast.error("Failed to delete file: " + (err as Error).message);
     } finally {
       // Remove file from deleting set
       setDeletingFiles(prev => {
@@ -224,7 +230,7 @@ export default function ClaimCardContent({
       });
     } catch (error) {
       console.error("Failed to save claim:", error);
-      alert("Failed to save claim: " + (error as Error).message);
+      toast.error("Failed to save claim: " + (error as Error).message);
     }
   };
 
@@ -257,7 +263,7 @@ export default function ClaimCardContent({
 
     if (!response.ok) {
       const errorText = await response.text();
-      alert(`Failed to save changes: ${response.status} ${errorText}`);
+      toast.error(`Failed to save changes: ${response.status} ${errorText}`);
       return;
     }
 

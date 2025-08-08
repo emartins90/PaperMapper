@@ -889,6 +889,15 @@ export default function CanvasInner({ projectId }: CanvasProps) {
       
       setNodes((nds) => {
         const updatedNodes = applyNodeChanges(changes, nds);
+        
+        // Clear position save timeout if any nodes were removed
+        if (removedNodeIds.length > 0) {
+          if (positionSaveTimeoutRef.current) {
+            clearTimeout(positionSaveTimeoutRef.current);
+            positionSaveTimeoutRef.current = null;
+          }
+        }
+        
         // Check if any node was removed and matches the openCard
         if (openCard && removedNodeIds.includes(openCard.id)) {
           setOpenCard(null);
@@ -1427,7 +1436,13 @@ export default function CanvasInner({ projectId }: CanvasProps) {
         if (cardType === "claim") setClaimTab("info");
       setChatActiveCardId(null);
     } catch (err) {
-      alert("Failed to save card: " + (err as Error).message);
+      console.error("Failed to save card:", err);
+      const errorMessage = (err as Error).message;
+      if (errorMessage === "Failed to fetch" || errorMessage.includes("fetch") || errorMessage.includes("network")) {
+        toast.error("Please check your network connection.");
+      } else {
+        toast.error("Failed to save card: " + errorMessage);
+      }
     }
   };
 
@@ -1435,6 +1450,12 @@ export default function CanvasInner({ projectId }: CanvasProps) {
   const handleDeleteCard = useCallback(async (cardId: string) => {
     const node = nodes.find(n => n.id === cardId);
     if (!node) return;
+    
+    // Clear any pending position save timeout to prevent saving position of deleted card
+    if (positionSaveTimeoutRef.current) {
+      clearTimeout(positionSaveTimeoutRef.current);
+      positionSaveTimeoutRef.current = null;
+    }
     
     // Add card to deleting set
     setDeletingCards(prev => new Set(prev).add(cardId));
@@ -1512,11 +1533,6 @@ export default function CanvasInner({ projectId }: CanvasProps) {
     
     // Remove the node from the canvas
     setNodes((nds) => nds.filter(n => n.id !== cardId));
-    
-    // Dispatch deleteCard event to notify other components
-    window.dispatchEvent(new CustomEvent('deleteCard', { 
-      detail: { cardId } 
-    }));
     
     // Close the panel if this card was open
     if (openCard && openCard.id === cardId) {
@@ -1939,7 +1955,12 @@ export default function CanvasInner({ projectId }: CanvasProps) {
       
     } catch (err) {
       console.error("Failed to save card:", err);
-      alert("Failed to save card: " + (err as Error).message);
+      const errorMessage = (err as Error).message;
+      if (errorMessage === "Failed to fetch" || errorMessage.includes("fetch") || errorMessage.includes("network")) {
+        toast.error("Please check your network connection.");
+      } else {
+        toast.error("Failed to save card: " + errorMessage);
+      }
     }
   }, [nodes, projectId]);
 

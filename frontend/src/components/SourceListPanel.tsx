@@ -11,6 +11,7 @@ import { Label } from "./ui/label";
 import { Combobox, useCustomOptions } from "./ui/combobox";
 import SourceMaterialCard from "./canvas-cards/SourceMaterialCard";
 import { TextWithLinks } from "./ui/text-with-links";
+import { toast } from "sonner";
 
 interface Citation {
   id: number;
@@ -61,7 +62,7 @@ export default function SourceListPanel({ projectId, onClose, onSourceCardClick,
   const [editingCitation, setEditingCitation] = useState<Citation | null>(null);
   const [editText, setEditText] = useState("");
   const [editCredibility, setEditCredibility] = useState("");
-  const [isSaving, setIsSaving] = useState(false);
+  const [isSavingCitation, setIsSavingCitation] = useState(false);
 
   // Delete confirmation state
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -343,7 +344,7 @@ export default function SourceListPanel({ projectId, onClose, onSourceCardClick,
     if (!editingCitation) return;
 
     try {
-      setIsSaving(true);
+      setIsSavingCitation(true);
       const token = localStorage.getItem("token");
       const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -376,9 +377,10 @@ export default function SourceListPanel({ projectId, onClose, onSourceCardClick,
       setEditText("");
       setEditCredibility("none");
     } catch (err) {
-      alert("Failed to update citation: " + (err as Error).message);
+      console.error("Failed to update citation:", err);
+      toast.error("Failed to update citation: " + (err as Error).message);
     } finally {
-      setIsSaving(false);
+      setIsSavingCitation(false);
     }
   };
 
@@ -466,7 +468,8 @@ export default function SourceListPanel({ projectId, onClose, onSourceCardClick,
       setDeleteDialogOpen(false);
       setCitationToDelete(null);
     } catch (err) {
-      alert("Failed to delete citation: " + (err as Error).message);
+      console.error("Failed to delete citation:", err);
+      toast.error("Failed to delete citation: " + (err as Error).message);
     }
   };
 
@@ -521,7 +524,7 @@ export default function SourceListPanel({ projectId, onClose, onSourceCardClick,
       window.dispatchEvent(new CustomEvent('citationUpdate'));
     } catch (error) {
       console.error("Failed to create citation:", error);
-      alert("Failed to create citation: " + (error as Error).message);
+      toast.error("Failed to create citation: " + (error as Error).message);
     } finally {
       setIsCreatingCitation(false);
     }
@@ -1143,8 +1146,8 @@ export default function SourceListPanel({ projectId, onClose, onSourceCardClick,
               <Button variant="outline" onClick={() => setEditingCitation(null)}>
                 Cancel
               </Button>
-              <Button onClick={handleSaveCitation} disabled={isSaving || !editText.trim()}>
-                {isSaving ? "Saving..." : "Save"}
+              <Button onClick={handleSaveCitation} disabled={isSavingCitation || !editText.trim()}>
+                {isSavingCitation ? "Saving..." : "Save"}
               </Button>
           </DialogFooter>
         </DialogContent>
