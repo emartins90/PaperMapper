@@ -140,6 +140,45 @@ export default function SourceListPanel({ projectId, onClose, onSourceCardClick,
     };
   }, [projectId]);
 
+  // Listen for card deletion events to immediately remove deleted cards
+  useEffect(() => {
+    const handleCardDelete = (event: CustomEvent) => {
+      const { cardId } = event.detail;
+      
+      // Find the source material that corresponds to this card
+      const cardNode = nodes.find(node => node.id === cardId);
+      if (cardNode && cardNode.type === "source" && cardNode.data?.sourceMaterialId) {
+        // Remove the source material from the state immediately
+        setSourceMaterials(prev => prev.filter(sm => sm.id !== cardNode.data.sourceMaterialId));
+      }
+    };
+
+    window.addEventListener('deleteCard', handleCardDelete as EventListener);
+    
+    return () => {
+      window.removeEventListener('deleteCard', handleCardDelete as EventListener);
+    };
+  }, [nodes]);
+
+  // Listen for citation deletion events to immediately remove deleted citations
+  useEffect(() => {
+    const handleCitationDelete = (event: CustomEvent) => {
+      const { citationId } = event.detail;
+      
+      // Remove the citation from the state immediately
+      setCitations(prev => prev.filter(c => c.id !== citationId));
+      
+      // Also remove any source materials associated with this citation
+      setSourceMaterials(prev => prev.filter(sm => sm.citation_id !== citationId));
+    };
+
+    window.addEventListener('citationDelete', handleCitationDelete as EventListener);
+    
+    return () => {
+      window.removeEventListener('citationDelete', handleCitationDelete as EventListener);
+    };
+  }, []);
+
   // Check for pending updates when component mounts
   useEffect(() => {
     // Check if there were any recent updates that we missed
@@ -416,6 +455,11 @@ export default function SourceListPanel({ projectId, onClose, onSourceCardClick,
         });
       }
 
+      // Dispatch citation delete event to immediately update the UI
+      window.dispatchEvent(new CustomEvent('citationDelete', { 
+        detail: { citationId: citationToDelete.id } 
+      }));
+
       // Dispatch citation update event to refresh source list
       window.dispatchEvent(new CustomEvent('citationUpdate'));
 
@@ -522,7 +566,15 @@ export default function SourceListPanel({ projectId, onClose, onSourceCardClick,
     );
   }
 
-  if (filteredCitations.length === 0 && filteredUncitedSourceMaterials.length === 0) {
+  // Check if there are any citations or source materials at all (unfiltered)
+  const hasAnyCitations = citations.length > 0;
+  const hasAnySourceMaterials = sourceMaterials.length > 0;
+  const hasAnyData = hasAnyCitations || hasAnySourceMaterials;
+  
+  // Check if there are no results for current search/filters
+  const hasNoSearchResults = filteredCitations.length === 0 && filteredUncitedSourceMaterials.length === 0;
+  
+  if (hasNoSearchResults) {
     return (
       <div className="fixed left-0 top-0 h-full w-86 bg-white shadow-lg border-r border-gray-200 z-[100] overflow-y-auto">
         <div className="sticky top-0 z-10 bg-white p-4 border-b border-gray-200 flex items-center justify-between">
@@ -531,6 +583,7 @@ export default function SourceListPanel({ projectId, onClose, onSourceCardClick,
             <LuX size={20} />
           </Button>
         </div>
+
         <div className="p-4">
           <div className="relative">
             <Input
@@ -555,14 +608,25 @@ export default function SourceListPanel({ projectId, onClose, onSourceCardClick,
               </Button>
             )}
           </div>
+          
+          {/* Show different messages based on whether there's data or not */}
           <div className="text-center py-8">
             <div className="text-gray-400 mb-2">
               <svg className="mx-auto h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
             </div>
-            <p className="text-sm text-gray-500 mb-2">No citations or sources found</p>
-            <p className="text-xs text-gray-400">Try a different search term</p>
+            {!hasAnyData ? (
+              <>
+                <p className="text-sm text-gray-500 mb-2">No citations or sources yet</p>
+                <p className="text-xs text-gray-400">Add your first citation to get started</p>
+              </>
+            ) : (
+              <>
+                <p className="text-sm text-gray-500 mb-2">No results found</p>
+                <p className="text-xs text-gray-400">Try adjusting your search or filters</p>
+              </>
+            )}
           </div>
         </div>
       </div>

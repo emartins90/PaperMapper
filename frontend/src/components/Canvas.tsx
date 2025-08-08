@@ -840,6 +840,11 @@ export default function CanvasInner({ projectId }: CanvasProps) {
                 Authorization: token ? `Bearer ${token}` : "",
               },
             });
+            
+            // Dispatch deleteCard event to notify other components
+            window.dispatchEvent(new CustomEvent('deleteCard', { 
+              detail: { cardId: nodeId } 
+            }));
           } catch (err) {
             console.error("Failed to delete card from backend:", err);
           }
@@ -1507,6 +1512,11 @@ export default function CanvasInner({ projectId }: CanvasProps) {
     
     // Remove the node from the canvas
     setNodes((nds) => nds.filter(n => n.id !== cardId));
+    
+    // Dispatch deleteCard event to notify other components
+    window.dispatchEvent(new CustomEvent('deleteCard', { 
+      detail: { cardId } 
+    }));
     
     // Close the panel if this card was open
     if (openCard && openCard.id === cardId) {
