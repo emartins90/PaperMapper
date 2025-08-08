@@ -13,7 +13,8 @@ import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { Edit, Trash2 } from "lucide-react";
-import CookieSettings from "./CookieSettings";
+import CookieSettings from "./cookies-consent/CookieSettings";
+import Link from "next/link";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -398,8 +399,20 @@ export default function AccountSettings({ open, onOpenChange }: AccountSettingsP
                       </Alert>
                     )}
                     
-                    <div className="pt-6 border-t border-gray-200 mb-6">
+                    <div className="pt-6 border-t border-gray-200 mb-1">
                       {/* Divider moved up */}
+                    </div>
+                    
+                    {/* Privacy Policy Link */}
+                    <div className="mb-6">
+                      <Link 
+                        href="/privacy" 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-sm text-blue-600 hover:underline"
+                      >
+                        Privacy Policy
+                      </Link>
                     </div>
                     
                     {/* Account deletion at bottom */}

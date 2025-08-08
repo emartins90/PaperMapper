@@ -4,6 +4,7 @@ import { FaCircleCheck } from "react-icons/fa6";
 import { Button } from "../components/ui/button";
 import { Alert, AlertDescription } from "../components/ui/alert";
 import { hasCookieConsent } from "@/lib/cookieUtils";
+import Link from "next/link";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -30,6 +31,7 @@ export default function AuthForm({ onAuth, mode: initialMode = "login" }: AuthFo
   const [passwordTouched, setPasswordTouched] = useState(false);
   const [showPasswordRequirements, setShowPasswordRequirements] = useState(false);
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
+  const [privacyConsent, setPrivacyConsent] = useState(false);
   const router = useRouter();
 
   // Show password requirements immediately for Sign Up mode
@@ -163,6 +165,12 @@ export default function AuthForm({ onAuth, mode: initialMode = "login" }: AuthFo
     
     // Only validate password for Sign Up
     if (mode === "Sign Up" && !validatePassword(password)) {
+      return;
+    }
+    
+    // Check privacy consent for Sign Up
+    if (mode === "Sign Up" && !privacyConsent) {
+      setError("Please agree to the Privacy Policy to continue.");
       return;
     }
     
@@ -322,10 +330,31 @@ export default function AuthForm({ onAuth, mode: initialMode = "login" }: AuthFo
             </div>
           )}
         </div>
+        
+        {/* Privacy Policy Consent - Only for Sign Up */}
+        {mode === "Sign Up" && (
+          <div className="flex items-start space-x-2">
+            <input
+              type="checkbox"
+              id="privacy-consent"
+              checked={privacyConsent}
+              onChange={(e) => setPrivacyConsent(e.target.checked)}
+              className="mt-1"
+              required
+            />
+            <label htmlFor="privacy-consent" className="text-sm text-gray-700">
+              I have read and agree to the{" "}
+              <Link href="/privacy" className="text-blue-600 hover:underline" target="_blank" rel="noopener noreferrer">
+                Privacy Policy
+              </Link>
+            </label>
+          </div>
+        )}
+        
         <Button 
           type="submit" 
           className="w-full" 
-          disabled={loading || !!emailError || (mode === "Sign Up" && !!passwordError)}
+          disabled={loading || !!emailError || (mode === "Sign Up" && !!passwordError) || (mode === "Sign Up" && !privacyConsent)}
         >
           {loading ? "Loading..." : mode === "login" ? "Log In" : "Sign Up"}
         </Button>
