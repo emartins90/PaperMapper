@@ -403,8 +403,8 @@ export default function AccountSettings({ open, onOpenChange }: AccountSettingsP
                       {/* Divider moved up */}
                     </div>
                     
-                    {/* Privacy Policy Link */}
-                    <div className="mb-6">
+                    {/* Privacy Policy and Terms Links */}
+                    <div className="mb-6 flex gap-4">
                       <Link 
                         href="/privacy" 
                         target="_blank" 
@@ -412,6 +412,14 @@ export default function AccountSettings({ open, onOpenChange }: AccountSettingsP
                         className="text-sm text-blue-600 hover:underline"
                       >
                         Privacy Policy
+                      </Link>
+                      <Link 
+                        href="/terms" 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-sm text-blue-600 hover:underline"
+                      >
+                        Terms of Service
                       </Link>
                     </div>
                     

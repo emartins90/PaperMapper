@@ -347,6 +347,10 @@ export default function AuthForm({ onAuth, mode: initialMode = "login" }: AuthFo
               <Link href="/privacy" className="text-blue-600 hover:underline" target="_blank" rel="noopener noreferrer">
                 Privacy Policy
               </Link>
+              {" "}and{" "}
+              <Link href="/terms" className="text-blue-600 hover:underline" target="_blank" rel="noopener noreferrer">
+                Terms of Service
+              </Link>
             </label>
           </div>
         )}
