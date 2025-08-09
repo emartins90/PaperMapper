@@ -3,8 +3,14 @@ import { CardType } from "../useFileUploadHandler";
 
 const insightPrompts = [
   {
+    id: "insightText",
+    prompt: "What did you discover or realize? Describe the insight you want to capture.",
+    options: [],
+    hasCustomOption: false
+  },
+  {
     id: "insightType",
-    prompt: "What type of insight is this?",
+    prompt: "Awesome! How does this insight fit into your project? Think about what it helped you understand or what it revealed about your sources.",
     options: [
       "Resolved Confusion",
       "Noticed a Pattern",
@@ -16,14 +22,8 @@ const insightPrompts = [
     hasCustomOption: true // Enable add your own option
   },
   {
-    id: "insightText",
-    prompt: "Describe the insight or pattern you noticed. What connection or pattern emerged from your sources?",
-    options: [],
-    hasCustomOption: false
-  },
-  {
     id: "topicalTags",
-    prompt: "Great! Now let's add some tags to help you find and organize this insight later. Think of 2-4 words or short phrases that capture the main themes. Examples: 'Teen Anxiety', 'Social Media', 'Body Image'. Don't overthink it - just go with what feels right!",
+    prompt: "Last step! If you want, add tags to help you track topics across your project. Otherwise, just hit done to save your insight.\n\nex. 'Case Studies', 'Ethics', 'Data Quality', etc.",
     options: [],
     hasCustomOption: false
   }
