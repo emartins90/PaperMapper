@@ -4,14 +4,13 @@ import { CardType } from "../useFileUploadHandler";
 const thoughtPrompts = [
   {
     id: "thoughtText",
-    prompt: "Share your thought. What are you thinking about this topic or these sources?",
+    prompt: "This is your space to write down whatever you're thinking. It can be as structured or unstructured as you want.",
     options: [],
     hasCustomOption: false
   },
   {
     id: "topicalTags",
-    prompt: "Great! Now let's add some tags to help you find and organize this thought later. Think of 2-4 words or short phrases that capture the main themes. Examples: 'Teen Anxiety', 'Social Media', 'Body Image'. Don't overthink it - just go with what feels right!",
-    options: [],
+    prompt: "If you want, add some tags to help you track topics across your project. Otherwise, just hit done to create your thought.\n\nex. 'Social Impact', 'Cell Division', 'Urbanization', etc.",
     hasCustomOption: false
   }
 ];
