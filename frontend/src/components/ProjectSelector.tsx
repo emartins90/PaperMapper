@@ -2,12 +2,12 @@ import React, { useEffect, useState, useRef } from "react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { useRouter } from "next/navigation";
+import Logo from "./Logo";
 import { 
   LuSearch, 
   LuListFilter, 
   LuEllipsis, 
   LuArrowRight, 
-  LuFileText, 
   LuPencil, 
   LuCircleCheck, 
   LuPlus, 
@@ -498,12 +498,10 @@ export default function ProjectSelector({ token }: { token: string }) {
       <div>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-                <LuFileText className="w-4 h-4 text-white" />
-              </div>
-              <h1 className="text-xl font-semibold text-gray-900">Paper Thread</h1>
-            </div>
+                            <div className="flex items-center space-x-2">
+                  <Logo width={28} height={28} variant="plain" />
+                  <h1 className="text-xl font-semibold text-gray-900">Paper Thread</h1>
+                </div>
             <Button
               onClick={() => setIsAccountModalOpen(true)}
               variant="outline"
@@ -885,7 +883,7 @@ export default function ProjectSelector({ token }: { token: string }) {
                   <div className="text-center py-6">
                     <div className="max-w-sm mx-auto p-8 rounded-lg border border-gray-100 backdrop-blur-[1.5px]">
                       <div className="w-20 h-20 mx-auto mb-6 bg-gray-100 rounded-full flex items-center justify-center">
-                        <LuFileText className="w-10 h-10 text-gray-400" />
+                        <LuNotebookPen className="w-10 h-10 text-gray-400" />
                       </div>
                       <h3 className="text-xl font-semibold text-gray-900 mb-2">
                         {userInfo?.time_first_project_created ? "No projects found" : "No projects yet"}

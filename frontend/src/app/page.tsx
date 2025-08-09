@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
-import { LuFileText } from "react-icons/lu";
+import Logo from "@/components/Logo";
 
 export default function Home() {
   const [isLoading, setIsLoading] = useState(true);
@@ -48,14 +48,12 @@ export default function Home() {
       <nav className={`fixed top-0 left-0 right-0 z-50 px-8 py-6 flex justify-between items-center transition-all duration-300 ${
         isScrolled ? 'bg-white/80 backdrop-blur-md shadow-sm' : 'bg-transparent'
       }`}>
-        <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
-            <LuFileText className="w-6 h-6 text-white" />
-          </div>
-          <div className="text-2xl font-bold text-gray-900">
-            Paper Thread
-          </div>
-        </div>
+                    <div className="flex items-center space-x-3">
+              <Logo width={40} height={40} variant="rounded" priority />
+              <div className="text-2xl font-bold text-gray-900">
+                Paper Thread
+              </div>
+            </div>
         
         {/* Desktop Navigation */}
         <div className="hidden md:flex items-center space-x-4">
@@ -137,9 +135,9 @@ export default function Home() {
                 <Link href="/signup">
                   Join the Beta
                 </Link>
-              </Button>
+                              </Button>
 
-            {/* Image */}
+              {/* Image */}
             <div className="w-full max-w-5xl">
               <div className="relative">
                 <div className="absolute -inset-6 bg-gradient-to-r from-primary/20 to-primary/10 rounded-3xl blur-xl"></div>
