@@ -25,7 +25,7 @@ const QUESTION_CATEGORIES = [
   "Test a hypothesis",
   "Consider a counterpoint",
   "Ask an ethical question",
-  "Propose a solution",
+  "Investigate a solution",
   "Custom..."
 ];
 const QUESTION_STATUSES = [
@@ -352,7 +352,7 @@ export default function QuestionCardContent({
                 { value: "Test a hypothesis", label: "Test a hypothesis" },
                 { value: "Consider a counterpoint", label: "Consider a counterpoint" },
                 { value: "Ask an ethical question", label: "Ask an ethical question" },
-                { value: "Propose a solution", label: "Propose a solution" },
+                { value: "Investigate a solution", label: "Investigate a solution" },
                 ...questionFunctionOptions.options.filter(
                   o => ![
                     "Clarify a concept",
@@ -363,7 +363,7 @@ export default function QuestionCardContent({
                     "Test a hypothesis",
                     "Consider a counterpoint",
                     "Ask an ethical question",
-                    "Propose a solution"
+                    "Investigate a solution"
                   ].includes(o.value)
                 ),
               ]}
@@ -386,7 +386,7 @@ export default function QuestionCardContent({
                     "Test a hypothesis",
                     "Consider a counterpoint",
                     "Ask an ethical question",
-                    "Propose a solution"
+                    "Investigate a solution"
                   ].includes(value) &&
                   !questionFunctionOptions.options.some(o => o.value === value)
                 ) {

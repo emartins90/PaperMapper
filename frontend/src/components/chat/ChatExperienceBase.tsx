@@ -103,10 +103,24 @@ const ChatExperienceBase: React.FC<ChatExperienceBaseProps> = ({
     onDeleteCard: undefined, // Chat experience doesn't need delete functionality
   });
 
-  // Auto-scroll to bottom when chat history updates
+  // Auto-scroll to show the latest prompt near the top of the panel
   useEffect(() => {
-    if (chatContainerRef.current) {
-      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+    if (chatContainerRef.current && chatHistory.length > 0) {
+      const container = chatContainerRef.current;
+      const lastMessage = chatHistory[chatHistory.length - 1];
+      
+      // If the last message is a system prompt (new question), scroll to show it near the top
+      if (lastMessage.role === "system") {
+        // Use requestAnimationFrame for smoother scrolling without flicker
+        requestAnimationFrame(() => {
+          const systemMessages = container.querySelectorAll('[data-role="system"]');
+          const lastSystemMessage = systemMessages[systemMessages.length - 1] as HTMLElement;
+          if (lastSystemMessage) {
+            const offsetTop = lastSystemMessage.offsetTop - 20; // 20px from top
+            container.scrollTop = offsetTop;
+          }
+        });
+      }
     }
   }, [chatHistory]);
 
@@ -702,7 +716,7 @@ const ChatExperienceBase: React.FC<ChatExperienceBaseProps> = ({
               }
             }
             return (
-              <div key={i} className={`flex items-center gap-2 ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+              <div key={i} className={`flex items-center gap-2 ${msg.role === "user" ? "justify-end" : "justify-start"}`} data-role={msg.role}>
                 <div
                   className={
                     msg.role === "system"

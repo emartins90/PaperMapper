@@ -6,25 +6,25 @@ import { CardType } from "../useFileUploadHandler";
 const questionPrompts = [
   { 
     id: "questionText", 
-    prompt: "Let's start with your question! What specific question are you trying to answer? This could be about understanding a concept, exploring a relationship, or investigating a problem. Don't worry about making it perfect - just write what you're curious about!",
+    prompt: "What's your question? Consider what might help you thread your thoughts and sources together.",
     options: [],
     hasCustomOption: false
   },
   { 
     id: "questionFunction", 
-    prompt: "Great question! Now let's think about what role this question plays in your paper. Is it helping you clarify a concept, challenge an assumption, evaluate a source, or something else?",
-    options: ["Clarify a concept", "Challenge an assumption", "Evaluate a source", "Compare or contrast", "Explore cause and effect", "Test a hypothesis", "Consider a counterpoint", "Ask an ethical question", "Propose a solution"],
+    prompt: "Nice! Now let's consider what role this question plays in your investigation. Think about what you're trying to accomplish with it.",
+    options: ["Clarify a concept", "Challenge an assumption", "Evaluate a source", "Compare or contrast", "Explore cause and effect", "Test a hypothesis", "Consider a counterpoint", "Ask an ethical question", "Investigate a solution"],
     hasCustomOption: true
   },
   { 
     id: "questionPriority", 
-    prompt: "Perfect! Now let's think about how important this question is to your overall paper. Is it something you need to answer right away, or can it wait?",
+    prompt: "Alright, where does this question fit in your priorities? Is it urgent or something for later?",
     options: ["High", "Medium", "Low"],
     hasCustomOption: false
   },
   { 
     id: "topicalTags", 
-    prompt: "Great! Now let's add some tags to help you find and organize this question later. Think of 2-4 words or short phrases that capture the main themes. Don't overthink it - just go with what feels right!",
+    prompt: "Almost done. If you want, add some tags to help you track topics across your project. Otherwise, just hit done to create your question.\n\nex. 'Mental Health', 'Student Engagement', 'Ethics', etc.",
     options: [],
     hasCustomOption: false
   },

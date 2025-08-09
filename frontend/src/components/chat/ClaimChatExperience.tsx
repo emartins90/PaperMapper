@@ -25,7 +25,7 @@ const claimPrompts = [
   },
   {
     id: "topicalTags",
-    prompt: "Great! If you want, add some tags to help you track topics across your project. Otherwise, just hit done to create you claim.\n\nex. 'Decision Making', 'Climate Impact', 'Technology', etc.",
+    prompt: "Great! If you want, add some tags to help you track topics across your project. Otherwise, just hit done to create your claim.\n\nex. 'Decision Making', 'Climate Impact', 'Technology', etc.",
     options: [],
     hasCustomOption: false
   }
