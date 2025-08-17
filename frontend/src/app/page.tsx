@@ -143,7 +143,7 @@ export default function Home() {
                 <div className="absolute -inset-6 bg-gradient-to-r from-primary/20 to-primary/10 rounded-3xl blur-xl"></div>
                 <div className="relative bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
                   <Image
-                    src="/api/static-assets/heroimage.png?v=1"
+                    src="/api/static-assets/heroimage.png?v=2"
                     alt="Paper Thread - Visual research mapping interface showing interconnected nodes for organizing research"
                     width={1200}
                     height={800}
