@@ -75,6 +75,7 @@ class Card(Base):
     data_id = Column(Integer, nullable=True)  # e.g., source_material_id
     position_x = Column(Float, nullable=True)
     position_y = Column(Float, nullable=True)
+    time_created = Column(DateTime, default=func.now(), nullable=False)
     project_id = Column(Integer, ForeignKey("projects.id"))
     project = relationship("Project", back_populates="cards")
     outgoing_links = relationship("CardLink", back_populates="source_card", foreign_keys='CardLink.source_card_id')

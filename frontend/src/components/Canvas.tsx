@@ -907,17 +907,114 @@ export default function CanvasInner({ projectId }: CanvasProps) {
     },
     [openCard]
   );
+
+    // Helper function to update question status based on linked cards
+  const updateQuestionStatus = useCallback(async (questionCardId: string, currentEdges: Edge[]) => {
+    try {
+      console.log('🔍 updateQuestionStatus called for:', questionCardId);
+      
+      // Find the question node
+      const questionNode = nodes.find(n => n.id === questionCardId);
+      if (!questionNode || questionNode.type !== 'question' || !questionNode.data.questionId) {
+        console.log('❌ Not a valid question card or no backend ID:', questionNode);
+        return; // Not a valid question card or no backend ID
+      }
+      
+      // Additional safety check: ensure the card ID is a saved card (integer)
+      if (isNaN(parseInt(questionCardId))) {
+        console.log('❌ Skipping unsaved card:', questionCardId);
+        return; // Skip unsaved cards
+      }
+      
+      // Get current status - don't update if manually set to answered/not relevant
+      const currentStatus = questionNode.data.status;
+      console.log('📊 Current status:', currentStatus);
+      if (currentStatus === 'answered' || currentStatus === 'not relevant') {
+        console.log('⏭️ Skipping manually set status:', currentStatus);
+        return; // Don't auto-update manually set statuses
+      }
+      
+      // Find all edges where this question is either source or target
+      const questionEdges = currentEdges.filter(edge => 
+        edge.source === questionCardId || edge.target === questionCardId
+      );
+      console.log('🔗 Question edges found:', questionEdges);
+      
+      // Get all linked card IDs
+      const linkedCardIds = questionEdges.map(edge => 
+        edge.source === questionCardId ? edge.target : edge.source
+      );
+      console.log('🆔 Linked card IDs:', linkedCardIds);
+      
+      // Find linked card nodes and their types
+      const linkedCards = nodes.filter(node => linkedCardIds.includes(node.id));
+      const linkedCardTypes = linkedCards.map(card => card.type);
+      console.log('🎴 Linked card types:', linkedCardTypes);
+      
+      // Check if any source cards are linked (this is the key decision point)
+      const hasSourceCards = linkedCardTypes.includes('source');
+      const hasNonSourceCards = linkedCardTypes.some(type => type !== 'source');
+      console.log('📚 Has source cards:', hasSourceCards);
+      console.log('💭 Has non-source cards:', hasNonSourceCards);
+      
+      // Determine new status based on rules
+      let newStatus = 'unexplored';
+      if (hasSourceCards) {
+        newStatus = 'in progress'; // Any source cards = in progress
+      } else if (hasNonSourceCards) {
+        newStatus = 'needs sources'; // Only non-source cards = needs sources
+      }
+      console.log('🎯 New status determined:', newStatus);
+      
+      // Only update if status actually changed
+      if (newStatus !== currentStatus) {
+        console.log('🔄 Status changed from', currentStatus, 'to', newStatus, '- updating backend');
+        // Update backend
+        const token = localStorage.getItem("token");
+        const response = await fetch(`${API_URL}/questions/${questionNode.data.questionId}`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: token ? `Bearer ${token}` : "",
+          },
+          body: JSON.stringify({ status: newStatus }),
+        });
+        
+        if (response.ok) {
+          console.log('✅ Backend updated successfully');
+          // Update frontend state
+          setNodes((nds) => 
+            nds.map(n => 
+              n.id === questionCardId 
+                ? { ...n, data: { ...n.data, status: newStatus } }
+                : n
+            )
+          );
+        } else {
+          console.error('❌ Backend update failed:', response.status);
+        }
+      } else {
+        console.log('⏭️ Status unchanged, no update needed');
+      }
+    } catch (err) {
+      // Silently fail - don't break edge functionality
+      console.error("❌ Failed to update question status:", err);
+    }
+  }, [nodes, projectId]);
+
   const onEdgesChange = useCallback(
     async (changes: EdgeChange[]) => {
       // Apply changes to local state first
       setEdges((eds) => applyEdgeChanges(changes, eds));
+      
+      // Track which question cards need status updates
+      const questionCardsToUpdate = new Set<string>();
       
       // Handle deletions in backend
       for (const change of changes) {
         if (change.type === 'remove' && change.id) {
           // Skip temporary edges (they haven't been saved to backend yet)
           if (change.id.startsWith('temp-')) {
-    
             continue;
           }
           
@@ -934,16 +1031,40 @@ export default function CanvasInner({ projectId }: CanvasProps) {
               console.error("Failed to delete connection from backend:", change.id);
               // Optionally revert the local change if backend deletion failed
             } else {
-      
+                    // Check if this edge involved a question card
+      const edge = edges.find(e => e.id === change.id);
+      if (edge) {
+        console.log('🔍 Edge removal involves:', edge.source, '->', edge.target);
+        if (nodes.find(n => n.id === edge.source)?.type === 'question') {
+          console.log('📝 Question card as source detected:', edge.source);
+          questionCardsToUpdate.add(edge.source);
+        }
+        if (nodes.find(n => n.id === edge.target)?.type === 'question') {
+          console.log('📝 Question card as target detected:', edge.target);
+          questionCardsToUpdate.add(edge.target);
+        }
+      }
             }
           } catch (err) {
-            console.error("Failed to delete connection:", err);
+            console.error("Failed to delete connection from backend:", err);
             // Optionally revert the local change if backend deletion failed
           }
         }
       }
+
+      // Update question statuses for affected cards (non-blocking)
+      if (questionCardsToUpdate.size > 0) {
+        // Get current edges after changes
+        const currentEdges = applyEdgeChanges(changes, edges);
+        
+        // Update each question card's status
+        questionCardsToUpdate.forEach(questionId => {
+          // Don't await - make it non-blocking
+          updateQuestionStatus(questionId, currentEdges);
+        });
+      }
     },
-    []
+    [edges, updateQuestionStatus]
   );
 
   const onConnect = useCallback(
@@ -960,6 +1081,15 @@ export default function CanvasInner({ projectId }: CanvasProps) {
       }
       if (params.source && params.target && params.sourceHandle && params.targetHandle && projectId) {
         
+        // Check if both cards are saved (have integer IDs) before attempting to connect
+        const sourceCardId = parseInt(params.source);
+        const targetCardId = parseInt(params.target);
+        
+        if (isNaN(sourceCardId) || isNaN(targetCardId)) {
+          toast.error("Cannot connect unsaved cards. Please save both cards first.");
+          return;
+        }
+        
         // Add edge to local state immediately for responsive UI
         const newEdge = {
           id: `temp-${Date.now()}`, // Temporary ID
@@ -975,8 +1105,8 @@ export default function CanvasInner({ projectId }: CanvasProps) {
         try {
           const token = localStorage.getItem("token");
           const linkPayload = {
-            source_card_id: parseInt(params.source),
-            target_card_id: parseInt(params.target),
+            source_card_id: sourceCardId,
+            target_card_id: targetCardId,
             source_handle: params.sourceHandle,
             target_handle: params.targetHandle,
             project_id: projectId,
@@ -1001,6 +1131,35 @@ export default function CanvasInner({ projectId }: CanvasProps) {
                   : edge
               )
             );
+            
+            // Check if this connection involves a question card and update its status
+            // Create updated edges array that includes the new connection
+            const updatedEdges = [
+              ...edges.filter(edge => edge.id !== newEdge.id), // Remove temp edge
+              { // Add the saved edge
+                id: savedLink.id.toString(),
+                source: params.source,
+                target: params.target,
+                sourceHandle: params.sourceHandle,
+                targetHandle: params.targetHandle,
+                type: 'default',
+              }
+            ];
+            
+            console.log('🔗 Connection created successfully, checking for question cards...');
+            console.log('📝 Source card type:', nodes.find(n => n.id === params.source)?.type);
+            console.log('📝 Target card type:', nodes.find(n => n.id === params.target)?.type);
+            console.log('🔗 Updated edges array:', updatedEdges);
+            
+            // Check if source or target is a question card (only for saved cards)
+            if (nodes.find(n => n.id === params.source)?.type === 'question' && !isNaN(sourceCardId)) {
+              console.log('📝 Question card as source detected, updating status:', params.source);
+              updateQuestionStatus(params.source, updatedEdges);
+            }
+            if (nodes.find(n => n.id === params.target)?.type === 'question' && !isNaN(targetCardId)) {
+              console.log('📝 Question card as target detected, updating status:', params.target);
+              updateQuestionStatus(params.target, updatedEdges);
+            }
           } else {
             const errorText = await res.text();
             console.error("Failed to save connection:", res.status, errorText);
@@ -1016,7 +1175,7 @@ export default function CanvasInner({ projectId }: CanvasProps) {
   
       }
     },
-    [projectId],
+    [projectId, nodes, updateQuestionStatus],
   );
 
   const isValidConnection = useCallback((connection: Connection) => {
