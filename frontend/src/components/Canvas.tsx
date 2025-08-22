@@ -911,51 +911,48 @@ export default function CanvasInner({ projectId }: CanvasProps) {
     // Helper function to update question status based on linked cards
   const updateQuestionStatus = useCallback(async (questionCardId: string, currentEdges: Edge[]) => {
     try {
-      console.log('🔍 updateQuestionStatus called for:', questionCardId);
-      
       // Find the question node
       const questionNode = nodes.find(n => n.id === questionCardId);
       if (!questionNode || questionNode.type !== 'question' || !questionNode.data.questionId) {
-        console.log('❌ Not a valid question card or no backend ID:', questionNode);
         return; // Not a valid question card or no backend ID
       }
       
       // Additional safety check: ensure the card ID is a saved card (integer)
       if (isNaN(parseInt(questionCardId))) {
-        console.log('❌ Skipping unsaved card:', questionCardId);
         return; // Skip unsaved cards
       }
       
       // Get current status - don't update if manually set to answered/not relevant
       const currentStatus = questionNode.data.status;
-      console.log('📊 Current status:', currentStatus);
       if (currentStatus === 'answered' || currentStatus === 'not relevant') {
-        console.log('⏭️ Skipping manually set status:', currentStatus);
         return; // Don't auto-update manually set statuses
       }
       
       // Find all edges where this question is either source or target
-      const questionEdges = currentEdges.filter(edge => 
-        edge.source === questionCardId || edge.target === questionCardId
-      );
-      console.log('🔗 Question edges found:', questionEdges);
+      // BUT exclude edges where question is target and target handle is "top"
+      const questionEdges = currentEdges.filter(edge => {
+        if (edge.source === questionCardId) {
+          return true; // Question is source - include this edge
+        }
+        if (edge.target === questionCardId) {
+          // Question is target - only include if target handle is NOT "top"
+          return edge.targetHandle !== 'top';
+        }
+        return false; // Question is neither source nor target
+      });
       
-      // Get all linked card IDs
+      // Get all linked card IDs (only from edges we want to count)
       const linkedCardIds = questionEdges.map(edge => 
         edge.source === questionCardId ? edge.target : edge.source
       );
-      console.log('🆔 Linked card IDs:', linkedCardIds);
       
       // Find linked card nodes and their types
       const linkedCards = nodes.filter(node => linkedCardIds.includes(node.id));
       const linkedCardTypes = linkedCards.map(card => card.type);
-      console.log('🎴 Linked card types:', linkedCardTypes);
       
       // Check if any source cards are linked (this is the key decision point)
       const hasSourceCards = linkedCardTypes.includes('source');
       const hasNonSourceCards = linkedCardTypes.some(type => type !== 'source');
-      console.log('📚 Has source cards:', hasSourceCards);
-      console.log('💭 Has non-source cards:', hasNonSourceCards);
       
       // Determine new status based on rules
       let newStatus = 'unexplored';
@@ -964,11 +961,9 @@ export default function CanvasInner({ projectId }: CanvasProps) {
       } else if (hasNonSourceCards) {
         newStatus = 'needs sources'; // Only non-source cards = needs sources
       }
-      console.log('🎯 New status determined:', newStatus);
       
       // Only update if status actually changed
       if (newStatus !== currentStatus) {
-        console.log('🔄 Status changed from', currentStatus, 'to', newStatus, '- updating backend');
         // Update backend
         const token = localStorage.getItem("token");
         const response = await fetch(`${API_URL}/questions/${questionNode.data.questionId}`, {
@@ -981,7 +976,6 @@ export default function CanvasInner({ projectId }: CanvasProps) {
         });
         
         if (response.ok) {
-          console.log('✅ Backend updated successfully');
           // Update frontend state
           setNodes((nds) => 
             nds.map(n => 
@@ -990,15 +984,11 @@ export default function CanvasInner({ projectId }: CanvasProps) {
                 : n
             )
           );
-        } else {
-          console.error('❌ Backend update failed:', response.status);
         }
-      } else {
-        console.log('⏭️ Status unchanged, no update needed');
       }
     } catch (err) {
       // Silently fail - don't break edge functionality
-      console.error("❌ Failed to update question status:", err);
+      console.error("Failed to update question status:", err);
     }
   }, [nodes, projectId]);
 
@@ -1034,13 +1024,10 @@ export default function CanvasInner({ projectId }: CanvasProps) {
                     // Check if this edge involved a question card
       const edge = edges.find(e => e.id === change.id);
       if (edge) {
-        console.log('🔍 Edge removal involves:', edge.source, '->', edge.target);
         if (nodes.find(n => n.id === edge.source)?.type === 'question') {
-          console.log('📝 Question card as source detected:', edge.source);
           questionCardsToUpdate.add(edge.source);
         }
         if (nodes.find(n => n.id === edge.target)?.type === 'question') {
-          console.log('📝 Question card as target detected:', edge.target);
           questionCardsToUpdate.add(edge.target);
         }
       }
@@ -1146,18 +1133,11 @@ export default function CanvasInner({ projectId }: CanvasProps) {
               }
             ];
             
-            console.log('🔗 Connection created successfully, checking for question cards...');
-            console.log('📝 Source card type:', nodes.find(n => n.id === params.source)?.type);
-            console.log('📝 Target card type:', nodes.find(n => n.id === params.target)?.type);
-            console.log('🔗 Updated edges array:', updatedEdges);
-            
             // Check if source or target is a question card (only for saved cards)
             if (nodes.find(n => n.id === params.source)?.type === 'question' && !isNaN(sourceCardId)) {
-              console.log('📝 Question card as source detected, updating status:', params.source);
               updateQuestionStatus(params.source, updatedEdges);
             }
             if (nodes.find(n => n.id === params.target)?.type === 'question' && !isNaN(targetCardId)) {
-              console.log('📝 Question card as target detected, updating status:', params.target);
               updateQuestionStatus(params.target, updatedEdges);
             }
           } else {
