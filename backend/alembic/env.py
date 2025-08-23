@@ -5,6 +5,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from dotenv import load_dotenv
 load_dotenv(os.path.join(os.path.dirname(__file__), '..', '.env.production'))
 #load_dotenv(os.path.join(os.path.dirname(__file__), '..', '.env.development'))
+#load_dotenv(os.path.join(os.path.dirname(__file__), '..', '.env.local'))
 
 
 from logging.config import fileConfig

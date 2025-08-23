@@ -48,6 +48,7 @@ export default function ProjectInfoModal({ projectId, mode, onClose }: ProjectIn
   const [viewerOpen, setViewerOpen] = useState(false);
   const [viewerFile, setViewerFile] = useState<string | null>(null);
   const [viewerType, setViewerType] = useState<'image' | 'pdf' | 'other' | 'audio'>('other');
+  const [viewerCardNode, setViewerCardNode] = useState<any>(null);
 
   // Ref for auto-focusing the name input
   const nameInputRef = useRef<HTMLInputElement>(null);
@@ -82,9 +83,22 @@ export default function ProjectInfoModal({ projectId, mode, onClose }: ProjectIn
         : `/secure-files/assignments/${filename}`;
     }
     
+    // Create a mock cardNode structure for the project assignment file
+    const mockCardNode = {
+      id: `project-${projectId || 'modal'}`,
+      type: "project",
+      data: {
+        fileEntries: [{
+          url: secureUrl, // Use the secure URL that matches what we pass to viewerFile
+          filename: currentFilename || filename
+        }]
+      }
+    };
+    
     setViewerFile(secureUrl);
     setViewerType(getFileType(filename));
     setViewerOpen(true);
+    setViewerCardNode(mockCardNode);
   }
 
   useEffect(() => {
@@ -419,8 +433,12 @@ export default function ProjectInfoModal({ projectId, mode, onClose }: ProjectIn
         open={viewerOpen} 
         fileUrl={viewerFile} 
         fileType={viewerType} 
-        onClose={() => setViewerOpen(false)}
+        onClose={() => {
+          setViewerOpen(false);
+          setViewerCardNode(null);
+        }}
         cardType="assignments"
+        cardNode={viewerCardNode}
       />
     </Dialog>
   );

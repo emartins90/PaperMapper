@@ -12,12 +12,21 @@ if os.getenv("RAILWAY_ENVIRONMENT") or os.getenv("RAILWAY_PROJECT_ID"):
     ENV = "production"
     print("Detected Railway environment, setting ENV=production")
 
-env_path = Path(__file__).parent / f".env.{ENV}"
+# Map ENV to environment file
+env_mapping = {
+    "local": ".env.local",
+    "development": ".env.development", 
+    "production": ".env.production"
+}
+
+env_file = env_mapping.get(ENV, ".env.development")
+env_path = Path(__file__).parent / env_file
 load_dotenv(env_path)
 
 print("Loaded DATABASE_URL:", os.getenv("DATABASE_URL"))
 print("Loaded DATABASE_SYNC_URL:", os.getenv("DATABASE_SYNC_URL"))
 print("Loaded from:", env_path)
+print("Environment:", ENV)
 
 class Settings:
     # Database

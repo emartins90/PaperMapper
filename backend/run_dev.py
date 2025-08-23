@@ -15,10 +15,10 @@ def main():
     # Change to project root directory
     os.chdir(project_root)
     
-    # Set environment to development
-    os.environ["ENV"] = "development"
+    # Set environment to local
+    os.environ["ENV"] = "local"
     
-    print("🚀 Starting PaperMapper Backend in DEVELOPMENT mode")
+    print("🚀 Starting PaperMapper Backend in LOCAL mode")
     print(f"Environment: {os.environ.get('ENV')}")
     print(f"Project root: {project_root}")
     
