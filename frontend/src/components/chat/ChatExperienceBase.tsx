@@ -35,6 +35,9 @@ type ChatMessage = { role: "system" | "user"; text: string; imageUrl?: string };
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
+// Character length threshold for deciding when to ask for a summary on source cards
+const SOURCE_SUMMARY_PROMPT_CHAR_THRESHOLD = 600;
+
 const getToken = () => {
   if (typeof window === "undefined") return "";
   const token = localStorage.getItem("token");
@@ -335,6 +338,19 @@ const ChatExperienceBase: React.FC<ChatExperienceBaseProps> = ({
       if (newStep >= 0 && newStep < prompts.length && prompts[newStep].id === 'sourceCredibility' && selectedCitation) {
         newStep = newStep - 1; // Go back one more step to citation
       }
+
+      // If we'd land on the summary step but it was skipped (short source content),
+      // jump back over it to the source content step instead
+      if (
+        chatType === 'source' &&
+        newStep >= 0 && newStep < prompts.length &&
+        prompts[newStep].id === 'summary'
+      ) {
+        const sourcePlain = (chatInputs['sourceContent'] || '').trim();
+        if (sourcePlain.length < SOURCE_SUMMARY_PROMPT_CHAR_THRESHOLD) {
+          newStep = newStep - 1;
+        }
+      }
       
       // Ensure we don't go below 0
       if (newStep < 0) newStep = 0;
@@ -429,6 +445,16 @@ const ChatExperienceBase: React.FC<ChatExperienceBaseProps> = ({
         // If we're on sourceCitation step and have a selected citation, skip the credibility step
         if (currentPrompt.id === 'sourceCitation' && selectedCitation) {
           nextStep = chatStep + 2; // Skip credibility prompt
+        }
+        
+        // If we're on sourceContent and it's short, skip the summary step
+        if (chatType === 'source' && currentPrompt.id === 'sourceContent') {
+          const plainText = (chatInputs[currentPrompt.id] || '').trim();
+          if (plainText.length < SOURCE_SUMMARY_PROMPT_CHAR_THRESHOLD) {
+            if (nextStep < prompts.length && prompts[nextStep].id === 'summary') {
+              nextStep = nextStep + 1;
+            }
+          }
         }
         
         if (nextStep <= prompts.length) {
