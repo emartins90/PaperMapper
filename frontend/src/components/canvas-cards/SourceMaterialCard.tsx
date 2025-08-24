@@ -4,6 +4,7 @@ import { Handle, Position } from "reactflow";
 import { FileListDisplay } from "../canvas-add-files/FileListDisplay";
 import { LuBookOpen } from "react-icons/lu";
 import { Spinner } from "../ui/spinner";
+import { TextWithLinks } from "../ui/text-with-links";
 
 type SourceMaterialCardProps = {
   data: {
@@ -140,7 +141,13 @@ export default function SourceMaterialCard({ data, showHandles = true, width = '
       )}
       
       <div className="mt-2 text-xs text-gray-700">
-        <span className="font-bold">Source:</span> <span className="break-all" style={{ wordBreak: 'break-all', overflowWrap: 'break-word' }}>{(data.source && data.source.trim() !== '' && data.source !== '(skipped)') ? data.source : <span className="text-gray-500">No source provided</span>}</span>
+        <span className="font-bold">Source:</span> <span className="break-words" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>
+          {(data.source && data.source.trim() !== '' && data.source !== '(skipped)') ? (
+            <TextWithLinks text={data.source} />
+          ) : (
+            <span className="text-gray-500">No source provided</span>
+          )}
+        </span>
         {data.credibility && data.credibility.trim() !== '' && data.credibility !== '(skipped)' && (
           <>
             <br />
