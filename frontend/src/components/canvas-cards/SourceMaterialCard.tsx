@@ -4,12 +4,15 @@ import { Handle, Position } from "reactflow";
 import { FileListDisplay } from "../canvas-add-files/FileListDisplay";
 import { LuBookOpen } from "react-icons/lu";
 import { Spinner } from "../ui/spinner";
+import { TextWithLinks } from "../ui/text-with-links";
 
 type SourceMaterialCardProps = {
   data: {
     tags: string[] | undefined;
     summary?: string;
     summaryFormatted?: string;
+    text?: string; // Add text property for full content
+    contentFormatted?: string; // Add contentFormatted property for formatted full content
     thesisSupport: string;
     source: string;
     credibility: string;
@@ -118,14 +121,20 @@ export default function SourceMaterialCard({ data, showHandles = true, width = '
         </div>
       )}
       
-      {/* Only show summary if not empty or '(skipped)' */}
-      {data.summary && data.summary.trim() !== '' && data.summary !== '(skipped)' && (
+      {/* Show summary if available, otherwise fall back to full content */}
+      {(data.summary && data.summary.trim() !== '' && data.summary !== '(skipped)') ? (
         <div 
           className="rich-text-display text-black mb-4 break-words" 
           style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}
           dangerouslySetInnerHTML={{ __html: data.summaryFormatted || data.summary }}
         />
-      )}
+      ) : (data.text && data.text.trim() !== '' && data.text !== '(skipped)') ? (
+        <div 
+          className="rich-text-display text-black mb-4 break-words" 
+          style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}
+          dangerouslySetInnerHTML={{ __html: data.contentFormatted || data.text }}
+        />
+      ) : null}
 
       {/* Render uploaded files (images as thumbnails, others as file names) */}
       {Array.isArray((data as any).files) && (data as any).files.length > 0 && (
@@ -140,7 +149,13 @@ export default function SourceMaterialCard({ data, showHandles = true, width = '
       )}
       
       <div className="mt-2 text-xs text-gray-700">
-        <span className="font-bold">Source:</span> <span className="break-all" style={{ wordBreak: 'break-all', overflowWrap: 'break-word' }}>{(data.source && data.source.trim() !== '' && data.source !== '(skipped)') ? data.source : <span className="text-gray-500">No source provided</span>}</span>
+        <span className="font-bold">Source:</span> <span className="break-words" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>
+          {(data.source && data.source.trim() !== '' && data.source !== '(skipped)') ? (
+            <TextWithLinks text={data.source} />
+          ) : (
+            <span className="text-gray-500">No source provided</span>
+          )}
+        </span>
         {data.credibility && data.credibility.trim() !== '' && data.credibility !== '(skipped)' && (
           <>
             <br />
