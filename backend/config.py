@@ -5,17 +5,22 @@ from pathlib import Path
 import secrets
 
 # Load environment variables based on ENV setting
-ENV = os.getenv("ENV", "development")
+ENV = os.getenv("ENV", "local")
 
-# Detect production environment more reliably
+# If Railway is detected but ENV is explicitly set, use that
 if os.getenv("RAILWAY_ENVIRONMENT") or os.getenv("RAILWAY_PROJECT_ID"):
-    ENV = "production"
-    print("Detected Railway environment, setting ENV=production")
+    if os.getenv("ENV") in ["develop", "production"]:
+        ENV = os.getenv("ENV")
+        print(f"Using explicit ENV setting: {ENV}")
+    else:
+        ENV = "production"
+        print("Detected Railway environment, setting ENV=production")
 
 # Map ENV to environment file
 env_mapping = {
     "local": ".env.local",
     "development": ".env.development", 
+    "develop": ".env.development",  # Add support for "develop" environment
     "production": ".env.production"
 }
 

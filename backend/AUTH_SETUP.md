@@ -46,7 +46,7 @@ R2_BUCKET_NAME=your-bucket-name
 CORS_ORIGINS=http://localhost:3000,https://yourdomain.com
 
 # Environment
-ENV=development
+ENV=local
 
 # OAuth Configuration (Optional - for future use)
 # GOOGLE_CLIENT_ID=your-google-client-id

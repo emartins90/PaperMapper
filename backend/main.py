@@ -91,14 +91,30 @@ def get_jwt_strategy() -> JWTStrategy:
         token_audience=["fastapi-users:auth"]  # Add audience for extra security
     )
 
+def get_cookie_name():
+    """Get cookie name based on environment"""
+    if settings.ENV == "production":
+        return "auth_token_prod"
+    elif settings.ENV == "develop":
+        return "auth_token_dev"
+    else:
+        return "auth_token_local"
+
+def get_cookie_samesite():
+    """Get cookie SameSite policy based on environment"""
+    if settings.ENV == "production":
+        return "none"  # Required for Railway
+    else:
+        return "lax"  # Works with HTTP in local development
+
 # Use cookie transport for authentication with secure settings
 cookie_transport = CookieTransport(
-    cookie_name="auth_token",  # Less predictable name
-    cookie_max_age=30 * 24 * 3600,  # 30 days - users stay logged in
+    cookie_name=get_cookie_name(),  # Environment-specific name
+    cookie_max_age=30 * 24 * 3600,  # 30 days
     cookie_secure=settings.ENV == "production",  # HTTPS only in production
-    cookie_httponly=True,  # Prevent XSS
-    cookie_samesite="lax" if settings.ENV == "development" else "none",  # Lax in dev, none in prod
-    cookie_domain=".paperthread-app.com" if settings.ENV == "production" else None,  # Cross-domain in production
+    cookie_httponly=True,
+    cookie_samesite=get_cookie_samesite(),  # Environment-specific SameSite
+    cookie_domain=".paperthread-app.com" if settings.ENV == "production" else None,
     cookie_path="/"  # Available across entire site
 )
 
@@ -1096,11 +1112,12 @@ async def logout():
     """Logout and clear authentication cookie"""
     response = Response()
     response.delete_cookie(
-        key="auth_token",
+        key=get_cookie_name(),  # Match the login cookie name
         path="/",
         secure=settings.ENV == "production",
         httponly=True,
-        samesite="none"  # Match the login cookie settings
+        samesite=get_cookie_samesite(),  # Match the login cookie settings
+        domain=".paperthread-app.com" if settings.ENV == "production" else None  # Match the login cookie settings
     )
     return response
 
