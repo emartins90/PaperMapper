@@ -107,8 +107,8 @@ def get_cookie_name():
 def get_cookie_samesite():
     """Get cookie SameSite policy based on environment"""
     samesite = None
-    if settings.ENV == "production":
-        samesite = "none"  # Required for Railway
+    if settings.ENV in ["production", "develop"]:
+        samesite = "none"  # Required for Railway (both develop and production)
     else:
         samesite = "lax"  # Works with HTTP in local development
     
@@ -119,7 +119,7 @@ def get_cookie_samesite():
 cookie_transport = CookieTransport(
     cookie_name=get_cookie_name(),  # Environment-specific name
     cookie_max_age=30 * 24 * 3600,  # 30 days
-    cookie_secure=settings.ENV == "production",  # HTTPS only in production
+    cookie_secure=settings.ENV in ["production", "develop"],  # HTTPS for Railway environments
     cookie_httponly=True,
     cookie_samesite=get_cookie_samesite(),  # Environment-specific SameSite
     cookie_domain=".paperthread-app.com" if settings.ENV == "production" else None,
