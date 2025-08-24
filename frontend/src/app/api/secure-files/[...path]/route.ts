@@ -21,7 +21,9 @@ export async function GET(
     cookie.trim().startsWith('auth_token_')
   );
   
-  console.log('[SECURE-FILES] App auth cookie:', appAuthCookie);
+  console.log('[SECURE-FILES] All cookies received:', allCookies);
+  console.log('[SECURE-FILES] Cookie header exists:', !!request.headers.get('cookie'));
+  console.log('[SECURE-FILES] App auth cookie found:', appAuthCookie);
   console.log('[SECURE-FILES] Request URL:', url);
 
   try {
