@@ -15,10 +15,15 @@ export async function GET(
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
   const url = `${apiUrl}/secure-files/${folder}/${filename}`;
 
+  // Debug: Log what cookies we're forwarding
+  const cookies = request.headers.get('cookie') || '';
+  console.log('[SECURE-FILES] Forwarding cookies:', cookies);
+  console.log('[SECURE-FILES] Request URL:', url);
+
   try {
     const response = await fetch(url, {
       headers: {
-        'Cookie': request.headers.get('cookie') || '',
+        'Cookie': cookies,
         'User-Agent': request.headers.get('user-agent') || '',
         'Accept': request.headers.get('accept') || '*/*',
         'Accept-Language': request.headers.get('accept-language') || '',
@@ -27,6 +32,7 @@ export async function GET(
     });
 
     if (!response.ok) {
+      console.log('[SECURE-FILES] Backend response not ok:', response.status, response.statusText);
       return NextResponse.json(
         { error: 'File not found or access denied' }, 
         { status: response.status }
@@ -44,7 +50,7 @@ export async function GET(
       },
     });
   } catch (error) {
-    console.error('Error fetching secure file:', error);
+    console.error('[SECURE-FILES] Error fetching secure file:', error);
     return NextResponse.json(
       { error: 'Internal server error' }, 
       { status: 500 }
