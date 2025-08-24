@@ -18,7 +18,7 @@ const sourcePrompts = [
   },
   { 
     id: "summary", 
-    prompt: "Okay, we've got the content. Now take a moment to think about what is most important about this source. Write a short summary of the key points. This is what you'll see on your card. ",
+    prompt: "You've captured a lot of detail here. Now take a moment to think about what is most important about this source. Write a short summary of the key points. This is what you'll see on your card. ",
     options: [],
     hasCustomOption: false
   },
