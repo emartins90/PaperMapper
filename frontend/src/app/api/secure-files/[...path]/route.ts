@@ -15,21 +15,10 @@ export async function GET(
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
   const url = `${apiUrl}/secure-files/${folder}/${filename}`;
 
-  // Just extract your app's auth cookie, ignore Vercel's JWT
-  const allCookies = request.headers.get('cookie') || '';
-  const appAuthCookie = allCookies.split(';').find(cookie => 
-    cookie.trim().startsWith('auth_token_')
-  );
-  
-  console.log('[SECURE-FILES] All cookies received:', allCookies);
-  console.log('[SECURE-FILES] Cookie header exists:', !!request.headers.get('cookie'));
-  console.log('[SECURE-FILES] App auth cookie found:', appAuthCookie);
-  console.log('[SECURE-FILES] Request URL:', url);
-
   try {
     const response = await fetch(url, {
       headers: {
-        'Cookie': appAuthCookie || '', // Only send your app's auth cookie
+        'Cookie': request.headers.get('cookie') || '',
         'User-Agent': request.headers.get('user-agent') || '',
         'Accept': request.headers.get('accept') || '*/*',
         'Accept-Language': request.headers.get('accept-language') || '',
@@ -38,7 +27,6 @@ export async function GET(
     });
 
     if (!response.ok) {
-      console.log('[SECURE-FILES] Backend response not ok:', response.status, response.statusText);
       return NextResponse.json(
         { error: 'File not found or access denied' }, 
         { status: response.status }
@@ -56,7 +44,7 @@ export async function GET(
       },
     });
   } catch (error) {
-    console.error('[SECURE-FILES] Error fetching secure file:', error);
+    console.error('Error fetching secure file:', error);
     return NextResponse.json(
       { error: 'Internal server error' }, 
       { status: 500 }
