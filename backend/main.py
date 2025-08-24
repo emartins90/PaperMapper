@@ -93,19 +93,27 @@ def get_jwt_strategy() -> JWTStrategy:
 
 def get_cookie_name():
     """Get cookie name based on environment"""
+    cookie_name = None
     if settings.ENV == "production":
-        return "auth_token_prod"
+        cookie_name = "auth_token_prod"
     elif settings.ENV == "develop":
-        return "auth_token_dev"
+        cookie_name = "auth_token_dev"
     else:
-        return "auth_token_local"
+        cookie_name = "auth_token_local"
+    
+    print(f"[COOKIE] Environment: {settings.ENV}, Cookie name: {cookie_name}")
+    return cookie_name
 
 def get_cookie_samesite():
     """Get cookie SameSite policy based on environment"""
+    samesite = None
     if settings.ENV == "production":
-        return "none"  # Required for Railway
+        samesite = "none"  # Required for Railway
     else:
-        return "lax"  # Works with HTTP in local development
+        samesite = "lax"  # Works with HTTP in local development
+    
+    print(f"[COOKIE] Environment: {settings.ENV}, SameSite: {samesite}")
+    return samesite
 
 # Use cookie transport for authentication with secure settings
 cookie_transport = CookieTransport(

@@ -7,14 +7,37 @@ import secrets
 # Load environment variables based on ENV setting
 ENV = os.getenv("ENV", "local")
 
-# If Railway is detected but ENV is explicitly set, use that
+# Debug: Print all Railway-related environment variables
+print("=== Environment Detection Debug ===")
+print(f"Initial ENV: {ENV}")
+print(f"RAILWAY_ENVIRONMENT: {os.getenv('RAILWAY_ENVIRONMENT')}")
+print(f"RAILWAY_PROJECT_ID: {os.getenv('RAILWAY_PROJECT_ID')}")
+print(f"RAILWAY_SERVICE_NAME: {os.getenv('RAILWAY_SERVICE_NAME')}")
+print(f"RAILWAY_SERVICE_ID: {os.getenv('RAILWAY_SERVICE_ID')}")
+print(f"Custom ENV variable: {os.getenv('ENV')}")
+
+# If Railway is detected, try to determine the environment
 if os.getenv("RAILWAY_ENVIRONMENT") or os.getenv("RAILWAY_PROJECT_ID"):
+    print("Railway environment detected")
+    
+    # First, check if ENV is explicitly set
     if os.getenv("ENV") in ["develop", "production"]:
         ENV = os.getenv("ENV")
         print(f"Using explicit ENV setting: {ENV}")
     else:
-        ENV = "production"
-        print("Detected Railway environment, setting ENV=production")
+        # Try to determine from Railway service name
+        service_name = os.getenv("RAILWAY_SERVICE_NAME", "").lower()
+        if "develop" in service_name or "dev" in service_name:
+            ENV = "develop"
+            print(f"Detected develop environment from service name: {service_name}")
+        else:
+            ENV = "production"
+            print(f"Detected production environment from service name: {service_name}")
+else:
+    print("Local environment detected")
+
+print(f"Final ENV setting: {ENV}")
+print("=== End Environment Detection ===")
 
 # Map ENV to environment file
 env_mapping = {
