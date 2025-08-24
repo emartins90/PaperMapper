@@ -15,15 +15,19 @@ export async function GET(
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
   const url = `${apiUrl}/secure-files/${folder}/${filename}`;
 
-  // Debug: Log what cookies we're forwarding
-  const cookies = request.headers.get('cookie') || '';
-  console.log('[SECURE-FILES] Forwarding cookies:', cookies);
+  // Just extract your app's auth cookie, ignore Vercel's JWT
+  const allCookies = request.headers.get('cookie') || '';
+  const appAuthCookie = allCookies.split(';').find(cookie => 
+    cookie.trim().startsWith('auth_token_')
+  );
+  
+  console.log('[SECURE-FILES] App auth cookie:', appAuthCookie);
   console.log('[SECURE-FILES] Request URL:', url);
 
   try {
     const response = await fetch(url, {
       headers: {
-        'Cookie': cookies,
+        'Cookie': appAuthCookie || '', // Only send your app's auth cookie
         'User-Agent': request.headers.get('user-agent') || '',
         'Accept': request.headers.get('accept') || '*/*',
         'Accept-Language': request.headers.get('accept-language') || '',
