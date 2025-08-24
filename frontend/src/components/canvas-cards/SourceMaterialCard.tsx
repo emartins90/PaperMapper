@@ -11,6 +11,8 @@ type SourceMaterialCardProps = {
     tags: string[] | undefined;
     summary?: string;
     summaryFormatted?: string;
+    text?: string; // Add text property for full content
+    contentFormatted?: string; // Add contentFormatted property for formatted full content
     thesisSupport: string;
     source: string;
     credibility: string;
@@ -119,14 +121,20 @@ export default function SourceMaterialCard({ data, showHandles = true, width = '
         </div>
       )}
       
-      {/* Only show summary if not empty or '(skipped)' */}
-      {data.summary && data.summary.trim() !== '' && data.summary !== '(skipped)' && (
+      {/* Show summary if available, otherwise fall back to full content */}
+      {(data.summary && data.summary.trim() !== '' && data.summary !== '(skipped)') ? (
         <div 
           className="rich-text-display text-black mb-4 break-words" 
           style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}
           dangerouslySetInnerHTML={{ __html: data.summaryFormatted || data.summary }}
         />
-      )}
+      ) : (data.text && data.text.trim() !== '' && data.text !== '(skipped)') ? (
+        <div 
+          className="rich-text-display text-black mb-4 break-words" 
+          style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}
+          dangerouslySetInnerHTML={{ __html: data.contentFormatted || data.text }}
+        />
+      ) : null}
 
       {/* Render uploaded files (images as thumbnails, others as file names) */}
       {Array.isArray((data as any).files) && (data as any).files.length > 0 && (
