@@ -522,6 +522,42 @@ export default function CanvasInner({ projectId }: CanvasProps) {
     });
   }, [placingNodeType, screenToFlowPosition, ghostNodeId]);
 
+  // Cancel card placement
+  const cancelCardPlacement = useCallback(() => {
+    if (placingNodeType) {
+      setPlacingNodeType(null);
+      // Remove ghost node
+      setNodes((nds) => nds.filter(n => n.id !== ghostNodeId));
+      toast.dismiss(); // Dismiss any placement instructions
+    }
+  }, [placingNodeType, ghostNodeId]);
+
+  // Remove any existing unsaved cards (cards with UUID IDs)
+  const removeUnsavedCards = useCallback(() => {
+    setNodes((nds) => nds.filter(n => {
+      // Keep only saved cards (integer IDs) and the ghost node
+      const isSavedCard = /^\d+$/.test(n.id);
+      const isGhostNode = n.id === ghostNodeId;
+      return isSavedCard || isGhostNode;
+    }));
+  }, [ghostNodeId]);
+
+  // Keyboard event handler for canceling card placement
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (placingNodeType && (event.key === 'Escape' || event.key === 'Delete' || event.key === 'Backspace')) {
+        event.preventDefault();
+        cancelCardPlacement();
+        toast.info('Card placement cancelled');
+      }
+    };
+
+    if (placingNodeType) {
+      document.addEventListener('keydown', handleKeyDown);
+      return () => document.removeEventListener('keydown', handleKeyDown);
+    }
+  }, [placingNodeType, cancelCardPlacement]);
+
   // Click to place node
   const onPaneClick = useCallback(async (evt: React.MouseEvent) => {
     if (!placingNodeType) return;
@@ -735,6 +771,8 @@ export default function CanvasInner({ projectId }: CanvasProps) {
 
   // Handlers for add buttons
   const startPlacingSource = useCallback(() => {
+    // Remove any existing unsaved cards before placing a new one
+    removeUnsavedCards();
     setPlacingNodeType("source");
     // Add ghost node (position will be set by mouse move)
     setNodes((nds) => [
@@ -749,9 +787,11 @@ export default function CanvasInner({ projectId }: CanvasProps) {
     // Show device-specific toast
     const action = getDeviceSpecificAction();
     toast.info(`${action.charAt(0).toUpperCase() + action.slice(1)} anywhere on the canvas to place your source material card`);
-  }, [ghostNodeId]);
+  }, [ghostNodeId, removeUnsavedCards]);
 
   const startPlacingQuestion = useCallback(() => {
+    // Remove any existing unsaved cards before placing a new one
+    removeUnsavedCards();
     setPlacingNodeType("question");
     // Add ghost node (position will be set by mouse move)
     setNodes((nds) => [
@@ -766,9 +806,11 @@ export default function CanvasInner({ projectId }: CanvasProps) {
     // Show device-specific toast
     const action = getDeviceSpecificAction();
     toast.info(`${action.charAt(0).toUpperCase() + action.slice(1)} anywhere on the canvas to place your question card`);
-  }, [ghostNodeId]);
+  }, [ghostNodeId, removeUnsavedCards]);
 
   const startPlacingInsight = useCallback(() => {
+    // Remove any existing unsaved cards before placing a new one
+    removeUnsavedCards();
     setPlacingNodeType("insight");
     // Add ghost node (position will be set by mouse move)
     setNodes((nds) => [
@@ -783,9 +825,11 @@ export default function CanvasInner({ projectId }: CanvasProps) {
     // Show device-specific toast
     const action = getDeviceSpecificAction();
     toast.info(`${action.charAt(0).toUpperCase() + action.slice(1)} anywhere on the canvas to place your insight card`);
-  }, [ghostNodeId]);
+  }, [ghostNodeId, removeUnsavedCards]);
 
   const startPlacingThought = useCallback(() => {
+    // Remove any existing unsaved cards before placing a new one
+    removeUnsavedCards();
     setPlacingNodeType("thought");
     // Add ghost node (position will be updated immediately by mouse move)
     setNodes((nds) => [
@@ -800,9 +844,11 @@ export default function CanvasInner({ projectId }: CanvasProps) {
     // Show device-specific toast
     const action = getDeviceSpecificAction();
     toast.info(`${action.charAt(0).toUpperCase() + action.slice(1)} anywhere on the canvas to place your thought card`);
-  }, [ghostNodeId]);
+  }, [ghostNodeId, removeUnsavedCards]);
 
   const startPlacingClaim = useCallback(() => {
+    // Remove any existing unsaved cards before placing a new one
+    removeUnsavedCards();
     setPlacingNodeType("claim");
     // Add ghost node (position will be updated immediately by mouse move)
     setNodes((nds) => [
@@ -817,7 +863,7 @@ export default function CanvasInner({ projectId }: CanvasProps) {
     // Show device-specific toast
     const action = getDeviceSpecificAction();
     toast.info(`${action.charAt(0).toUpperCase() + action.slice(1)} anywhere on the canvas to place your claim card`);
-  }, [ghostNodeId]);
+  }, [ghostNodeId, removeUnsavedCards]);
 
   const onNodesChange = useCallback(
     async (changes: NodeChange[]) => {
