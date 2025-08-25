@@ -1404,7 +1404,7 @@ export default function SourceCardContent({
               showSaveButton={!!cardData?.sourceMaterialId}
               onSave={() => saveAllFields()}
             />
-            <p className="text-xs text-gray-500 mt-1">Focus on the most relevant information for your questions.</p>
+            <p className="text-xs text-gray-500 mt-1">If your source material is very long, it can help to summarize the key points to display on your card.  </p>
           </div>
           
           <div className="border-t border-gray-200 pt-4">
