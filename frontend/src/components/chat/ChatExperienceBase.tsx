@@ -321,6 +321,10 @@ const ChatExperienceBase: React.FC<ChatExperienceBaseProps> = ({
     if ((optionType === "claimType" || optionType.endsWith("Type")) && typeof option === "string" && option.includes("–")) {
       valueToSave = option.split("–")[0].trim();
     }
+    // Also handle sourceCredibility the same way - only save the part before the dash
+    if (optionType === "sourceCredibility" && typeof option === "string" && option.includes("–")) {
+      valueToSave = option.split("–")[0].trim();
+    }
     setSelectedOptions(prev => ({ ...prev, [optionType]: valueToSave }));
     setChatInputs(prev => ({ ...prev, [optionType]: valueToSave }));
     // Also update chatAnswers immediately for option selections
@@ -904,7 +908,7 @@ const ChatExperienceBase: React.FC<ChatExperienceBaseProps> = ({
                               variant={isSelected ? "default" : "outline"}
                               aria-pressed={isSelected}
                               onClick={() => handleOptionSelect(currentPrompt.id, o)}
-                              className={`w-full text-left px-4 py-5 mb-2 border rounded-lg transition-colors ${isSelected ? 'bg-primary text-white font-bold border-primary ring-2 ring-primary/50' : ''}`}
+                              className={`w-full text-left px-4 py-5 mb-2 border rounded-lg overflow-hidden transition-colors ${isSelected ? 'bg-primary text-white font-bold border-primary ring-2 ring-primary/50' : ''}`}
                             >
                               <div>
                                 {description ? (

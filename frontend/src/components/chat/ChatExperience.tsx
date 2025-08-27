@@ -43,7 +43,15 @@ const sourcePrompts = [
   { 
     id: "sourceCredibility", 
     prompt: "Finally, take a moment to evaluate how trustworthy this source is. Consider where it's published, who created it, and how the information was gathered.",
-    options: ["Peer-reviewed study", "News article (reputable)", "News article (biased)", "Expert opinion", "Institutional report", "Personal experience", "Blog or opinion piece", "Speculative claim", "Social media post", "Unclear origin"],
+    options: [
+      "Peer-Reviewed – Ex. Academic journal",
+      "Editorially Reviewed (Scholarly) – Ex. Textbooks",
+      "Editorially Reviewed (Media) – Ex. Newspapers",
+      "Organizationally Reviewed – Ex. NGO publications",
+      "Minimally Reviewed – Ex. Wikipedia articles",
+      "Unreviewed – Ex. Personal blogs",
+      "Unknown Origin"
+    ],
     hasCustomOption: true
   },
 ];
