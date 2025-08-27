@@ -1026,28 +1026,22 @@ export default function SourceListPanel({ projectId, onClose, onSourceCardClick,
               <Label htmlFor="new-citation-credibility" className="block text-sm font-medium text-gray-700 mb-1">Credibility</Label>
               <Combobox
                 options={[
-                  { value: "Peer-reviewed study", label: "Peer-reviewed study" },
-                  { value: "News article (reputable)", label: "News article (reputable)" },
-                  { value: "News article (biased)", label: "News article (biased)" },
-                  { value: "Expert opinion", label: "Expert opinion" },
-                  { value: "Institutional report", label: "Institutional report" },
-                  { value: "Personal experience", label: "Personal experience" },
-                  { value: "Blog or opinion piece", label: "Blog or opinion piece" },
-                  { value: "Speculative claim", label: "Speculative claim" },
-                  { value: "Social media post", label: "Social media post" },
-                  { value: "Unclear origin", label: "Unclear origin" },
+                  { value: "Peer-Reviewed", label: "Peer-Reviewed" },
+                  { value: "Editorially Reviewed – Scholarly", label: "Editorially Reviewed – Scholarly" },
+                  { value: "Editorially Reviewed – Media", label: "Editorially Reviewed – Media" },
+                  { value: "Organizationally Reviewed", label: "Organizationally Reviewed" },
+                  { value: "Minimally Reviewed", label: "Minimally Reviewed" },
+                  { value: "Unreviewed", label: "Unreviewed" },
+                  { value: "Unknown Origin", label: "Unknown Origin" },
                   ...((sourceCredibilityOptions?.options as { value: string; label: string }[]) || []).filter(
                     (o: { value: string; label: string }) => ![
-                      "Peer-reviewed study",
-                      "News article (reputable)",
-                      "News article (biased)",
-                      "Expert opinion",
-                      "Institutional report",
-                      "Personal experience",
-                      "Blog or opinion piece",
-                      "Speculative claim",
-                      "Social media post",
-                      "Unclear origin"
+                      "Peer-Reviewed",
+                      "Editorially Reviewed – Scholarly",
+                      "Editorially Reviewed – Media",
+                      "Organizationally Reviewed",
+                      "Minimally Reviewed",
+                      "Unreviewed",
+                      "Unknown Origin"
                     ].includes(o.value)
                   ),
                 ]}
@@ -1058,16 +1052,13 @@ export default function SourceListPanel({ projectId, onClose, onSourceCardClick,
                   if (
                     value &&
                     ![
-                      "Peer-reviewed study",
-                      "News article (reputable)",
-                      "News article (biased)",
-                      "Expert opinion",
-                      "Institutional report",
-                      "Personal experience",
-                      "Blog or opinion piece",
-                      "Speculative claim",
-                      "Social media post",
-                      "Unclear origin"
+                      "Peer-Reviewed",
+                      "Editorially Reviewed – Scholarly",
+                      "Editorially Reviewed – Media",
+                      "Organizationally Reviewed",
+                      "Minimally Reviewed",
+                      "Unreviewed",
+                      "Unknown Origin"
                     ].includes(value) &&
                     sourceCredibilityOptions?.options &&
                     !sourceCredibilityOptions.options.some(o => o.value === value)
@@ -1115,28 +1106,22 @@ export default function SourceListPanel({ projectId, onClose, onSourceCardClick,
               <Label htmlFor="edit-citation-credibility" className="block text-sm font-medium text-gray-700 mb-1">Credibility</Label>
               <Combobox
                 options={[
-                  { value: "Peer-reviewed study", label: "Peer-reviewed study" },
-                  { value: "News article (reputable)", label: "News article (reputable)" },
-                  { value: "News article (biased)", label: "News article (biased)" },
-                  { value: "Expert opinion", label: "Expert opinion" },
-                  { value: "Institutional report", label: "Institutional report" },
-                  { value: "Personal experience", label: "Personal experience" },
-                  { value: "Blog or opinion piece", label: "Blog or opinion piece" },
-                  { value: "Speculative claim", label: "Speculative claim" },
-                  { value: "Social media post", label: "Social media post" },
-                  { value: "Unclear origin", label: "Unclear origin" },
+                  { value: "Peer-Reviewed", label: "Peer-Reviewed" },
+                  { value: "Editorially Reviewed – Scholarly", label: "Editorially Reviewed – Scholarly" },
+                  { value: "Editorially Reviewed – Media", label: "Editorially Reviewed – Media" },
+                  { value: "Organizationally Reviewed", label: "Organizationally Reviewed" },
+                  { value: "Minimally Reviewed", label: "Minimally Reviewed" },
+                  { value: "Unreviewed", label: "Unreviewed" },
+                  { value: "Unknown Origin", label: "Unknown Origin" },
                   ...(sourceCredibilityOptions?.options || []).filter(
                     (o: { value: string; label: string }) => ![
-                      "Peer-reviewed study",
-                      "News article (reputable)",
-                      "News article (biased)",
-                      "Expert opinion",
-                      "Institutional report",
-                      "Personal experience",
-                      "Blog or opinion piece",
-                      "Speculative claim",
-                      "Social media post",
-                      "Unclear origin"
+                      "Peer-Reviewed",
+                      "Editorially Reviewed – Scholarly",
+                      "Editorially Reviewed – Media",
+                      "Organizationally Reviewed",
+                      "Minimally Reviewed",
+                      "Unreviewed",
+                      "Unknown Origin"
                     ].includes(o.value)
                   ),
                 ]}
@@ -1147,16 +1132,13 @@ export default function SourceListPanel({ projectId, onClose, onSourceCardClick,
                   if (
                     value &&
                     ![
-                      "Peer-reviewed study",
-                      "News article (reputable)",
-                      "News article (biased)",
-                      "Expert opinion",
-                      "Institutional report",
-                      "Personal experience",
-                      "Blog or opinion piece",
-                      "Speculative claim",
-                      "Social media post",
-                      "Unclear origin"
+                      "Peer-Reviewed",
+                      "Editorially Reviewed – Scholarly",
+                      "Editorially Reviewed – Media",
+                      "Organizationally Reviewed",
+                      "Minimally Reviewed",
+                      "Unreviewed",
+                      "Unknown Origin"
                     ].includes(value) &&
                     sourceCredibilityOptions?.options &&
                     !sourceCredibilityOptions.options.some(o => o.value === value)
