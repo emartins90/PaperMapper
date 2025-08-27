@@ -904,7 +904,7 @@ const ChatExperienceBase: React.FC<ChatExperienceBaseProps> = ({
                               variant={isSelected ? "default" : "outline"}
                               aria-pressed={isSelected}
                               onClick={() => handleOptionSelect(currentPrompt.id, o)}
-                              className={`w-full text-left px-4 py-5 mb-2 border rounded-lg transition-colors ${isSelected ? 'bg-primary text-white font-bold border-primary ring-2 ring-primary/50' : ''}`}
+                              className={`w-full text-left px-4 py-5 mb-2 border rounded-lg overflow-hidden transition-colors ${isSelected ? 'bg-primary text-white font-bold border-primary ring-2 ring-primary/50' : ''}`}
                             >
                               <div>
                                 {description ? (
