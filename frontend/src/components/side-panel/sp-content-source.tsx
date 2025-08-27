@@ -1574,7 +1574,9 @@ export default function SourceCardContent({
                 </div>
               )}
             </div>
-            <p className="text-xs text-gray-500 mt-1">Think about where this source came from.</p>
+            {isUnsaved && (
+              <p className="text-xs text-gray-500 mt-1">Think about where this source came from.</p>
+            )}
 
           </div>
 
