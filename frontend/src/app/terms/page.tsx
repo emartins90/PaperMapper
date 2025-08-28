@@ -138,6 +138,21 @@ export default function TermsOfServicePage() {
         </section>
 
         <section className="mb-8">
+          <h2 className="text-2xl font-semibold mb-4">Cookie Consent and Analytics</h2>
+          
+          <p className="mb-4">
+            By using our Service, you agree to our cookie policy and consent to the use of cookies as described in our Privacy Policy.
+          </p>
+          
+          <ul className="list-disc pl-6 mb-4 space-y-2">
+            <li>You must provide consent for non-essential cookies before they are set</li>
+            <li>You can change your cookie preferences anytime in Account Settings</li>
+            <li>Declining analytics cookies may limit our ability to improve the Service</li>
+            <li>Essential cookies are required for the Service to function properly</li>
+          </ul>
+        </section>
+
+        <section className="mb-8">
           <h2 className="text-2xl font-semibold mb-4">Account Termination</h2>
           
           <h3 className="text-xl font-medium mb-3">By You</h3>
