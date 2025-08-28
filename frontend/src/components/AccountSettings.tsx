@@ -314,9 +314,26 @@ export default function AccountSettings({ open, onOpenChange }: AccountSettingsP
   };
 
   // Handle logout
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      // Call backend logout endpoint to invalidate session
+      await fetch(`${API_URL}/auth/logout`, {
+        method: "POST",
+        credentials: "include",
+      });
+    } catch (error) {
+      // Continue with logout even if backend call fails
+      console.error("Logout backend call failed:", error);
+    }
+    
+    // Clear local storage
     localStorage.removeItem("token");
     localStorage.removeItem("email");
+    
+    // Clear cookies by setting them to expire in the past
+    document.cookie = "auth_token_prod=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+    document.cookie = "auth_token_dev=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+    
     onOpenChange(false);
     router.push("/");
   };

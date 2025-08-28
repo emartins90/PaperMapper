@@ -706,7 +706,25 @@ async def create_card(card: schemas.CardCreate, db: AsyncSession = Depends(get_d
     return db_card
 
 @app.get("/cards/", response_model=List[schemas.Card])
-async def read_cards(skip: int = 0, limit: int = 100, project_id: int = None, db: AsyncSession = Depends(get_db())):
+async def read_cards(
+    skip: int = 0, 
+    limit: int = 100, 
+    project_id: int = None, 
+    db: AsyncSession = Depends(get_db()),
+    current_user: User = Depends(get_current_user)
+):
+    # If project_id is specified, verify user owns the project
+    if project_id is not None:
+        # Get the project to check ownership
+        project_result = await db.execute(select(models.Project).where(models.Project.id == project_id))
+        project = project_result.scalar_one_or_none()
+        
+        if not project:
+            raise HTTPException(status_code=404, detail="Project not found")
+        
+        if project.user_id != current_user.id:
+            raise HTTPException(status_code=403, detail="Access denied: You don't own this project")
+    
     query = select(models.Card)
     if project_id is not None:
         query = query.where(models.Card.project_id == project_id)
@@ -892,7 +910,25 @@ async def create_card_link(link: schemas.CardLinkCreate, db: AsyncSession = Depe
     return db_link
 
 @app.get("/card_links/", response_model=List[schemas.CardLink])
-async def read_card_links(skip: int = 0, limit: int = 100, project_id: int = None, db: AsyncSession = Depends(get_db())):
+async def read_card_links(
+    skip: int = 0, 
+    limit: int = 100, 
+    project_id: int = None, 
+    db: AsyncSession = Depends(get_db()),
+    current_user: User = Depends(get_current_user)
+):
+    # If project_id is specified, verify user owns the project
+    if project_id is not None:
+        # Get the project to check ownership
+        project_result = await db.execute(select(models.Project).where(models.Project.id == project_id))
+        project = project_result.scalar_one_or_none()
+        
+        if not project:
+            raise HTTPException(status_code=404, detail="Project not found")
+        
+        if project.user_id != current_user.id:
+            raise HTTPException(status_code=403, detail="Access denied: You don't own this project")
+    
     query = select(models.CardLink)
     if project_id is not None:
         query = query.where(models.CardLink.project_id == project_id)
@@ -972,11 +1008,29 @@ async def read_projects(skip: int = 0, limit: int = 100, db: Session = Depends(g
     return result.scalars().all()
 
 @app.get("/projects/{project_id}", response_model=schemas.Project)
-async def read_project(project_id: int, db: AsyncSession = Depends(get_db())):
+async def read_project(
+    project_id: int, 
+    db: AsyncSession = Depends(get_db()),
+    current_user: User = Depends(get_current_user)
+):
+    print(f"[DEBUG] Accessing project {project_id} for user {current_user.id}")
+    
+    # First get the project
     result = await db.execute(select(models.Project).where(models.Project.id == project_id))
     project = result.scalar_one_or_none()
+    
     if not project:
+        print(f"[DEBUG] Project {project_id} not found")
         raise HTTPException(status_code=404, detail="Project not found")
+    
+    print(f"[DEBUG] Project {project_id} found, owned by user {project.user_id}")
+    
+    # Check if user owns this project
+    if project.user_id != current_user.id:
+        print(f"[DEBUG] Access denied: User {current_user.id} doesn't own project {project_id}")
+        raise HTTPException(status_code=403, detail="Access denied: You don't own this project")
+    
+    print(f"[DEBUG] Access granted for user {current_user.id} to project {project_id}")
     return project
 
 @app.put("/projects/{project_id}", response_model=schemas.Project)

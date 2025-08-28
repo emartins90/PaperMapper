@@ -51,9 +51,7 @@ env_file = env_mapping.get(ENV, ".env.development")
 env_path = Path(__file__).parent / env_file
 load_dotenv(env_path)
 
-print("Loaded DATABASE_URL:", os.getenv("DATABASE_URL"))
-print("Loaded DATABASE_SYNC_URL:", os.getenv("DATABASE_SYNC_URL"))
-print("Loaded from:", env_path)
+
 print("Environment:", ENV)
 
 class Settings:
