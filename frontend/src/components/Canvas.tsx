@@ -158,6 +158,36 @@ export default function CanvasInner({ projectId }: CanvasProps) {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  // Remove any existing unsaved cards (cards with UUID IDs)
+  const removeUnsavedCards = useCallback(() => {
+    // Close the side panel if an unsaved card was open
+    if (openCard) {
+      // Check if the open card is unsaved (has UUID ID or missing data IDs)
+      const node = nodes.find(n => n.id === openCard.id);
+      if (node) {
+        const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(openCard.id);
+        const hasMissingDataIds = 
+          (node.type === "source" && !node.data.sourceMaterialId) ||
+          (node.type === "question" && !node.data.questionId) ||
+          (node.type === "insight" && !node.data.insightId) ||
+          (node.type === "thought" && !node.data.thoughtId) ||
+          (node.type === "claim" && !node.data.claimId);
+        
+        if (isUUID || hasMissingDataIds) {
+          setOpenCard(null);
+          setChatActiveCardId(null);
+        }
+      }
+    }
+    
+    setNodes((nds) => nds.filter(n => {
+      // Keep only saved cards (integer IDs) and the ghost node
+      const isSavedCard = /^\d+$/.test(n.id);
+      const isGhostNode = n.id === ghostNodeId;
+      return isSavedCard || isGhostNode;
+    }));
+  }, [ghostNodeId, openCard, nodes, setChatActiveCardId]);
+
   // Load cards from backend when projectId changes
   useEffect(() => {
     if (!projectId) return;
@@ -532,15 +562,7 @@ export default function CanvasInner({ projectId }: CanvasProps) {
     }
   }, [placingNodeType, ghostNodeId]);
 
-  // Remove any existing unsaved cards (cards with UUID IDs)
-  const removeUnsavedCards = useCallback(() => {
-    setNodes((nds) => nds.filter(n => {
-      // Keep only saved cards (integer IDs) and the ghost node
-      const isSavedCard = /^\d+$/.test(n.id);
-      const isGhostNode = n.id === ghostNodeId;
-      return isSavedCard || isGhostNode;
-    }));
-  }, [ghostNodeId]);
+
 
   // Keyboard event handler for canceling card placement
   useEffect(() => {
