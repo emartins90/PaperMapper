@@ -1,14 +1,16 @@
 # Sample Project Implementation Plan
 
 ## Overview
-Create a sample/tutorial project that new users can access to learn how to use the software. This project will be stored in the production database but hidden from users' project lists, accessible only through the Resources section.
+Create a sample/tutorial project that new users can access to learn how to use the software. This project will be served through a special endpoint that bypasses the normal project security system, making it accessible to all users.
+
 
 ## Goals
 - Provide new users with a hands-on tutorial experience
 - Demonstrate all card types and features
 - Show proper workflow and connections
 - Give users confidence in using the software
-- No code changes required to the main application
+- Maintain security of the main project system
+
 
 ## Implementation Strategy
 
@@ -87,6 +89,19 @@ curl "http://localhost:8000/cards/?project_id=YOUR_PROJECT_ID" > cards.json
 curl "http://localhost:8000/card_links/?project_id=YOUR_PROJECT_ID" > links.json
 ```
 
+
+### Phase 3: Create Special Sample Project Endpoint
+**IMPORTANT**: Due to security constraints, we cannot use the normal project system. Instead, create a dedicated endpoint:
+
+1. **Add new backend endpoint** `/api/sample-project` that serves tutorial data
+2. **Store tutorial data** as static JSON or in a special database table
+3. **Bypass normal authentication** for this endpoint (or use minimal auth)
+4. **Return tutorial data** in the same format as normal projects
+
+### Phase 4: Update Application Code
+1. **Add sample project link** to the Resources section
+2. **Create tutorial viewer component** that renders the sample data
+=======
 ### Phase 3: Insert into Production Database
 1. **Insert the project data** into the production database
 2. **Use project ID 1** (or another specific ID) for the sample project
@@ -96,10 +111,23 @@ curl "http://localhost:8000/card_links/?project_id=YOUR_PROJECT_ID" > links.json
 ### Phase 4: Update Application Code
 1. **Filter out project ID 1** from the project list in `ProjectSelector.tsx`
 2. **Add sample project link** to the Resources section
-3. **Test the integration** to ensure it works correctly
 
-## Code Changes Required
 
+### 1. Backend Sample Project Endpoint
+Add a new endpoint in `backend/main.py`:
+
+```python
+@app.get("/api/sample-project")
+async def get_sample_project():
+    """Get the tutorial sample project data"""
+    # Load tutorial data from static file or special table
+    # Return in same format as normal project endpoints
+    # No authentication required for this endpoint
+    pass
+```
+
+### 2. Frontend Resources Integration
+=======
 ### 1. Filter Sample Project from Project List
 In `frontend/src/components/ProjectSelector.tsx`, update the `fetchProjects` function:
 
@@ -144,12 +172,33 @@ In the Resources section, add a link to the sample project:
     {
       title: "Sample Project Tutorial",
       description: "Explore a complete example project to learn how to use all features",
-      url: "/project/1",
-      icon: "tutorial"
-    }
-  ]
+
+      url: "/tutorial", // New route for tutorial viewer
+
+### 3. Tutorial Viewer Component
+Create a new component that renders the sample project data:
+
+```typescript
+// components/TutorialViewer.tsx
+export default function TutorialViewer() {
+  // Fetch data from /api/sample-project
+  // Render using existing Canvas components
+  // Show in read-only mode
 }
 ```
+
+## Security Considerations
+
+### Why We Can't Use Normal Project System
+- **All project endpoints now require authentication AND ownership verification**
+- **No way to create "public" projects** that bypass security checks
+- **Sample project needs to be accessible to all users**
+
+### Security Benefits of Special Endpoint
+- **Maintains security** of user projects
+- **Isolated tutorial system** doesn't affect production data
+- **Clear separation** between user data and tutorial content
+- **Easy to audit** and maintain
 
 ## File Storage Strategy
 
@@ -211,10 +260,11 @@ In the Resources section, add a link to the sample project:
 - **Reference material** they can return to
 
 ### For Development
-- **No major code changes** required
-- **Uses existing infrastructure** (database, API endpoints)
+- **Maintains security** of the main application
+- **Uses existing infrastructure** for rendering
 - **Easy to maintain** and update
-- **Consistent with app architecture**
+- **Clear separation** of concerns
+
 
 ### For Business
 - **Improved user onboarding** experience
@@ -230,10 +280,10 @@ In the Resources section, add a link to the sample project:
 - [ ] File attachments work and are accessible
 - [ ] Card connections are visible and logical
 - [ ] Project exports successfully using chosen method
-- [ ] Data inserts correctly into production database
-- [ ] Project ID 1 is filtered from user project lists
-- [ ] Resources section links to sample project correctly
-- [ ] Sample project opens in read-only mode (if desired)
+
+- [ ] Special endpoint serves tutorial data correctly
+- [ ] Resources section links to tutorial correctly
+- [ ] Tutorial opens in read-only mode
 - [ ] All file URLs point to publicly accessible locations
 
 ### After Production Deployment
@@ -263,12 +313,14 @@ In the Resources section, add a link to the sample project:
 
 ## Conclusion
 
-This implementation plan provides a comprehensive approach to creating a sample project tutorial that integrates seamlessly with your existing application architecture. By leveraging the database and existing API endpoints, we can provide users with valuable learning resources without requiring significant code changes.
+This revised implementation plan addresses the security constraints while still providing users with valuable learning resources. By using a special endpoint for the tutorial, we maintain the security of user projects while creating an accessible learning experience.
 
 The key success factors are:
 1. **Creating comprehensive tutorial content** that covers all features
 2. **Proper file management** to ensure public accessibility
-3. **Seamless integration** with existing user workflows
+3. **Secure implementation** that doesn't compromise user data
 4. **Ongoing maintenance** to keep the tutorial current
 
-This approach will significantly improve the user onboarding experience and help users get the most value from your software from day one. 
+This approach will significantly improve the user onboarding experience and help users get the most value from your software from day one, while maintaining the security improvements we've implemented. 
+
+
