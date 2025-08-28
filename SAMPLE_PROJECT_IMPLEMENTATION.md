@@ -3,13 +3,14 @@
 ## Overview
 Create a sample/tutorial project that new users can access to learn how to use the software. This project will be served through a special endpoint that bypasses the normal project security system, making it accessible to all users.
 
+
 ## Goals
 - Provide new users with a hands-on tutorial experience
 - Demonstrate all card types and features
 - Show proper workflow and connections
 - Give users confidence in using the software
 - Maintain security of the main project system
-- No code changes required to the main application
+
 
 ## Implementation Strategy
 
@@ -88,6 +89,7 @@ curl "http://localhost:8000/cards/?project_id=YOUR_PROJECT_ID" > cards.json
 curl "http://localhost:8000/card_links/?project_id=YOUR_PROJECT_ID" > links.json
 ```
 
+
 ### Phase 3: Create Special Sample Project Endpoint
 **IMPORTANT**: Due to security constraints, we cannot use the normal project system. Instead, create a dedicated endpoint:
 
@@ -99,9 +101,17 @@ curl "http://localhost:8000/card_links/?project_id=YOUR_PROJECT_ID" > links.json
 ### Phase 4: Update Application Code
 1. **Add sample project link** to the Resources section
 2. **Create tutorial viewer component** that renders the sample data
-3. **Test the integration** to ensure it works correctly
+=======
+### Phase 3: Insert into Production Database
+1. **Insert the project data** into the production database
+2. **Use project ID 1** (or another specific ID) for the sample project
+3. **Update file URLs** to point to public storage locations
+4. **Verify the project** loads correctly in production
 
-## Code Changes Required
+### Phase 4: Update Application Code
+1. **Filter out project ID 1** from the project list in `ProjectSelector.tsx`
+2. **Add sample project link** to the Resources section
+
 
 ### 1. Backend Sample Project Endpoint
 Add a new endpoint in `backend/main.py`:
@@ -117,6 +127,41 @@ async def get_sample_project():
 ```
 
 ### 2. Frontend Resources Integration
+=======
+### 1. Filter Sample Project from Project List
+In `frontend/src/components/ProjectSelector.tsx`, update the `fetchProjects` function:
+
+```typescript
+async function fetchProjects() {
+  setLoading(true);
+  setError("");
+  
+  try {
+    const res = await fetch(`${API_URL}/projects/`, {
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+    
+    if (!res.ok) {
+      throw new Error("Failed to fetch projects");
+    }
+    const data = await res.json();
+    
+    // Filter out the sample project (ID 1)
+    const filteredProjects = data.filter((project: Project) => project.id !== 1);
+    
+    setProjects(filteredProjects);
+  } catch (err: any) {
+    setError(err.message);
+  } finally {
+    setLoading(false);
+  }
+}
+```
+
+### 2. Add Sample Project to Resources
 In the Resources section, add a link to the sample project:
 
 ```typescript
@@ -127,12 +172,8 @@ In the Resources section, add a link to the sample project:
     {
       title: "Sample Project Tutorial",
       description: "Explore a complete example project to learn how to use all features",
+
       url: "/tutorial", // New route for tutorial viewer
-      icon: "tutorial"
-    }
-  ]
-}
-```
 
 ### 3. Tutorial Viewer Component
 Create a new component that renders the sample project data:
@@ -224,6 +265,7 @@ export default function TutorialViewer() {
 - **Easy to maintain** and update
 - **Clear separation** of concerns
 
+
 ### For Business
 - **Improved user onboarding** experience
 - **Reduced support requests** from confused users
@@ -238,18 +280,19 @@ export default function TutorialViewer() {
 - [ ] File attachments work and are accessible
 - [ ] Card connections are visible and logical
 - [ ] Project exports successfully using chosen method
+
 - [ ] Special endpoint serves tutorial data correctly
 - [ ] Resources section links to tutorial correctly
 - [ ] Tutorial opens in read-only mode
 - [ ] All file URLs point to publicly accessible locations
 
 ### After Production Deployment
-- [ ] Tutorial is accessible to new users
+- [ ] Sample project is accessible to new users
 - [ ] No errors in browser console
 - [ ] File downloads work for all users
-- [ ] Tutorial navigation works as expected
+- [ ] Project list filtering works correctly
 - [ ] Resources section displays properly
-- [ ] No security vulnerabilities introduced
+- [ ] Sample project navigation works as expected
 
 ## Future Enhancements
 
@@ -279,3 +322,5 @@ The key success factors are:
 4. **Ongoing maintenance** to keep the tutorial current
 
 This approach will significantly improve the user onboarding experience and help users get the most value from your software from day one, while maintaining the security improvements we've implemented. 
+
+
