@@ -6,6 +6,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import Logo from "@/components/Logo";
+import { captureEvent } from "@/lib/posthog";
 
 export default function Home() {
   const [isLoading, setIsLoading] = useState(true);
@@ -16,6 +17,9 @@ export default function Home() {
   useEffect(() => {
     // Root page should always be accessible - no redirects
     setIsLoading(false);
+
+    // Track page view
+    captureEvent('page_viewed', { page: 'home' });
 
     // Handle scroll for sticky nav
     const handleScroll = () => {
@@ -61,12 +65,16 @@ export default function Home() {
             <Link 
               href="/login"
               className="text-gray-600 hover:text-gray-900 transition-colors font-medium"
+              onClick={() => captureEvent('login_button_clicked', { location: 'desktop_nav' })}
             >
               Log in
             </Link>
           </Button>
           <Button asChild>
-            <Link href="/signup">
+            <Link 
+              href="/signup"
+              onClick={() => captureEvent('signup_button_clicked', { location: 'desktop_nav' })}
+            >
               Join the Beta
             </Link>
           </Button>
@@ -91,7 +99,10 @@ export default function Home() {
               <Button asChild variant="outline" className="w-full">
                 <Link 
                   href="/login"
-                  onClick={() => setIsMobileMenuOpen(false)}
+                  onClick={() => {
+                    setIsMobileMenuOpen(false);
+                    captureEvent('login_button_clicked', { location: 'mobile_nav' });
+                  }}
                 >
                   Log in
                 </Link>
@@ -99,7 +110,10 @@ export default function Home() {
               <Button asChild className="w-full">
                 <Link 
                   href="/signup"
-                  onClick={() => setIsMobileMenuOpen(false)}
+                  onClick={() => {
+                    setIsMobileMenuOpen(false);
+                    captureEvent('signup_button_clicked', { location: 'mobile_nav' });
+                  }}
                 >
                   Join the Beta
                 </Link>
@@ -132,10 +146,13 @@ export default function Home() {
             
             {/* Buttons */}
               <Button asChild size="xl">
-                <Link href="/signup">
+                <Link 
+                  href="/signup"
+                  onClick={() => captureEvent('hero_signup_button_clicked', { location: 'hero_section' })}
+                >
                   Join the Beta
                 </Link>
-                              </Button>
+              </Button>
 
               {/* Image */}
             <div className="w-full max-w-5xl">

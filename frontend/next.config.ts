@@ -1,6 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  experimental: {
+    clientInstrumentationHook: true
+  },
   async rewrites() {
     // In development, proxy directly to backend
     // In production, use API route for better cookie handling
