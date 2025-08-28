@@ -31,18 +31,41 @@ export default function ProjectLayout({ children }: { children: React.ReactNode 
   const [projectName, setProjectName] = useState<string>("");
   const [accountOpen, setAccountOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [hasAccess, setHasAccess] = useState<boolean | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const toastIdRef = useRef<string | number | null>(null);
   const email = typeof window !== "undefined" ? localStorage.getItem("email") : "";
 
+  // Check project access and get project name
   useEffect(() => {
     if (!projectId) return;
-    const token = localStorage.getItem("token");
-    fetch(`${API_URL}/projects/${projectId}`, {
-      credentials: "include", // Send cookies with request
-    })
-      .then(res => res.ok ? res.json() : Promise.reject("Failed to fetch project"))
-      .then(data => setProjectName(data.name))
-      .catch(() => setProjectName(""));
+    
+    const checkProjectAccess = async () => {
+      try {
+        const res = await fetch(`${API_URL}/projects/${projectId}`, {
+          credentials: "include",
+        });
+        
+        if (res.status === 403) {
+          setHasAccess(false);
+          setProjectName("");
+        } else if (res.ok) {
+          const data = await res.json();
+          setProjectName(data.name);
+          setHasAccess(true);
+        } else {
+          setHasAccess(false);
+          setProjectName("");
+        }
+      } catch (error) {
+        setHasAccess(false);
+        setProjectName("");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    checkProjectAccess();
   }, [projectId]);
 
   // Check if device is mobile and show toast
@@ -114,6 +137,48 @@ export default function ProjectLayout({ children }: { children: React.ReactNode 
     });
     window.dispatchEvent(event);
   };
+
+  // Show loading state
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto mb-4"></div>
+          <p className="text-gray-600">Checking project access...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show access denied page
+  if (!hasAccess) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="max-w-md mx-auto text-center p-8">
+          <div className="w-20 h-20 mx-auto mb-6 bg-red-100 rounded-full flex items-center justify-center">
+            <svg className="w-10 h-10 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+            </svg>
+          </div>
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">Access Denied</h1>
+          <p className="text-gray-600 mb-8">
+            You don't have permission to access this project.
+          </p>
+          <div className="space-y-3">
+            <button 
+              onClick={() => router.push('/projects')}
+              className="w-full bg-gray-800 hover:bg-gray-900 text-white font-medium py-2 px-4 rounded-lg transition-colors flex items-center justify-center"
+            >
+              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+              </svg>
+              Go to My Projects
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>
