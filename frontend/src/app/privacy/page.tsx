@@ -68,7 +68,7 @@ export default function PrivacyPolicyPage() {
         </section>
 
         <section className="mb-8">
-          <h2 className="text-2xl font-semibold mb-4">Cookies and Tracking</h2>
+          <h2 className="text-2xl font-semibold mb-4">Cookies and Analytics</h2>
           
           <h3 className="text-xl font-medium mb-3">Essential Cookies</h3>
           <p className="mb-4">
@@ -80,9 +80,27 @@ export default function PrivacyPolicyPage() {
             <li><strong>Security Cookies:</strong> Protect your account and data</li>
           </ul>
 
+          <h3 className="text-xl font-medium mb-3">Analytics Cookies (Optional)</h3>
+          <p className="mb-4">
+            We use PostHog analytics to understand how you use our app and improve our service. This includes:
+          </p>
+          <ul className="list-disc pl-6 mb-4 space-y-2">
+            <li><strong>Usage Analytics:</strong> Which features are most popular and how users navigate the app</li>
+            <li><strong>Performance Data:</strong> Identify and fix technical issues</li>
+            <li><strong>User Experience:</strong> Improve app functionality and design</li>
+          </ul>
+
           <h3 className="text-xl font-medium mb-3">Cookie Consent</h3>
           <p className="mb-4">
-            We require your explicit consent before setting any cookies. You can manage your cookie preferences in your Account Settings at any time.
+            We offer three levels of cookie consent:
+          </p>
+          <ul className="list-disc pl-6 mb-4 space-y-2">
+            <li><strong>Accept All:</strong> Essential cookies + analytics cookies</li>
+            <li><strong>Essential Only:</strong> Only necessary cookies (no analytics)</li>
+            <li><strong>Decline All:</strong> Limited functionality</li>
+          </ul>
+          <p className="mb-4">
+            You can change your cookie preferences anytime in your Account Settings.
           </p>
         </section>
 
@@ -113,7 +131,7 @@ export default function PrivacyPolicyPage() {
           </p>
           
           <ul className="list-disc pl-6 mb-4 space-y-2">
-            <li><strong>Service Providers:</strong> We use trusted third-party services for hosting, database management, and file storage (Railway, Cloudflare R2)</li>
+            <li><strong>Service Providers:</strong> We use trusted third-party services for hosting, database management, file storage, and analytics (Railway, Cloudflare R2, PostHog)</li>
             <li><strong>Legal Requirements:</strong> We may disclose information if required by law or to protect our rights</li>
             <li><strong>Security:</strong> We may share information to investigate or prevent security threats</li>
           </ul>
