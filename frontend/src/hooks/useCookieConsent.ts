@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 
-export type ConsentStatus = 'accepted' | 'declined' | null;
+export type ConsentStatus = 'accepted' | 'essential' | 'declined' | null;
 
 export function useCookieConsent() {
   const [consentStatus, setConsentStatus] = useState<ConsentStatus>(null);
@@ -13,9 +13,14 @@ export function useCookieConsent() {
     setIsLoaded(true);
   }, []);
 
-  const acceptCookies = () => {
+  const acceptAllCookies = () => {
     localStorage.setItem('cookie-consent', 'accepted');
     setConsentStatus('accepted');
+  };
+
+  const acceptEssentialCookies = () => {
+    localStorage.setItem('cookie-consent', 'essential');
+    setConsentStatus('essential');
   };
 
   const declineCookies = () => {
@@ -32,6 +37,10 @@ export function useCookieConsent() {
     return consentStatus === 'accepted';
   };
 
+  const hasAnalyticsConsent = () => {
+    return consentStatus === 'accepted';
+  };
+
   const needsConsent = () => {
     return consentStatus === null;
   };
@@ -39,10 +48,12 @@ export function useCookieConsent() {
   return {
     consentStatus,
     isLoaded,
-    acceptCookies,
+    acceptAllCookies,
+    acceptEssentialCookies,
     declineCookies,
     clearConsent,
     hasConsented,
+    hasAnalyticsConsent,
     needsConsent,
   };
 } 

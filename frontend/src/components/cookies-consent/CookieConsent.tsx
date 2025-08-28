@@ -5,11 +5,12 @@ import { Card, CardContent } from '@/components/ui/card';
 import { LuX } from 'react-icons/lu';
 
 interface CookieConsentProps {
-  onAccept: () => void;
+  onAcceptAll: () => void;
+  onAcceptEssential: () => void;
   onDecline: () => void;
 }
 
-export default function CookieConsent({ onAccept, onDecline }: CookieConsentProps) {
+export default function CookieConsent({ onAcceptAll, onAcceptEssential, onDecline }: CookieConsentProps) {
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
@@ -20,10 +21,16 @@ export default function CookieConsent({ onAccept, onDecline }: CookieConsentProp
     }
   }, []);
 
-  const handleAccept = () => {
+  const handleAcceptAll = () => {
     localStorage.setItem('cookie-consent', 'accepted');
     setIsVisible(false);
-    onAccept();
+    onAcceptAll();
+  };
+
+  const handleAcceptEssential = () => {
+    localStorage.setItem('cookie-consent', 'essential');
+    setIsVisible(false);
+    onAcceptEssential();
   };
 
   const handleDecline = () => {
@@ -35,28 +42,26 @@ export default function CookieConsent({ onAccept, onDecline }: CookieConsentProp
   if (!isVisible) return null;
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 p-4 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-t">
-      <Card className="max-w-4xl mx-auto">
-        <CardContent className="p-6">
+    <div className="fixed bottom-0 left-0 right-0 z-50 p-2 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-t">
+      <Card className="max-w-4xl mx-auto py-1 shadow-none">
+        <CardContent className="p-4">
           <div className="space-y-4">
             <div className="space-y-2">
               <h3 className="text-lg font-semibold">We use cookies</h3>
               <p className="text-sm text-muted-foreground">
-                We use cookies to keep you signed in and provide a better experience. 
-                These cookies are essential for the app to function properly. 
-                By clicking "Accept", you consent to our use of cookies.
+                We use cookies to keep you signed in and provide a better experience.
               </p>
-              <div className="text-xs text-muted-foreground space-y-1">
-                <p><strong>Essential cookies we use:</strong></p>
-                <ul className="list-disc list-inside space-y-1 ml-2">
-                  <li><strong>Authentication cookies</strong> - Keep you signed in for 30 days</li>
-                  <li><strong>Session cookies</strong> - Remember your preferences and settings</li>
-                </ul>
+              <div className="text-xs text-muted-foreground">
+                <p><strong>Essential cookies</strong> keep you signed in and remember your preferences.</p>
+                <p><strong>Analytics cookies</strong> help us improve the app by understanding usage patterns.</p>
               </div>
             </div>
             <div className="flex flex-col sm:flex-row gap-2">
-              <Button onClick={handleAccept}>
+              <Button onClick={handleAcceptAll}>
                 Accept All Cookies
+              </Button>
+              <Button onClick={handleAcceptEssential} variant="secondary">
+                Accept Essential Only
               </Button>
               <Button 
                 onClick={handleDecline} 

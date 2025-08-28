@@ -1,16 +1,19 @@
 "use client";
-import { createContext, useContext, ReactNode } from 'react';
+import { createContext, useContext, ReactNode, useEffect } from 'react';
 import { useCookieConsent, ConsentStatus } from '@/hooks/useCookieConsent';
 import CookieConsent from './CookieConsent';
+import { enablePostHog, disablePostHog } from '@/lib/posthog';
 
 interface CookieConsentContextType {
   consentStatus: ConsentStatus;
   isLoaded: boolean;
-  acceptCookies: () => void;
+  acceptAllCookies: () => void;
+  acceptEssentialCookies: () => void;
   declineCookies: () => void;
   clearConsent: () => void;
   hasConsented: () => boolean;
   needsConsent: () => boolean;
+  hasAnalyticsConsent: () => boolean;
 }
 
 const CookieConsentContext = createContext<CookieConsentContextType | undefined>(undefined);
@@ -30,14 +33,21 @@ interface CookieConsentProviderProps {
 export default function CookieConsentProvider({ children }: CookieConsentProviderProps) {
   const cookieConsent = useCookieConsent();
 
-  const handleAccept = () => {
-    cookieConsent.acceptCookies();
-    // You can add analytics tracking here if needed
-    console.log('Cookies accepted');
+  const handleAcceptAll = () => {
+    cookieConsent.acceptAllCookies();
+    enablePostHog(); // Enable analytics
+    console.log('All cookies accepted');
+  };
+
+  const handleAcceptEssential = () => {
+    cookieConsent.acceptEssentialCookies();
+    disablePostHog(); // Disable analytics for essential-only consent
+    console.log('Essential cookies accepted');
   };
 
   const handleDecline = () => {
     cookieConsent.declineCookies();
+    disablePostHog(); // Disable analytics
     // Clear any existing cookies if user declines
     document.cookie.split(";").forEach(function(c) { 
       document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/"); 
@@ -45,11 +55,27 @@ export default function CookieConsentProvider({ children }: CookieConsentProvide
     console.log('Cookies declined');
   };
 
+  // Handle consent changes after initial setup
+  useEffect(() => {
+    if (cookieConsent.consentStatus === 'accepted') {
+      enablePostHog();
+    } else {
+      disablePostHog();
+    }
+  }, [cookieConsent.consentStatus]);
+
   return (
-    <CookieConsentContext.Provider value={cookieConsent}>
+    <CookieConsentContext.Provider value={{
+      ...cookieConsent,
+      hasAnalyticsConsent: cookieConsent.hasAnalyticsConsent
+    }}>
       {children}
       {cookieConsent.needsConsent() && (
-        <CookieConsent onAccept={handleAccept} onDecline={handleDecline} />
+        <CookieConsent 
+          onAcceptAll={handleAcceptAll} 
+          onAcceptEssential={handleAcceptEssential}
+          onDecline={handleDecline} 
+        />
       )}
     </CookieConsentContext.Provider>
   );
