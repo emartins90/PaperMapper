@@ -2,7 +2,7 @@
 import { createContext, useContext, ReactNode, useEffect } from 'react';
 import { useCookieConsent, ConsentStatus } from '@/hooks/useCookieConsent';
 import CookieConsent from './CookieConsent';
-import { enablePostHog, disablePostHog } from '@/lib/posthog';
+import { posthog } from '@/lib/posthog';
 
 interface CookieConsentContextType {
   consentStatus: ConsentStatus;
@@ -35,19 +35,19 @@ export default function CookieConsentProvider({ children }: CookieConsentProvide
 
   const handleAcceptAll = () => {
     cookieConsent.acceptAllCookies();
-    enablePostHog(); // Enable analytics
+    posthog.opt_in_capturing(); // Enable PostHog analytics
     console.log('All cookies accepted');
   };
 
   const handleAcceptEssential = () => {
     cookieConsent.acceptEssentialCookies();
-    disablePostHog(); // Disable analytics for essential-only consent
+    posthog.opt_out_capturing(); // Disable PostHog analytics for essential-only consent
     console.log('Essential cookies accepted');
   };
 
   const handleDecline = () => {
     cookieConsent.declineCookies();
-    disablePostHog(); // Disable analytics
+    posthog.opt_out_capturing(); // Disable PostHog analytics
     // Clear any existing cookies if user declines
     document.cookie.split(";").forEach(function(c) { 
       document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/"); 
@@ -58,9 +58,9 @@ export default function CookieConsentProvider({ children }: CookieConsentProvide
   // Handle consent changes after initial setup
   useEffect(() => {
     if (cookieConsent.consentStatus === 'accepted') {
-      enablePostHog();
+      posthog.opt_in_capturing();
     } else {
-      disablePostHog();
+      posthog.opt_out_capturing();
     }
   }, [cookieConsent.consentStatus]);
 
