@@ -4,6 +4,7 @@ import { FaCircleCheck } from "react-icons/fa6";
 import { Button } from "../components/ui/button";
 import { Alert, AlertDescription } from "../components/ui/alert";
 import { hasCookieConsent } from "@/lib/cookieUtils";
+import { useUser } from "@/contexts/UserContext";
 import Link from "next/link";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -33,6 +34,7 @@ export default function AuthForm({ onAuth, mode: initialMode = "login" }: AuthFo
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const [privacyConsent, setPrivacyConsent] = useState(false);
   const router = useRouter();
+  const { setUser } = useUser();
 
   // Show password requirements immediately for Sign Up mode
   useEffect(() => {
@@ -210,6 +212,15 @@ export default function AuthForm({ onAuth, mode: initialMode = "login" }: AuthFo
         
         localStorage.setItem("email", email);
         localStorage.setItem("token", "cookie-auth");
+        
+        // Set user in context for PostHog identification
+        const userWithId = {
+          id: email, // Use email as temporary ID until we get the real ID from backend
+          email: email,
+          name: email.split('@')[0],
+        };
+        setUser(userWithId);
+        
         onAuth("cookie-auth");
       } else {
         const res = await fetch(`${API_URL}/auth/cookie/login`, {
@@ -237,6 +248,15 @@ export default function AuthForm({ onAuth, mode: initialMode = "login" }: AuthFo
         
         localStorage.setItem("email", email);
         localStorage.setItem("token", "cookie-auth"); // Set a token for app compatibility
+        
+        // Set user in context for PostHog identification
+        const userWithId = {
+          id: email, // Use email as temporary ID until we get the real ID from backend
+          email: email,
+          name: email.split('@')[0],
+        };
+        setUser(userWithId);
+        
         onAuth("cookie-auth");
       }
     } catch (err: any) {

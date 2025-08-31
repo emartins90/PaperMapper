@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { Edit, Trash2 } from "lucide-react";
 import CookieSettings from "./cookies-consent/CookieSettings";
+import { useUser } from "@/contexts/UserContext";
 import Link from "next/link";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -39,6 +40,7 @@ const TABS = [
 
 export default function AccountSettings({ open, onOpenChange }: AccountSettingsProps) {
   const router = useRouter();
+  const { setUser } = useUser();
   const [customOptions, setCustomOptions] = useState<any[]>([]);
   const [loadingOptions, setLoadingOptions] = useState(false);
   const [deletingId, setDeletingId] = useState<number | null>(null);
@@ -334,6 +336,9 @@ export default function AccountSettings({ open, onOpenChange }: AccountSettingsP
     document.cookie = "auth_token_prod=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
     document.cookie = "auth_token_dev=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
     
+    // Reset PostHog user data
+    setUser(null);
+    
     onOpenChange(false);
     router.push("/");
   };
@@ -350,6 +355,10 @@ export default function AccountSettings({ open, onOpenChange }: AccountSettingsP
       if (res.ok) {
         localStorage.removeItem("token");
         localStorage.removeItem("email");
+        
+        // Reset PostHog user data
+        setUser(null);
+        
         onOpenChange(false);
         router.push("/");
         toast.success("Your account has been deleted successfully.");
