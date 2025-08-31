@@ -28,8 +28,8 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        <CookieConsentProvider>
-          <UserProvider>
+        <UserProvider>
+          <CookieConsentProvider>
             <Toaster richColors position="top-center" offset={100} />
             <div style={{ position: "relative", minHeight: "100vh" }}>
               {/* Main page content */}
@@ -37,8 +37,8 @@ export default function RootLayout({
                 {children}
               </div>
             </div>
-          </UserProvider>
-        </CookieConsentProvider>
+          </CookieConsentProvider>
+        </UserProvider>
       </body>
     </html>
   );

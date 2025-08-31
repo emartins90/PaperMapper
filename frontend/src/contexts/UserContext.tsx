@@ -19,7 +19,12 @@ const UserContext = createContext<UserContextType | undefined>(undefined);
 export function useUser() {
   const context = useContext(UserContext);
   if (context === undefined) {
-    throw new Error('useUser must be used within a UserProvider');
+    // Return a default context instead of throwing error
+    return {
+      user: null,
+      setUser: () => {},
+      isLoading: false,
+    };
   }
   return context;
 }
@@ -71,17 +76,21 @@ export function UserProvider({ children }: UserProviderProps) {
 
   // Handle user identification with PostHog
   useEffect(() => {
-    if (user) {
-      // Check cookie consent before identifying user
-      const consent = localStorage.getItem('cookie-consent');
-      if (consent === 'accepted') {
-        posthog.identify(user.id, {
-          email: user.email,
-          name: user.name,
-        });
-        console.log('User identified in PostHog:', user.id);
-      } else {
-        console.log('User not identified - no analytics consent');
+    if (user && typeof posthog !== 'undefined') {
+      try {
+        // Check cookie consent before identifying user
+        const consent = localStorage.getItem('cookie-consent');
+        if (consent === 'accepted') {
+          posthog.identify(user.id, {
+            email: user.email,
+            name: user.name,
+          });
+          console.log('User identified in PostHog:', user.id);
+        } else {
+          console.log('User not identified - no analytics consent');
+        }
+      } catch (error) {
+        console.error('Error identifying user in PostHog:', error);
       }
     }
   }, [user]);
@@ -90,9 +99,13 @@ export function UserProvider({ children }: UserProviderProps) {
     setUser(newUser);
     
     // If user is being cleared (logout), reset PostHog
-    if (!newUser) {
-      posthog.reset(true); // Reset device_id too
-      console.log('User reset in PostHog');
+    if (!newUser && typeof posthog !== 'undefined') {
+      try {
+        posthog.reset(true); // Reset device_id too
+        console.log('User reset in PostHog');
+      } catch (error) {
+        console.error('Error resetting PostHog:', error);
+      }
     }
   };
 
