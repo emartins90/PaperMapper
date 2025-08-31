@@ -63,12 +63,14 @@ export default function CookieConsentProvider({ children }: CookieConsentProvide
       posthog.opt_in_capturing();
       
       // If user is logged in, identify them in PostHog
-      if (user) {
+      if (user && user.id !== user.email) {
         posthog.identify(user.id, {
           email: user.email,
           name: user.name,
         });
         console.log('User identified in PostHog after consent change:', user.id);
+      } else if (user) {
+        console.log('Skipping PostHog identification after consent change - waiting for real user ID');
       }
     } else {
       posthog.opt_out_capturing();
