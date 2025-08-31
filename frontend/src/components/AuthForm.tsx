@@ -214,8 +214,9 @@ export default function AuthForm({ onAuth, mode: initialMode = "login" }: AuthFo
         localStorage.setItem("token", "cookie-auth");
         
         // Set user in context for PostHog identification
+        // We'll use email temporarily, but UserContext will fetch the real ID from backend
         const userWithId = {
-          id: email, // Use email as temporary ID until we get the real ID from backend
+          id: email, // Temporary ID - UserContext will replace with real ID
           email: email,
           name: email.split('@')[0],
         };
@@ -250,8 +251,9 @@ export default function AuthForm({ onAuth, mode: initialMode = "login" }: AuthFo
         localStorage.setItem("token", "cookie-auth"); // Set a token for app compatibility
         
         // Set user in context for PostHog identification
+        // We'll use email temporarily, but UserContext will fetch the real ID from backend
         const userWithId = {
-          id: email, // Use email as temporary ID until we get the real ID from backend
+          id: email, // Temporary ID - UserContext will replace with real ID
           email: email,
           name: email.split('@')[0],
         };

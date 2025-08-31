@@ -43,12 +43,20 @@ export function UserProvider({ children }: UserProviderProps) {
     const token = localStorage.getItem('token');
     
     if (email && token === 'cookie-auth') {
-      // We have a logged-in user, but we need to get their ID from the backend
+      // We have a logged-in user, fetch their real ID from the backend
       fetchUserData();
     } else {
       setIsLoading(false);
     }
   }, []);
+
+  // Re-fetch user data when user changes (to get real ID)
+  useEffect(() => {
+    if (user && user.id === user.email) {
+      // User ID is still the email (temporary), fetch real ID
+      fetchUserData();
+    }
+  }, [user]);
 
   // Fetch user data from backend
   const fetchUserData = async () => {
@@ -61,7 +69,7 @@ export function UserProvider({ children }: UserProviderProps) {
       if (response.ok) {
         const userData = await response.json();
         const userWithId: User = {
-          id: userData.id.toString(), // Convert to string for PostHog
+          id: userData.id.toString(), // Use actual user ID from database
           email: userData.email,
           name: userData.email.split('@')[0], // Use email prefix as name
         };
