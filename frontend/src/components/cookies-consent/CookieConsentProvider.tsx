@@ -3,6 +3,7 @@ import { createContext, useContext, ReactNode, useEffect } from 'react';
 import { useCookieConsent, ConsentStatus } from '@/hooks/useCookieConsent';
 import CookieConsent from './CookieConsent';
 import { posthog } from '@/lib/posthog';
+import { useUser } from '@/contexts/UserContext';
 
 interface CookieConsentContextType {
   consentStatus: ConsentStatus;
@@ -32,6 +33,7 @@ interface CookieConsentProviderProps {
 
 export default function CookieConsentProvider({ children }: CookieConsentProviderProps) {
   const cookieConsent = useCookieConsent();
+  const { user } = useUser();
 
   const handleAcceptAll = () => {
     cookieConsent.acceptAllCookies();
@@ -59,10 +61,19 @@ export default function CookieConsentProvider({ children }: CookieConsentProvide
   useEffect(() => {
     if (cookieConsent.consentStatus === 'accepted') {
       posthog.opt_in_capturing();
+      
+      // If user is logged in, identify them in PostHog
+      if (user) {
+        posthog.identify(user.id, {
+          email: user.email,
+          name: user.name,
+        });
+        console.log('User identified in PostHog after consent change:', user.id);
+      }
     } else {
       posthog.opt_out_capturing();
     }
-  }, [cookieConsent.consentStatus]);
+  }, [cookieConsent.consentStatus, user]);
 
   return (
     <CookieConsentContext.Provider value={{

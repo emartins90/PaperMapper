@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "sonner";
 import CookieConsentProvider from "@/components/cookies-consent/CookieConsentProvider";
+import { UserProvider } from "@/contexts/UserContext";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -27,15 +28,17 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        <CookieConsentProvider>
-          <Toaster richColors position="top-center" offset={100} />
-          <div style={{ position: "relative", minHeight: "100vh" }}>
-            {/* Main page content */}
-            <div>
-              {children}
+        <UserProvider>
+          <CookieConsentProvider>
+            <Toaster richColors position="top-center" offset={100} />
+            <div style={{ position: "relative", minHeight: "100vh" }}>
+              {/* Main page content */}
+              <div>
+                {children}
+              </div>
             </div>
-          </div>
-        </CookieConsentProvider>
+          </CookieConsentProvider>
+        </UserProvider>
       </body>
     </html>
   );
