@@ -1034,7 +1034,6 @@ export default function ProjectSelector({ token }: { token: string }) {
                                   <DropdownMenuItem 
                                     onClick={(e) => { 
                                       e.stopPropagation(); 
-                                      console.log('Starting status update for project:', project.id);
                                       handleStatusUpdate(project.id, "ready_to_write"); 
                                     }}
                                     disabled={updatingProjectId === project.id}

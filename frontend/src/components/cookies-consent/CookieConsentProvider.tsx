@@ -38,13 +38,11 @@ export default function CookieConsentProvider({ children }: CookieConsentProvide
   const handleAcceptAll = () => {
     cookieConsent.acceptAllCookies();
     posthog.opt_in_capturing(); // Enable PostHog analytics
-    console.log('All cookies accepted');
   };
 
   const handleAcceptEssential = () => {
     cookieConsent.acceptEssentialCookies();
     posthog.opt_out_capturing(); // Disable PostHog analytics for essential-only consent
-    console.log('Essential cookies accepted');
   };
 
   const handleDecline = () => {
@@ -54,7 +52,6 @@ export default function CookieConsentProvider({ children }: CookieConsentProvide
     document.cookie.split(";").forEach(function(c) { 
       document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/"); 
     });
-    console.log('Cookies declined');
   };
 
   // Handle consent changes after initial setup
@@ -68,9 +65,7 @@ export default function CookieConsentProvider({ children }: CookieConsentProvide
           email: user.email,
           name: user.name,
         });
-        console.log('User identified in PostHog after consent change:', user.id);
       } else if (user) {
-        console.log('Skipping PostHog identification after consent change - waiting for real user ID');
       }
     } else {
       posthog.opt_out_capturing();
