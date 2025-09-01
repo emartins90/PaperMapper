@@ -1,8 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
+import { usePostHog } from 'posthog-js/react';
+
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 export function useGuidedExperience() {
+  const posthog = usePostHog();
   const [guided, setGuided] = useState<boolean>(true);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -75,6 +78,13 @@ export function useGuidedExperience() {
       if (response.ok) {
         const data = await response.json();
         setGuided(data.guided);
+        
+      posthog.capture('guided_experience_toggled', {
+        enabled: newGuided,
+        user_id: posthog.get_distinct_id(),
+      });
+
+
       } else {
         setError('Failed to update guided experience setting');
         console.error('Failed to update guided experience setting');
