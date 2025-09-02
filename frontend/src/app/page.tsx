@@ -19,7 +19,7 @@ export default function Home() {
     setIsLoading(false);
 
     // Track page view
-    captureEvent('page_viewed', { page: 'home' });
+    // captureEvent('page_viewed', { page: 'home' });
 
     // Handle scroll for sticky nav
     const handleScroll = () => {
