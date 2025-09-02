@@ -45,6 +45,7 @@ function PostHogScript() {
             defaults: '2025-05-24',
             autocapture: true,
             person_profiles: 'identified_only',
+            advanced_enable_surveys: true, // Enable survey functionality
             // Only use cookieless mode if consent is NOT given
             cookieless_mode: hasConsent ? 'off' : 'always',
             persistence: hasConsent ? 'localStorage+cookie' : 'memory'
