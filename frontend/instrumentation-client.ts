@@ -7,8 +7,14 @@ if (process.env.NEXT_PUBLIC_POSTHOG_KEY && process.env.NEXT_PUBLIC_POSTHOG_HOST)
     api_host: process.env.NEXT_PUBLIC_POSTHOG_HOST,
     defaults: '2025-05-24',
     autocapture: true,
-    cookieless_mode: 'on_reject'
+    cookieless_mode: 'on_reject',
+    person_profiles: 'identified_only' 
   });
+
+  // Expose PostHog to window for survey functionality (like the HTML snippet does)
+  if (typeof window !== 'undefined') {
+    (window as any).posthog = posthog;
+  }
 
   // Check existing consent and apply it
   const checkExistingConsent = () => {
