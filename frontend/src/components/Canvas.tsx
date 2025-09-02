@@ -29,6 +29,7 @@ import { SidePanelBase } from "../components/side-panel";
 import { FullscreenFileViewer } from "./canvas-add-files/FullscreenFileViewer";
 import { uploadFilesForCardType, CardType } from "../components/useFileUploadHandler";
 import { useGuidedExperience } from "./useGuidedExperience";
+import { captureEvent } from "../lib/posthog";
 
 
 // Ghost node component
@@ -139,6 +140,9 @@ export default function CanvasInner({ projectId }: CanvasProps) {
 
   // Mobile device detection
   const [isMobile, setIsMobile] = useState(false);
+
+  // Track survey trigger for 5th card
+  const [surveyTriggered, setSurveyTriggered] = useState(false);
 
   // Check if device is mobile
   useEffect(() => {
@@ -2351,6 +2355,27 @@ export default function CanvasInner({ projectId }: CanvasProps) {
     });
     window.dispatchEvent(event);
   }, [nodes]);
+
+  // Track when user reaches 5th card for survey trigger
+  useEffect(() => {
+    if (!surveyTriggered && projectId) {
+      // Count only saved cards (those with integer IDs)
+      const savedCards = nodes.filter(n => /^\d+$/.test(n.id));
+      
+      if (savedCards.length >= 5) {
+        setSurveyTriggered(true);
+        // Trigger PostHog event for survey
+        captureEvent('survey_trigger_5_cards', {
+          project_id: projectId,
+          total_cards: savedCards.length,
+          card_types: savedCards.reduce((acc, node) => {
+            acc[node.type || 'unknown'] = (acc[node.type || 'unknown'] || 0) + 1;
+            return acc;
+          }, {} as Record<string, number>)
+        });
+      }
+    }
+  }, [nodes, surveyTriggered, projectId]);
 
   // Helper to get filename from a file URL
   function getFileNameFromUrl(url: string | null | undefined): string {
