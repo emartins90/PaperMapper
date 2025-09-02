@@ -1,5 +1,7 @@
 import posthog from 'posthog-js'
 
+// DISABLED: Now using HTML snippet in layout.tsx for proper survey support
+/*
 // Only initialize PostHog if environment variables are available
 if (process.env.NEXT_PUBLIC_POSTHOG_KEY && process.env.NEXT_PUBLIC_POSTHOG_HOST) {
   // Always initialize PostHog with cookieless mode
@@ -32,4 +34,5 @@ if (process.env.NEXT_PUBLIC_POSTHOG_KEY && process.env.NEXT_PUBLIC_POSTHOG_HOST)
   checkExistingConsent();
 } else {
   console.log('PostHog environment variables not found - skipping initialization');
-} 
+}
+*/ 
