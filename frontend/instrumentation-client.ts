@@ -8,7 +8,8 @@ if (process.env.NEXT_PUBLIC_POSTHOG_KEY && process.env.NEXT_PUBLIC_POSTHOG_HOST)
     defaults: '2025-05-24',
     autocapture: true,
     cookieless_mode: 'on_reject',
-    person_profiles: 'identified_only' 
+    person_profiles: 'identified_only', // Required for surveys
+    advanced_enable_surveys: true // Enable survey functionality
   });
 
   // Expose PostHog to window for survey functionality (like the HTML snippet does)
