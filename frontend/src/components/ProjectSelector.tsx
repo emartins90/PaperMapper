@@ -16,7 +16,8 @@ import {
   LuChevronUp,
   LuChevronDown,
   LuNotebookPen,
-  LuX
+  LuX,
+  LuMessageSquare
 } from "react-icons/lu";
 import { 
   FaFilePdf, 
@@ -502,15 +503,26 @@ export default function ProjectSelector({ token }: { token: string }) {
                   <Logo width={28} height={28} variant="plain" />
                   <h1 className="text-xl font-semibold text-gray-900">Paper Thread</h1>
                 </div>
-            <Button
-              onClick={() => setIsAccountModalOpen(true)}
-              variant="outline"
-              size="sm"
-              className="flex items-center space-x-2"
-            >
-              <LuUser className="w-4 h-4" />
-              <span>My Account</span>
-            </Button>
+            <div className="flex items-center space-x-3">
+              {/* Beta Feedback Button */}
+                                            <Button
+                 size="sm"
+                 className="flex items-center text-insight-700 space-x-2 ph-no-capture bg-insight-100 hover:bg-insight-200"
+                 data-attr="feedback-button"
+               >
+                 <LuMessageSquare className="w-4 h-4 text-insight-700" />
+                 <span>Share Feedback</span>
+               </Button>
+              <Button
+                onClick={() => setIsAccountModalOpen(true)}
+                variant="outline"
+                size="sm"
+                className="flex items-center space-x-2"
+              >
+                <LuUser className="w-4 h-4" />
+                <span>My Account</span>
+              </Button>
+            </div>
           </div>
         </div>
       </div>

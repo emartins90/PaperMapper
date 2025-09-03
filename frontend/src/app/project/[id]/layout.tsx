@@ -14,13 +14,14 @@ import {
   BreadcrumbSeparator,
 } from "../../../components/ui/breadcrumb";
 import MenuDropdown from "../../../components/MenuDropdown";
-import { LuChevronLeft } from "react-icons/lu";
+import { LuChevronLeft, LuMessageSquare } from "react-icons/lu";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "../../../components/ui/tooltip";
+import { Button } from '@/components/ui/button';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -232,7 +233,19 @@ export default function ProjectLayout({ children }: { children: React.ReactNode 
           </div>
         </div>
         {/* Account button and menu - Hidden on mobile */}
-        {!isMobile && <MenuDropdown />}
+        {!isMobile && (
+          <div className="flex items-center space-x-3">
+            {/* Beta Feedback Button */}
+            <Button
+              className="flex items-center text-insight-700 space-x-2 ph-no-capture bg-insight-100 hover:bg-insight-200 font-medium"
+              data-attr="feedback-button"
+            >
+              <LuMessageSquare className="w-4 h-4 text-insight-700" />
+              <span>Share Feedback</span>
+            </Button>
+            <MenuDropdown />
+          </div>
+        )}
       </div>
       
       {/* Project Navigation with Card List - Hidden on mobile */}
