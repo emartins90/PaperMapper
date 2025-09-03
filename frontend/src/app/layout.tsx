@@ -42,16 +42,15 @@ function PostHogScript() {
           console.log('[DEBUG] Consent status:', consent);
           console.log('[DEBUG] Has consent:', hasConsent);
           
-          // Initialize PostHog with the correct mode from the start
-          console.log('[DEBUG] Initializing PostHog with cookieless_mode:', hasConsent ? 'off' : 'always');
+          // Initialize PostHog with persistence-based approach (no cookieless_mode)
+          console.log('[DEBUG] Initializing PostHog with persistence:', hasConsent ? 'localStorage+cookie' : 'memory');
           posthog.init('${posthogKey}', {
             api_host: '${posthogHost}',
             defaults: '2025-05-24',
             autocapture: true,
             person_profiles: 'identified_only',
             advanced_enable_surveys: true, // Enable survey functionality
-            // Only use cookieless mode if consent is NOT given
-            cookieless_mode: hasConsent ? 'off' : 'always',
+            // Use persistence instead of cookieless_mode
             persistence: hasConsent ? 'localStorage+cookie' : 'memory',
             loaded: function(posthog) {
               console.log('[DEBUG] PostHog loaded callback fired');
