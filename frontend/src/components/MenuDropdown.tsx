@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import AccountSettings from "@/components/AccountSettings";
+import { LuUser } from "react-icons/lu";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -59,11 +60,12 @@ export default function MenuDropdown({ large = false }: { large?: boolean }) {
     <>
       <Button
         variant="outline"
-        className={large ? "font-medium text-lg px-6 py-3" : "font-medium"}
+        className={large ? "font-medium text-lg px-6 py-3 flex items-center space-x-2" : "font-medium flex items-center space-x-2"}
         style={large ? { minHeight: 48, minWidth: 80 } : {}}
         onClick={() => setAccountOpen(true)}
       >
-        My Account
+        <LuUser className="w-4 h-4" />
+        <span>My Account</span>
       </Button>
       <AccountSettings open={accountOpen} onOpenChange={setAccountOpen} />
     </>
