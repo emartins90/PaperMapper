@@ -9,6 +9,10 @@ import CardListPanel from "./CardListPanel";
 import SourceListPanel from "./SourceListPanel";
 import ProjectInfoModal from "./ProjectInfoModal";
 import { toast } from "sonner";
+import { useFeatureFlagEnabled } from 'posthog-js/react';
+import { useRouter, usePathname } from 'next/navigation';
+
+
 
 interface ProjectNavProps {
   nodes: any[];
@@ -17,12 +21,21 @@ interface ProjectNavProps {
 }
 
 export default function ProjectNav({ nodes: initialNodes, onCardClick, projectId }: ProjectNavProps) {
-  const [activeTab, setActiveTab] = useState<"gather" | "outline">("gather");
   const [showCardList, setShowCardList] = useState(false);
   const [showSourceList, setShowSourceList] = useState(false);
   const [showProjectInfo, setShowProjectInfo] = useState(false);
   const [nodes, setNodes] = useState<any[]>(initialNodes);
   const [selectedCardId, setSelectedCardId] = useState<string | undefined>();
+
+  //const outlineFlagEnabled = useFeatureFlagEnabled('outline_tab');
+  const outlineFlagEnabled = true
+  
+  const router = useRouter();
+  const pathname = usePathname();
+
+  // Determine active tab based on current route
+  const activeTab = pathname?.includes('/outline') ? 'outline' : 'gather';
+
 
   // Listen for nodes updates from Canvas
   useEffect(() => {
@@ -39,12 +52,25 @@ export default function ProjectNav({ nodes: initialNodes, onCardClick, projectId
 
   const handleTabChange = (tab: "gather" | "outline") => {
     if (tab === "outline") {
-      toast.info("The Outline feature is coming soon! Stay tuned for updates.", {
-        duration: 3000,
-      });
-      return; // Don't actually change the tab
+      if (!outlineFlagEnabled) {
+        toast.info("The Outline feature is coming soon! Stay tuned for updates.", {
+          duration: 3000,
+        });
+        return; // Don't actually change the tab
+      }
+      // If flag is enabled, navigate to outline page
+      if (projectId) {
+        router.push(`/project/${projectId}/outline`);
+      }
+      return;
     }
-    setActiveTab(tab);
+    
+    if (tab === "gather") {
+      // Navigate back to main project page
+      if (projectId) {
+        router.push(`/project/${projectId}`);
+      }
+    }
   };
 
   const handleCardListClick = () => {
