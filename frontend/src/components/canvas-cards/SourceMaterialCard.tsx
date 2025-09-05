@@ -11,8 +11,8 @@ type SourceMaterialCardProps = {
     tags: string[] | undefined;
     summary?: string;
     summaryFormatted?: string;
-    text?: string; // Add text property for full content
-    contentFormatted?: string; // Add contentFormatted property for formatted full content
+    text?: string;
+    contentFormatted?: string;
     thesisSupport: string;
     source: string;
     credibility: string;
@@ -24,15 +24,20 @@ type SourceMaterialCardProps = {
     onFileClick?: (fileUrl: string, fileType: 'image' | 'pdf' | 'other' | 'audio') => void;
     isDeleting?: boolean;
     isSelected?: boolean;
-    cardId?: string; // Add cardId to identify this card
-    panelJustOpened?: boolean; // Add panelJustOpened to prevent hover flicker
-    actionButton?: React.ReactNode; // Add actionButton prop
+    cardId?: string;
+    panelJustOpened?: boolean;
+    actionButton?: React.ReactNode;
+    // New outline-specific props
+    isCondensed?: boolean;
+    isDisabled?: boolean;
+    isInStructure?: boolean;
   };
   showHandles?: boolean;
   width?: string;
-  openCard?: { id: string; type: string } | null; // Add openCard prop
-  showArrow?: boolean; // Add showArrow prop to control arrow visibility
-  showShadow?: boolean; // Add showShadow prop to control card shadow and hover effects
+  openCard?: { id: string; type: string } | null;
+  showArrow?: boolean;
+  showShadow?: boolean;
+  showIcon?: boolean; // Add this prop
 };
 
 const handleStyle = {
@@ -43,10 +48,20 @@ const handleStyle = {
   borderRadius: '50%',
 };
 
-export default function SourceMaterialCard({ data, showHandles = true, width = 'w-96', openCard, showArrow = true, showShadow = true }: SourceMaterialCardProps) {
+export default function SourceMaterialCard({ data, showHandles = true, width = 'w-96', openCard, showArrow = true, showShadow = true, showIcon = true }: SourceMaterialCardProps) {
   const onFileClick = data.onFileClick;
+  
   // Ensure tags is always an array
   const tags = Array.isArray(data.tags) ? data.tags : (data.tags ? [data.tags] : []);
+
+  // New outline-specific logic - default to full view (false) for gather view
+  const showCondensed = data.isCondensed ?? false; // Default to full view
+  const isDisabled = data.isDisabled ?? false;
+  const isInStructure = data.isInStructure ?? false;
+  
+  // Adjust width and shadow based on context
+  const effectiveWidth = isInStructure ? 'w-full' : width;
+  const effectiveShadow = isInStructure ? false : showShadow;
 
   // Get argument type color
   const getArgumentTypeColor = (argumentType: string) => {
@@ -66,11 +81,12 @@ export default function SourceMaterialCard({ data, showHandles = true, width = '
 
   return (
     <div 
-      className={`rounded-xl border-2 bg-white p-4 ${width} relative transition-all duration-200 cursor-pointer
-        ${showShadow ? 'shadow-md' : ''}
+      className={`rounded-xl border-2 bg-white ${showCondensed ? 'p-2.75' : 'p-4'} ${effectiveWidth} relative transition-all duration-200 cursor-pointer
+        ${effectiveShadow ? 'shadow-md' : ''}
+        ${isDisabled ? 'opacity-50 pointer-events-none' : ''}
         ${data.isSelected 
-          ? `border-source-400 ${showShadow ? 'shadow-lg shadow-source-200/50' : ''}` 
-          : `border-source-200 hover:border-source-300 ${showShadow ? 'hover:shadow-lg' : ''}`
+          ? `border-source-400 ${effectiveShadow ? 'shadow-lg shadow-source-200/50' : ''}` 
+          : `border-source-200 hover:border-source-300 ${effectiveShadow ? 'hover:shadow-lg' : ''}`
         }`}
       onClick={data.onSelect}
     >
@@ -94,9 +110,9 @@ export default function SourceMaterialCard({ data, showHandles = true, width = '
         </>
       )}
       
-      <div className="flex items-center justify-between mb-2">
+      <div className={`flex items-center justify-between ${showCondensed ? 'mb-1!' : 'mb-2'}`}>
         <div className="text-source-700 flex items-center gap-1 min-w-0 flex-1">
-          <LuBookOpen className="text-source-400 flex-shrink-0" size={22} />
+          {showIcon && <LuBookOpen className="text-source-400 flex-shrink-0" size={22} />}
           <div className="truncate">
             <span className="font-bold">Source Material</span>{data.sourceFunction ? <span className="font-normal"> : {data.sourceFunction}</span> : ''}
           </div>
@@ -112,8 +128,8 @@ export default function SourceMaterialCard({ data, showHandles = true, width = '
         )}
       </div>
       
-      {/* Only show tags section if there are tags and not '(skipped)' */}
-      {tags.length > 0 && tags[0] !== '(skipped)' && (
+      {/* Only show tags section if there are tags and not '(skipped)' - and only in full view */}
+      {!showCondensed && tags.length > 0 && tags[0] !== '(skipped)' && (
         <div className="flex flex-wrap gap-2 mb-2">
           {tags.map((tag: string) => (
             tag && tag !== '(skipped)' && <Tag key={tag} color="primary">{tag}</Tag>
@@ -121,51 +137,54 @@ export default function SourceMaterialCard({ data, showHandles = true, width = '
         </div>
       )}
       
-      {/* Show summary if available, otherwise fall back to full content */}
-      {(data.summary && data.summary.trim() !== '' && data.summary !== '(skipped)') ? (
+      {/* Show summary if available, otherwise fall back to full content - truncated in condensed view */}
+              {(data.summary && typeof data.summary === 'string' && data.summary.trim() !== '' && data.summary !== '(skipped)') ? (
         <div 
-          className="rich-text-display text-black mb-4 break-words" 
+          className={`rich-text-display text-black mb-4 break-words ${showCondensed ? 'line-clamp-2 mb-1!' : 'mb-4'}`}
           style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}
           dangerouslySetInnerHTML={{ __html: data.summaryFormatted || data.summary }}
         />
-      ) : (data.text && data.text.trim() !== '' && data.text !== '(skipped)') ? (
+              ) : (data.text && typeof data.text === 'string' && data.text.trim() !== '' && data.text !== '(skipped)') ? (
         <div 
-          className="rich-text-display text-black mb-4 break-words" 
+          className={`rich-text-display text-black mb-4 break-words ${showCondensed ? 'line-clamp-2 mb-1!' : 'mb-4'}`}
           style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}
           dangerouslySetInnerHTML={{ __html: data.contentFormatted || data.text }}
         />
       ) : null}
 
-      {/* Render uploaded files (images as thumbnails, others as file names) */}
-      {Array.isArray((data as any).files) && (data as any).files.length > 0 && (
+      {/* Render uploaded files (images as thumbnails, others as file names) - only in full view */}
+      {!showCondensed && Array.isArray((data as any).files) && (data as any).files.length > 0 && (
         <FileListDisplay files={data.files ?? []} fileEntries={data.fileEntries} onFileClick={onFileClick} showFilesLabel={true} cardType="source" />
       )}
 
-      {/* Only show argument type chip if one is selected and not '(skipped)' */}
-      {data.thesisSupport && data.thesisSupport.trim() !== '' && data.thesisSupport !== '(skipped)' && (
+      {/* Only show argument type chip if one is selected and not '(skipped)' - and only in full view */}
+      {!showCondensed && data.thesisSupport && typeof data.thesisSupport === 'string' && data.thesisSupport.trim() !== '' && data.thesisSupport !== '(skipped)' && (
         <Tag color={getArgumentTypeColor(data.thesisSupport)} className="mb-2 inline-block">
           {data.thesisSupport}
         </Tag>
       )}
       
-      <div className="mt-2 text-xs text-gray-700">
-        <span className="font-bold">Source:</span> <span className="break-words" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>
-          {(data.source && data.source.trim() !== '' && data.source !== '(skipped)') ? (
-            <TextWithLinks text={data.source} />
-          ) : (
-            <span className="text-gray-500">No source provided</span>
+      {/* Source and credibility info - only in full view */}
+      {!showCondensed && (
+        <div className="mt-2 text-xs text-gray-700">
+          <span className="font-bold">Source:</span> <span className="break-words" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>
+            {(data.source && typeof data.source === 'string' && data.source.trim() !== '' && data.source !== '(skipped)') ? (
+              <TextWithLinks text={data.source} />
+            ) : (
+              <span className="text-gray-500">No source provided</span>
+            )}
+          </span>
+          {data.credibility && typeof data.credibility === 'string' && data.credibility.trim() !== '' && data.credibility !== '(skipped)' && (
+            <>
+              <br />
+              <span className="font-bold">Credibility:</span> {data.credibility}
+            </>
           )}
-        </span>
-        {data.credibility && data.credibility.trim() !== '' && data.credibility !== '(skipped)' && (
-          <>
-            <br />
-            <span className="font-bold">Credibility:</span> {data.credibility}
-          </>
-        )}
-      </div>
+        </div>
+      )}
       
-      {/* Action button */}
-      {data.actionButton && (
+      {/* Action button - only in full view */}
+      {!showCondensed && data.actionButton && (
         <div className="mt-1 flex justify-end">
           {data.actionButton}
         </div>

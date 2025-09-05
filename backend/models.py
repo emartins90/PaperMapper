@@ -40,6 +40,8 @@ class Project(Base):
     insights = relationship("Insight", back_populates="project", cascade="all, delete-orphan")
     thoughts = relationship("Thought", back_populates="project", cascade="all, delete-orphan")
     claims = relationship("Claim", back_populates="project", cascade="all, delete-orphan")
+    outline_sections = relationship("OutlineSection", back_populates="project", cascade="all, delete-orphan")
+    outline_card_placements = relationship("OutlineCardPlacement", back_populates="project", cascade="all, delete-orphan")
 
 class Citation(Base):
     __tablename__ = "citations"
@@ -80,6 +82,7 @@ class Card(Base):
     project = relationship("Project", back_populates="cards")
     outgoing_links = relationship("CardLink", back_populates="source_card", foreign_keys='CardLink.source_card_id')
     incoming_links = relationship("CardLink", back_populates="target_card", foreign_keys='CardLink.target_card_id')
+    outline_placement = relationship("OutlineCardPlacement", back_populates="card", cascade="all, delete-orphan")
 
 class CardLink(Base):
     __tablename__ = "card_links"
@@ -159,3 +162,34 @@ class Claim(Base):
     files = Column(String, nullable=True)  # Store as comma-separated for now
     file_filenames = Column(String, nullable=True)  # Store original filenames as comma-separated
     project = relationship("Project", back_populates="claims")
+
+class OutlineSection(Base):
+    __tablename__ = "outline_sections"
+    id = Column(Integer, primary_key=True, index=True)
+    project_id = Column(Integer, ForeignKey("projects.id"))
+    title = Column(String, nullable=False)
+    order_index = Column(Integer, nullable=False)  # For ordering sections
+    parent_section_id = Column(Integer, ForeignKey("outline_sections.id"), nullable=True)  # For subsections
+    section_number = Column(String, nullable=True)  # e.g., "I", "II", "A", "B" - calculated and stored
+    time_created = Column(DateTime, default=func.now(), nullable=False)
+    time_updated = Column(DateTime, default=func.now(), onupdate=func.now(), nullable=False)
+    
+    # Relationships
+    project = relationship("Project", back_populates="outline_sections")
+    parent_section = relationship("OutlineSection", remote_side=[id], back_populates="subsections")
+    subsections = relationship("OutlineSection", back_populates="parent_section", cascade="all, delete-orphan")
+    card_placements = relationship("OutlineCardPlacement", back_populates="section", cascade="all, delete-orphan")
+
+class OutlineCardPlacement(Base):
+    __tablename__ = "outline_card_placements"
+    id = Column(Integer, primary_key=True, index=True)
+    project_id = Column(Integer, ForeignKey("projects.id"))
+    section_id = Column(Integer, ForeignKey("outline_sections.id"))
+    card_id = Column(Integer, ForeignKey("cards.id"), unique=True)  # UNIQUE constraint for single placement
+    order_index = Column(Integer, nullable=False)  # For ordering cards within a section
+    time_created = Column(DateTime, default=func.now(), nullable=False)
+    
+    # Relationships
+    project = relationship("Project", back_populates="outline_card_placements")
+    section = relationship("OutlineSection", back_populates="card_placements")
+    card = relationship("Card", back_populates="outline_placement") 

@@ -240,3 +240,54 @@ class ClaimUpdate(BaseModel):
     files: Optional[str] = None
     file_filenames: Optional[str] = None
     tags: Optional[List[str]] = None
+
+# Outline schemas
+class OutlineSectionBase(BaseModel):
+    title: str
+    order_index: int
+    parent_section_id: Optional[int] = None
+    section_number: Optional[str] = None
+
+class OutlineSectionCreate(OutlineSectionBase):
+    project_id: int
+
+class OutlineSectionUpdate(BaseModel):
+    title: Optional[str] = None
+    order_index: Optional[int] = None
+    parent_section_id: Optional[int] = None
+    section_number: Optional[str] = None
+
+class OutlineSection(OutlineSectionBase):
+    id: int
+    project_id: int
+    time_created: datetime
+    time_updated: datetime
+    subsections: List['OutlineSection'] = []
+    card_placements: List['OutlineCardPlacement'] = []
+    
+    class Config:
+        orm_mode = True
+
+class OutlineCardPlacementBase(BaseModel):
+    section_id: int
+    card_id: int
+    order_index: int
+
+class OutlineCardPlacementCreate(OutlineCardPlacementBase):
+    project_id: int
+
+class OutlineCardPlacementUpdate(BaseModel):
+    section_id: Optional[int] = None
+    order_index: Optional[int] = None
+
+class OutlineCardPlacement(OutlineCardPlacementBase):
+    id: int
+    project_id: int
+    time_created: datetime
+    card: Optional[dict] = None  # Will be populated with card data
+    
+    class Config:
+        orm_mode = True
+
+# Update forward references
+OutlineSection.model_rebuild()

@@ -101,7 +101,13 @@ export default function ProjectNav({ nodes: initialNodes, onCardClick, projectId
       <div
         className="absolute top-5 left-1/2 -translate-x-1/2 z-30 bg-white px-2 py-2 rounded-xl shadow-lg w-fit flex items-center"
       >
+        {/* Tab Switcher - first */}
+        <TabSwitcher activeTab={activeTab} onTabChange={handleTabChange} />
         
+        {/* Divider after tab switcher */}
+        <div className="self-stretch w-px bg-gray-200 mx-4" />
+        
+        {/* Other buttons */}
         <div className="flex gap-0">
           <Button 
             variant="ghost" 
@@ -127,21 +133,22 @@ export default function ProjectNav({ nodes: initialNodes, onCardClick, projectId
           >
             <LuBookOpen size={16} />Source List
           </Button>
-          <Button 
-            variant="ghost" 
-            className="text-foreground [&>svg]:text-foreground hover:bg-gray-100" 
-            onMouseDown={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              handleCardListClick();
-            }}
-            style={{ position: 'relative', zIndex: 9999 }}
-          >
-            <LuList size={16} />Card List
-          </Button>
+          {/* Only show Card List button when not on outline page */}
+          {!pathname?.includes('/outline') && (
+            <Button 
+              variant="ghost" 
+              className="text-foreground [&>svg]:text-foreground hover:bg-gray-100" 
+              onMouseDown={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                handleCardListClick();
+              }}
+              style={{ position: 'relative', zIndex: 9999 }}
+            >
+              <LuList size={16} />Card List
+            </Button>
+          )}
         </div>
-        <div className="self-stretch w-px bg-gray-200 mx-4" />
-        <TabSwitcher activeTab={activeTab} onTabChange={handleTabChange} />
       </div>
 
       {showCardList && (
