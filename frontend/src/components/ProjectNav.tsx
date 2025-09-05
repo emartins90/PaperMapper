@@ -27,8 +27,8 @@ export default function ProjectNav({ nodes: initialNodes, onCardClick, projectId
   const [nodes, setNodes] = useState<any[]>(initialNodes);
   const [selectedCardId, setSelectedCardId] = useState<string | undefined>();
 
-  //const outlineFlagEnabled = useFeatureFlagEnabled('outline_tab');
-  const outlineFlagEnabled = true
+  const outlineFlagEnabled = useFeatureFlagEnabled('outline_tab');
+  //const outlineFlagEnabled = true
   
   const router = useRouter();
   const pathname = usePathname();

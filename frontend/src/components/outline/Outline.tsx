@@ -90,7 +90,7 @@ export default function Outline({ projectId }: OutlineProps) {
     })
   );
 
-  // Load sections (moved from OutlineStructure)
+  // Load sections 
   useEffect(() => {
     const loadSections = async () => {
       try {
@@ -101,6 +101,11 @@ export default function Outline({ projectId }: OutlineProps) {
         if (response.ok) {
           const data = await response.json();
           setSections(data);
+          
+          // Auto-create default sections if none exist
+          if (data.length === 0) {
+            await createDefaultSections();
+          }
         }
       } catch (error) {
         console.error("Error loading outline sections:", error);
@@ -111,6 +116,61 @@ export default function Outline({ projectId }: OutlineProps) {
 
     loadSections();
   }, [projectId]);
+
+  const createDefaultSections = async () => {
+    try {
+      // Create first section
+      const firstSectionData = {
+        project_id: projectId,
+        title: "New Section",
+        order_index: 0,
+        section_number: "I"
+      };
+
+      const firstSectionRes = await fetch(`${API_URL}/outline_sections/`, {
+        method: "POST",
+        headers: { 
+          "Content-Type": "application/json",
+          "Accept": "application/json"
+        },
+        credentials: "include",
+        body: JSON.stringify(firstSectionData)
+      });
+
+      if (firstSectionRes.ok) {
+        const createdSection = await firstSectionRes.json();
+        
+        // Create subsection
+        const subsectionData = {
+          project_id: projectId,
+          title: "New Subsection",
+          order_index: 0,
+          parent_section_id: createdSection.id,
+          section_number: "A"
+        };
+
+        const subsectionRes = await fetch(`${API_URL}/outline_sections/`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify(subsectionData)
+        });
+
+        if (subsectionRes.ok) {
+          const createdSubsection = await subsectionRes.json();
+          
+          // Update local state
+          setSections([{
+            ...createdSection,
+            subsections: [createdSubsection],
+            card_placements: []
+          }]);
+        }
+      }
+    } catch (error) {
+      console.error("Error creating default sections:", error);
+    }
+  };
 
   // Smart collision detection for different drag types
   const smartCollisionDetection: CollisionDetection = (args) => {
