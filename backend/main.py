@@ -4,8 +4,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional
 from database import SessionLocal, engine, Base, DATABASE_URL, SyncSessionLocal
 import models, schemas
-from models import User, Project, PasswordResetCode
-from schemas import UserRead, UserCreate, UserUpdate, Project as ProjectSchema, ProjectCreate, CardUpdate
+from models import User, Project, PasswordResetCode, OutlineSection, OutlineCardPlacement
+from schemas import UserRead, UserCreate, UserUpdate, Project as ProjectSchema, ProjectCreate, CardUpdate, OutlineSection, OutlineSectionCreate, OutlineSectionUpdate, OutlineCardPlacement, OutlineCardPlacementCreate, OutlineCardPlacementUpdate
 from user_db import get_user_db
 from fastapi_users import FastAPIUsers
 from fastapi_users_db_sqlalchemy import SQLAlchemyUserDatabase
@@ -27,7 +27,7 @@ from fastapi.responses import StreamingResponse
 
 import uuid
 import os
-from sqlalchemy import select
+from sqlalchemy import select, update
 from pathlib import Path
 import crud
 import random
@@ -2001,6 +2001,532 @@ async def delete_user(current_user: models.User = Depends(get_current_user), db:
         db.rollback()
         print(f"[DELETE] Error deleting user {current_user.id}: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to delete user: {str(e)}")
+
+# --- Outline Endpoints ---
+@app.post("/outline_sections/", response_model=schemas.OutlineSection)
+async def create_outline_section(section: schemas.OutlineSectionCreate, db: AsyncSession = Depends(get_db())):
+    """Create a new outline section"""
+    db_section = models.OutlineSection(**section.dict())
+    db.add(db_section)
+    await db.commit()
+    await db.refresh(db_section)
+    
+    # Return a properly serialized response instead of the SQLAlchemy object
+    return {
+        "id": db_section.id,
+        "project_id": db_section.project_id,
+        "title": db_section.title,
+        "order_index": db_section.order_index,
+        "parent_section_id": db_section.parent_section_id,
+        "section_number": db_section.section_number,
+        "time_created": db_section.time_created,
+        "time_updated": db_section.time_updated,
+        "subsections": [],
+        "card_placements": []
+    }
+
+@app.get("/outline_sections/", response_model=List[schemas.OutlineSection])
+async def get_outline_sections(project_id: int, db: AsyncSession = Depends(get_db())):
+    """Get all outline sections for a project"""
+    result = await db.execute(
+        select(models.OutlineSection)
+        .where(models.OutlineSection.project_id == project_id)
+        .where(models.OutlineSection.parent_section_id.is_(None))  # Only top-level sections
+        .order_by(models.OutlineSection.order_index)
+    )
+    sections = result.scalars().all()
+    
+    # Build response data manually instead of setting relationship attributes
+    async def load_card_placements_for_section(section_id: int):
+        """Helper function to load card placements with full card data for a section"""
+        placements_result = await db.execute(
+            select(models.OutlineCardPlacement)
+            .where(models.OutlineCardPlacement.section_id == section_id)
+            .order_by(models.OutlineCardPlacement.order_index)
+        )
+        card_placements = placements_result.scalars().all()
+        
+        # Load full card data for each placement
+        placement_data = []
+        for placement in card_placements:
+            # First, get the card record from the cards table
+            card_result = await db.execute(
+                select(models.Card).where(models.Card.id == placement.card_id)
+            )
+            card = card_result.scalar_one_or_none()
+            
+            card_data = None
+            card_type = "unknown"
+            
+            if card and card.data_id:
+                card_type = card.type
+                
+                # Now fetch the actual card data using data_id and type
+                if card.type == "source":
+                    source_result = await db.execute(
+                        select(models.SourceMaterial).where(models.SourceMaterial.id == card.data_id)
+                    )
+                    source_card = source_result.scalar_one_or_none()
+                    if source_card:
+                        # Fetch citation data if available
+                        citation_text = None
+                        if source_card.citation_id:
+                            citation_result = await db.execute(
+                                select(models.Citation).where(models.Citation.id == source_card.citation_id)
+                            )
+                            citation = citation_result.scalar_one_or_none()
+                            if citation:
+                                citation_text = citation.text
+                        
+                        card_data = {
+                            "id": source_card.id,
+                            "type": "source",
+                            "title": source_card.content[:50] + "..." if len(source_card.content) > 50 else source_card.content,
+                            "content": source_card.content,
+                            "content_formatted": source_card.content_formatted or source_card.content,
+                            "summary": source_card.summary or "",
+                            "summary_formatted": source_card.summary_formatted or source_card.summary or "",
+                            "citation": citation_text
+                        }
+                
+                elif card.type == "question":
+                    question_result = await db.execute(
+                        select(models.Question).where(models.Question.id == card.data_id)
+                    )
+                    question_card = question_result.scalar_one_or_none()
+                    if question_card:
+                        card_data = {
+                            "id": question_card.id,
+                            "type": "question",
+                            "title": question_card.question_text[:50] + "..." if len(question_card.question_text) > 50 else question_card.question_text,
+                            "question": question_card.question_text,
+                            "question_text_formatted": question_card.question_text_formatted or question_card.question_text,
+                            "category": question_card.category or ""
+                        }
+                
+                elif card.type == "insight":
+                    insight_result = await db.execute(
+                        select(models.Insight).where(models.Insight.id == card.data_id)
+                    )
+                    insight_card = insight_result.scalar_one_or_none()
+                    if insight_card:
+                        card_data = {
+                            "id": insight_card.id,
+                            "type": "insight",
+                            "title": insight_card.insight_text[:50] + "..." if len(insight_card.insight_text) > 50 else insight_card.insight_text,
+                            "insight": insight_card.insight_text,
+                            "insight_text_formatted": insight_card.insight_text_formatted or insight_card.insight_text
+                        }
+                
+                elif card.type == "thought":
+                    thought_result = await db.execute(
+                        select(models.Thought).where(models.Thought.id == card.data_id)
+                    )
+                    thought_card = thought_result.scalar_one_or_none()
+                    if thought_card:
+                        card_data = {
+                            "id": thought_card.id,
+                            "type": "thought",
+                            "title": thought_card.thought_text[:50] + "..." if len(thought_card.thought_text) > 50 else thought_card.thought_text,
+                            "thought": thought_card.thought_text,
+                            "thought_text_formatted": thought_card.thought_text_formatted or thought_card.thought_text
+                        }
+                
+                elif card.type == "claim":
+                    claim_result = await db.execute(
+                        select(models.Claim).where(models.Claim.id == card.data_id)
+                    )
+                    claim_card = claim_result.scalar_one_or_none()
+                    if claim_card:
+                        card_data = {
+                            "id": claim_card.id,
+                            "type": "claim",
+                            "title": claim_card.claim_text[:50] + "..." if len(claim_card.claim_text) > 50 else claim_card.claim_text,
+                            "claim": claim_card.claim_text,
+                            "claim_text_formatted": claim_card.claim_text_formatted or claim_card.claim_text
+                        }
+            
+            # Add placement with card data
+            placement_data.append({
+                "id": placement.id,
+                "project_id": placement.project_id,
+                "section_id": placement.section_id,
+                "card_id": placement.card_id,
+                "order_index": placement.order_index,
+                "time_created": placement.time_created,
+                "card": card_data,
+                "card_type": card_type
+            })
+        
+        return placement_data
+
+    response_sections = []
+    for section in sections:
+        # Load subsections
+        subsections_result = await db.execute(
+            select(models.OutlineSection)
+            .where(models.OutlineSection.parent_section_id == section.id)
+            .order_by(models.OutlineSection.order_index)
+        )
+        subsections = subsections_result.scalars().all()
+        
+        # Load card placements for main section
+        section_placement_data = await load_card_placements_for_section(section.id)
+        
+        # Load card placements for each subsection
+        subsections_data = []
+        for subsection in subsections:
+            subsection_placement_data = await load_card_placements_for_section(subsection.id)
+            subsections_data.append({
+                "id": subsection.id,
+                "project_id": subsection.project_id,
+                "title": subsection.title,
+                "order_index": subsection.order_index,
+                "parent_section_id": subsection.parent_section_id,
+                "section_number": subsection.section_number,
+                "time_created": subsection.time_created,
+                "time_updated": subsection.time_updated,
+                "subsections": [],
+                "card_placements": subsection_placement_data
+            })
+        
+        # Create response object manually
+        section_data = {
+            "id": section.id,
+            "project_id": section.project_id,
+            "title": section.title,
+            "order_index": section.order_index,
+            "parent_section_id": section.parent_section_id,
+            "section_number": section.section_number,
+            "time_created": section.time_created,
+            "time_updated": section.time_updated,
+            "subsections": subsections_data,
+            "card_placements": section_placement_data
+        }
+        response_sections.append(section_data)
+    
+    return response_sections
+
+@app.get("/outline_sections/{section_id}", response_model=schemas.OutlineSection)
+async def get_outline_section(section_id: int, db: AsyncSession = Depends(get_db())):
+    """Get a specific outline section"""
+    result = await db.execute(select(models.OutlineSection).where(models.OutlineSection.id == section_id))
+    section = result.scalar_one_or_none()
+    if not section:
+        raise HTTPException(status_code=404, detail="Outline section not found")
+    
+    # Return serialized response
+    return {
+        "id": section.id,
+        "project_id": section.project_id,
+        "title": section.title,
+        "order_index": section.order_index,
+        "parent_section_id": section.parent_section_id,
+        "section_number": section.section_number,
+        "time_created": section.time_created,
+        "time_updated": section.time_updated,
+        "subsections": [],
+        "card_placements": []
+    }
+
+@app.put("/outline_sections/{section_id}", response_model=schemas.OutlineSection)
+async def update_outline_section(section_id: int, section_update: schemas.OutlineSectionUpdate, db: AsyncSession = Depends(get_db())):
+    """Update an outline section"""
+    result = await db.execute(select(models.OutlineSection).where(models.OutlineSection.id == section_id))
+    db_section = result.scalar_one_or_none()
+    if not db_section:
+        raise HTTPException(status_code=404, detail="Outline section not found")
+    
+    update_data = section_update.dict(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(db_section, key, value)
+    
+    await db.commit()
+    await db.refresh(db_section)
+    
+    # Return serialized response
+    return {
+        "id": db_section.id,
+        "project_id": db_section.project_id,
+        "title": db_section.title,
+        "order_index": db_section.order_index,
+        "parent_section_id": db_section.parent_section_id,
+        "section_number": db_section.section_number,
+        "time_created": db_section.time_created,
+        "time_updated": db_section.time_updated,
+        "subsections": [],
+        "card_placements": []
+    }
+
+@app.delete("/outline_sections/{section_id}")
+async def delete_outline_section(section_id: int, db: AsyncSession = Depends(get_db())):
+    """Delete an outline section and all its subsections and card placements"""
+    result = await db.execute(select(models.OutlineSection).where(models.OutlineSection.id == section_id))
+    db_section = result.scalar_one_or_none()
+    if not db_section:
+        raise HTTPException(status_code=404, detail="Outline section not found")
+    
+    await db.delete(db_section)
+    await db.commit()
+    return {"ok": True}
+
+@app.post("/outline_card_placements/", response_model=schemas.OutlineCardPlacement)
+async def create_card_placement(placement: schemas.OutlineCardPlacementCreate, db: AsyncSession = Depends(get_db())):
+    """Place a card in an outline section"""
+    # Remove any existing placement for this card
+    existing_result = await db.execute(
+        select(models.OutlineCardPlacement).where(models.OutlineCardPlacement.card_id == placement.card_id)
+    )
+    existing_placement = existing_result.scalar_one_or_none()
+    if existing_placement:
+        await db.delete(existing_placement)
+        await db.flush()  # Ensure delete is flushed before insert
+    
+    # Create new placement
+    db_placement = models.OutlineCardPlacement(**placement.dict())
+    db.add(db_placement)
+    await db.commit()
+    await db.refresh(db_placement)
+    
+    # Return serialized response
+    return {
+        "id": db_placement.id,
+        "project_id": db_placement.project_id,
+        "section_id": db_placement.section_id,
+        "card_id": db_placement.card_id,
+        "order_index": db_placement.order_index,
+        "time_created": db_placement.time_created
+    }
+
+@app.post("/outline_card_placements/upsert", response_model=schemas.OutlineCardPlacement)
+async def upsert_card_placement(placement: schemas.OutlineCardPlacementCreate, db: AsyncSession = Depends(get_db())):
+    """Update existing card placement or create new one (for moving cards within structure)"""
+    # Check if placement already exists for this card
+    existing_result = await db.execute(
+        select(models.OutlineCardPlacement).where(models.OutlineCardPlacement.card_id == placement.card_id)
+    )
+    existing_placement = existing_result.scalar_one_or_none()
+    
+    if existing_placement:
+        old_section_id = existing_placement.section_id
+        old_order_index = existing_placement.order_index
+        new_section_id = placement.section_id
+        new_order_index = placement.order_index
+        
+        print(f"[UPSERT] Moving card {placement.card_id} from section {old_section_id} pos {old_order_index} to section {new_section_id} pos {new_order_index}")
+        
+        # If moving to a different section, adjust order indices in both sections
+        if old_section_id != new_section_id:
+            # Decrement order_index for cards after the old position in old section
+            await db.execute(
+                update(models.OutlineCardPlacement)
+                .where(models.OutlineCardPlacement.section_id == old_section_id)
+                .where(models.OutlineCardPlacement.order_index > old_order_index)
+                .values(order_index=models.OutlineCardPlacement.order_index - 1)
+            )
+            
+            # Increment order_index for cards at or after the new position in new section
+            await db.execute(
+                update(models.OutlineCardPlacement)
+                .where(models.OutlineCardPlacement.section_id == new_section_id)
+                .where(models.OutlineCardPlacement.order_index >= new_order_index)
+                .values(order_index=models.OutlineCardPlacement.order_index + 1)
+            )
+        else:
+            # Moving within the same section
+            print(f"[UPSERT] Moving within same section")
+            if new_order_index < old_order_index:
+                print(f"[UPSERT] Moving up - increment cards between {new_order_index} and {old_order_index}")
+                # Moving up - increment order_index for cards between new and old position
+                result = await db.execute(
+                    update(models.OutlineCardPlacement)
+                    .where(models.OutlineCardPlacement.section_id == new_section_id)
+                    .where(models.OutlineCardPlacement.order_index >= new_order_index)
+                    .where(models.OutlineCardPlacement.order_index < old_order_index)
+                    .values(order_index=models.OutlineCardPlacement.order_index + 1)
+                )
+                print(f"[UPSERT] Updated {result.rowcount} rows")
+            elif new_order_index > old_order_index:
+                print(f"[UPSERT] Moving down - decrement cards between {old_order_index} and {new_order_index}")
+                # Moving down - decrement order_index for cards between old and new position
+                result = await db.execute(
+                    update(models.OutlineCardPlacement)
+                    .where(models.OutlineCardPlacement.section_id == new_section_id)
+                    .where(models.OutlineCardPlacement.order_index > old_order_index)
+                    .where(models.OutlineCardPlacement.order_index <= new_order_index)
+                    .values(order_index=models.OutlineCardPlacement.order_index - 1)
+                )
+                print(f"[UPSERT] Updated {result.rowcount} rows")
+        
+        # Update the moved card's placement
+        existing_placement.section_id = new_section_id
+        existing_placement.order_index = new_order_index
+        await db.commit()
+        await db.refresh(existing_placement)
+        
+        return {
+            "id": existing_placement.id,
+            "project_id": existing_placement.project_id,
+            "section_id": existing_placement.section_id,
+            "card_id": existing_placement.card_id,
+            "order_index": existing_placement.order_index,
+            "time_created": existing_placement.time_created
+        }
+    else:
+        # Create new placement - increment order_index for existing cards at or after this position
+        await db.execute(
+            update(models.OutlineCardPlacement)
+            .where(models.OutlineCardPlacement.section_id == placement.section_id)
+            .where(models.OutlineCardPlacement.order_index >= placement.order_index)
+            .values(order_index=models.OutlineCardPlacement.order_index + 1)
+        )
+        
+        db_placement = models.OutlineCardPlacement(**placement.dict())
+        db.add(db_placement)
+        await db.commit()
+        await db.refresh(db_placement)
+        
+        return {
+            "id": db_placement.id,
+            "project_id": db_placement.project_id,
+            "section_id": db_placement.section_id,
+            "card_id": db_placement.card_id,
+            "order_index": db_placement.order_index,
+            "time_created": db_placement.time_created
+        }
+
+@app.put("/outline_card_placements/{placement_id}", response_model=schemas.OutlineCardPlacement)
+async def update_card_placement(placement_id: int, placement_update: schemas.OutlineCardPlacementUpdate, db: AsyncSession = Depends(get_db())):
+    """Update a card placement"""
+    result = await db.execute(select(models.OutlineCardPlacement).where(models.OutlineCardPlacement.id == placement_id))
+    db_placement = result.scalar_one_or_none()
+    if not db_placement:
+        raise HTTPException(status_code=404, detail="Card placement not found")
+    
+    update_data = placement_update.dict(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(db_placement, key, value)
+    
+    await db.commit()
+    await db.refresh(db_placement)
+    
+    # Return serialized response
+    return {
+        "id": db_placement.id,
+        "project_id": db_placement.project_id,
+        "section_id": db_placement.section_id,
+        "card_id": db_placement.card_id,
+        "order_index": db_placement.order_index,
+        "time_created": db_placement.time_created
+    }
+
+@app.delete("/outline_card_placements/{placement_id}")
+async def delete_card_placement(placement_id: int, db: AsyncSession = Depends(get_db())):
+    """Remove a card from an outline section"""
+    result = await db.execute(select(models.OutlineCardPlacement).where(models.OutlineCardPlacement.id == placement_id))
+    db_placement = result.scalar_one_or_none()
+    if not db_placement:
+        raise HTTPException(status_code=404, detail="Card placement not found")
+    
+    await db.delete(db_placement)
+    await db.commit()
+    return {"ok": True}
+
+@app.delete("/outline_card_placements/card/{card_id}")
+async def delete_card_placement_by_card_id(card_id: int, db: AsyncSession = Depends(get_db())):
+    """Delete a card placement by card_id (for removing cards from structure)"""
+    result = await db.execute(select(models.OutlineCardPlacement).where(models.OutlineCardPlacement.card_id == card_id))
+    placement = result.scalar_one_or_none()
+    if not placement:
+        raise HTTPException(status_code=404, detail="Card placement not found")
+    
+    section_id = placement.section_id
+    order_index = placement.order_index
+    
+    # Delete the placement
+    await db.delete(placement)
+    
+    # Adjust order indices for remaining cards in the same section
+    await db.execute(
+        update(models.OutlineCardPlacement)
+        .where(models.OutlineCardPlacement.section_id == section_id)
+        .where(models.OutlineCardPlacement.order_index > order_index)
+        .values(order_index=models.OutlineCardPlacement.order_index - 1)
+    )
+    
+    await db.commit()
+    return {"message": "Card removed from structure"}
+
+@app.get("/outline_card_placements/")
+async def get_all_card_placements(project_id: int, db: AsyncSession = Depends(get_db())):
+    """Get all card placements for a project"""
+    result = await db.execute(
+        select(models.OutlineCardPlacement)
+        .where(models.OutlineCardPlacement.project_id == project_id)
+    )
+    placements = result.scalars().all()
+    
+    return [
+        {
+            "id": placement.id,
+            "project_id": placement.project_id,
+            "section_id": placement.section_id,
+            "card_id": placement.card_id,
+            "order_index": placement.order_index,
+            "time_created": placement.time_created
+        }
+        for placement in placements
+    ]
+
+@app.post("/outline_sections/{section_id}/reorder")
+async def reorder_sections(section_id: int, new_order: List[int], db: AsyncSession = Depends(get_db())):
+    """Reorder sections and update their numbers"""
+    # Get all sections for this project
+    result = await db.execute(
+        select(models.OutlineSection)
+        .where(models.OutlineSection.project_id == (await db.get(models.OutlineSection, section_id)).project_id)
+        .where(models.OutlineSection.parent_section_id.is_(None))
+        .order_by(models.OutlineSection.order_index)
+    )
+    sections = result.scalars().all()
+    
+    # Update order indices
+    for i, section_id in enumerate(new_order):
+        section = next((s for s in sections if s.id == section_id), None)
+        if section:
+            section.order_index = i
+            # Update section number (Roman numerals)
+            section.section_number = _int_to_roman(i + 1)
+    
+    await db.commit()
+    return {"ok": True}
+
+def _int_to_roman(num: int) -> str:
+    """Convert integer to Roman numeral"""
+    val = [1000, 900, 500, 400, 100, 90, 50, 40, 10, 9, 5, 4, 1]
+    syb = ["M", "CM", "D", "CD", "C", "XC", "L", "XL", "X", "IX", "V", "IV", "I"]
+    roman_num = ""
+    i = 0
+    while num > 0:
+        for _ in range(num // val[i]):
+            roman_num += syb[i]
+            num -= val[i]
+        i += 1
+    return roman_num
+
+# Add this right before the outline endpoints (around line 2014)
+@app.get("/debug/outline-test")
+async def debug_outline_test(project_id: int, db: AsyncSession = Depends(get_db())):
+    """Debug endpoint to test outline functionality"""
+    try:
+        result = await db.execute(
+            select(models.OutlineSection)
+            .where(models.OutlineSection.project_id == project_id)
+        )
+        sections = result.scalars().all()
+        return {"count": len(sections), "sections": [{"id": s.id, "title": s.title} for s in sections]}
+    except Exception as e:
+        return {"error": str(e), "type": type(e).__name__}
 
 if __name__ == "__main__":
     import uvicorn

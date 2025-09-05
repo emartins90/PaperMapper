@@ -21,15 +21,20 @@ type QuestionCardProps = {
     onFileClick?: (fileUrl: string, fileType: 'image' | 'pdf' | 'other' | 'audio') => void;
     isDeleting?: boolean;
     isSelected?: boolean;
-    cardId?: string; // Add cardId to identify this card
-    panelJustOpened?: boolean; // Add panelJustOpened to prevent hover flicker
-    actionButton?: React.ReactNode; // Add actionButton prop
+    cardId?: string;
+    panelJustOpened?: boolean;
+    actionButton?: React.ReactNode;
+    // New outline-specific props
+    isCondensed?: boolean;
+    isDisabled?: boolean;
+    isInStructure?: boolean;
   };
   showHandles?: boolean;
   width?: string;
-  openCard?: { id: string; type: string } | null; // Add openCard prop
-  showArrow?: boolean; // Add showArrow prop to control arrow visibility
-  showShadow?: boolean; // Add showShadow prop to control card shadow and hover effects
+  openCard?: { id: string; type: string } | null;
+  showArrow?: boolean;
+  showShadow?: boolean;
+  showIcon?: boolean; // Add this prop
 };
 
 const handleStyle = {
@@ -48,9 +53,18 @@ const grayHandleStyle = {
   borderRadius: '50%',
 };
 
-export default function QuestionCard({ data, showHandles = true, width = 'w-96', openCard, showArrow = true, showShadow = true }: QuestionCardProps) {
+export default function QuestionCard({ data, showHandles = true, width = 'w-96', openCard, showArrow = true, showShadow = true, showIcon = true }: QuestionCardProps) {
   // Ensure tags is always an array
   const tags = Array.isArray(data.tags) ? data.tags : (data.tags ? [data.tags] : []);
+
+  // New outline-specific logic - default to full view (false) for gather view
+  const showCondensed = data.isCondensed ?? false; // Default to full view
+  const isDisabled = data.isDisabled ?? false;
+  const isInStructure = data.isInStructure ?? false;
+  
+  // Adjust width and shadow based on context
+  const effectiveWidth = isInStructure ? 'w-full' : width;
+  const effectiveShadow = isInStructure ? false : showShadow;
 
   // Helper function to get status color
   const getStatusColor = (status: string) => {
@@ -108,11 +122,12 @@ export default function QuestionCard({ data, showHandles = true, width = 'w-96',
 
   return (
     <div 
-      className={`rounded-xl border-2 bg-white p-4 ${width} relative transition-all duration-200 cursor-pointer
-        ${showShadow ? 'shadow-md' : ''}
+      className={`rounded-xl border-2 bg-white ${showCondensed ? 'p-2.75' : 'p-4'} ${effectiveWidth} relative transition-all duration-200 cursor-pointer
+        ${effectiveShadow ? 'shadow-md' : ''}
+        ${isDisabled ? 'opacity-50 pointer-events-none' : ''}
         ${data.isSelected 
-          ? `border-question-400 ${showShadow ? 'shadow-lg shadow-question-200/50' : ''}` 
-          : `${cardBorderClass} hover:border-question-300 ${showShadow ? 'hover:shadow-lg' : ''}`
+          ? `border-question-400 ${effectiveShadow ? 'shadow-lg shadow-question-200/50' : ''}` 
+          : `${cardBorderClass} hover:border-question-300 ${effectiveShadow ? 'hover:shadow-lg' : ''}`
         }`}
       onClick={data.onSelect}
     >
@@ -135,14 +150,15 @@ export default function QuestionCard({ data, showHandles = true, width = 'w-96',
           <Handle type="source" position={Position.Right} id="right" style={{ ...handleStyles, right: -6 }} />
         </>
       )}
-      <div className="flex items-center justify-between mb-2">
-        <div className={`${titleColorClass} flex-1 min-w-0 flex items-center gap-1`}>
-          {data.priority && getPriorityIndicator(data.priority) && (
+      <div className={`flex items-center justify-between ${showCondensed ? 'mb-0!' : 'mb-2'}`}>
+        <div className={`${titleColorClass} flex-1 min-w-0 flex items-center gap-1 ${showCondensed ? 'mb-1' : 'mb-2'}`}>
+          {/* Priority indicator - only show in full view */}
+          {!showCondensed && data.priority && getPriorityIndicator(data.priority) && (
             <span className={`font-bold text-lg ${getPriorityIndicator(data.priority)?.color}`}>
               {getPriorityIndicator(data.priority)?.text}
             </span>
           )}
-          <LuCircleHelp className="text-question-400" size={22} />
+          {showIcon && <LuCircleHelp className="text-question-400" size={22} />}
           <div className="truncate block">
             <span className="font-bold">Question</span>{data.category ? <span className="font-normal"> : {data.category}</span> : ''}
           </div>
@@ -157,8 +173,8 @@ export default function QuestionCard({ data, showHandles = true, width = 'w-96',
           </button>
         )}
       </div>
-      {/* Only show tags section if there are tags and not '(skipped)' */}
-      {tags.length > 0 && tags[0] !== '(skipped)' && (
+      {/* Only show tags section if there are tags and not '(skipped)' - and only in full view */}
+      {!showCondensed && tags.length > 0 && tags[0] !== '(skipped)' && (
         <div className="flex flex-wrap gap-2 mb-2">
           {tags.map((tag: string) => (
             tag && tag !== '(skipped)' && <Tag key={tag} color="primary">{tag}</Tag>
@@ -166,27 +182,28 @@ export default function QuestionCard({ data, showHandles = true, width = 'w-96',
         </div>
       )}
       <div 
-        className="text-black mb-4 break-words rich-text-display" 
+        className={`text-black break-words rich-text-display ${showCondensed ? 'line-clamp-2 mb-1' : 'mb-4'}`}
         style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}
         dangerouslySetInnerHTML={{ __html: data.questionFormatted || data.question }}
       />
       
-      {/* Render uploaded files (images as thumbnails, others as file names) */}
-      {data.files && data.files.length > 0 && (
+      {/* Render uploaded files (images as thumbnails, others as file names) - only in full view */}
+      {!showCondensed && data.files && data.files.length > 0 && (
         <FileListDisplay files={data.files} fileEntries={data.fileEntries} onFileClick={data.onFileClick} showFilesLabel={true} cardType="question" />
       )}
       
-      <div className="flex flex-wrap gap-2 mt-4">
-        {data.status && (
+      {/* Status - only show in full view */}
+      {!showCondensed && data.status && (
+        <div className="flex flex-wrap gap-2 mt-4">
           <div className="flex items-center gap-1 text-xs text-gray-700 mt-2">
             <span className="font-bold">Status:</span>
             <Tag color={getStatusColor(data.status)}>{capitalizeStatus(data.status)}</Tag>
           </div>
-        )}
-      </div>
+        </div>
+      )}
       
-      {/* Action button */}
-      {data.actionButton && (
+      {/* Action button - only in full view */}
+      {!showCondensed && data.actionButton && (
         <div className="mt-1 flex justify-end">
           {data.actionButton}
         </div>
