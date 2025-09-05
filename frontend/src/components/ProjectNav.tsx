@@ -9,6 +9,10 @@ import CardListPanel from "./CardListPanel";
 import SourceListPanel from "./SourceListPanel";
 import ProjectInfoModal from "./ProjectInfoModal";
 import { toast } from "sonner";
+import { useFeatureFlagEnabled } from 'posthog-js/react';
+import { useRouter, usePathname } from 'next/navigation';
+
+
 
 interface ProjectNavProps {
   nodes: any[];
@@ -17,12 +21,21 @@ interface ProjectNavProps {
 }
 
 export default function ProjectNav({ nodes: initialNodes, onCardClick, projectId }: ProjectNavProps) {
-  const [activeTab, setActiveTab] = useState<"gather" | "outline">("gather");
   const [showCardList, setShowCardList] = useState(false);
   const [showSourceList, setShowSourceList] = useState(false);
   const [showProjectInfo, setShowProjectInfo] = useState(false);
   const [nodes, setNodes] = useState<any[]>(initialNodes);
   const [selectedCardId, setSelectedCardId] = useState<string | undefined>();
+
+  //const outlineFlagEnabled = useFeatureFlagEnabled('outline_tab');
+  const outlineFlagEnabled = true
+  
+  const router = useRouter();
+  const pathname = usePathname();
+
+  // Determine active tab based on current route
+  const activeTab = pathname?.includes('/outline') ? 'outline' : 'gather';
+
 
   // Listen for nodes updates from Canvas
   useEffect(() => {
@@ -39,12 +52,25 @@ export default function ProjectNav({ nodes: initialNodes, onCardClick, projectId
 
   const handleTabChange = (tab: "gather" | "outline") => {
     if (tab === "outline") {
-      toast.info("The Outline feature is coming soon! Stay tuned for updates.", {
-        duration: 3000,
-      });
-      return; // Don't actually change the tab
+      if (!outlineFlagEnabled) {
+        toast.info("The Outline feature is coming soon! Stay tuned for updates.", {
+          duration: 3000,
+        });
+        return; // Don't actually change the tab
+      }
+      // If flag is enabled, navigate to outline page
+      if (projectId) {
+        router.push(`/project/${projectId}/outline`);
+      }
+      return;
     }
-    setActiveTab(tab);
+    
+    if (tab === "gather") {
+      // Navigate back to main project page
+      if (projectId) {
+        router.push(`/project/${projectId}`);
+      }
+    }
   };
 
   const handleCardListClick = () => {
@@ -75,7 +101,13 @@ export default function ProjectNav({ nodes: initialNodes, onCardClick, projectId
       <div
         className="absolute top-5 left-1/2 -translate-x-1/2 z-30 bg-white px-2 py-2 rounded-xl shadow-lg w-fit flex items-center"
       >
+        {/* Tab Switcher - first */}
+        <TabSwitcher activeTab={activeTab} onTabChange={handleTabChange} />
         
+        {/* Divider after tab switcher */}
+        <div className="self-stretch w-px bg-gray-200 mx-4" />
+        
+        {/* Other buttons */}
         <div className="flex gap-0">
           <Button 
             variant="ghost" 
@@ -101,21 +133,22 @@ export default function ProjectNav({ nodes: initialNodes, onCardClick, projectId
           >
             <LuBookOpen size={16} />Source List
           </Button>
-          <Button 
-            variant="ghost" 
-            className="text-foreground [&>svg]:text-foreground hover:bg-gray-100" 
-            onMouseDown={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              handleCardListClick();
-            }}
-            style={{ position: 'relative', zIndex: 9999 }}
-          >
-            <LuList size={16} />Card List
-          </Button>
+          {/* Only show Card List button when not on outline page */}
+          {!pathname?.includes('/outline') && (
+            <Button 
+              variant="ghost" 
+              className="text-foreground [&>svg]:text-foreground hover:bg-gray-100" 
+              onMouseDown={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                handleCardListClick();
+              }}
+              style={{ position: 'relative', zIndex: 9999 }}
+            >
+              <LuList size={16} />Card List
+            </Button>
+          )}
         </div>
-        <div className="self-stretch w-px bg-gray-200 mx-4" />
-        <TabSwitcher activeTab={activeTab} onTabChange={handleTabChange} />
       </div>
 
       {showCardList && (
