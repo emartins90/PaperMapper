@@ -57,7 +57,6 @@ export default function ClaimCard({ data, showHandles = true, width = 'w-96', op
   const effectiveWidth = isInStructure ? 'w-full' : width;
   const effectiveShadow = isInStructure ? false : showShadow;
 
-  const onFileClick = data.onFileClick;
   return (
     <div 
       className={`rounded-xl border-2 bg-white ${showCondensed ? 'p-2.75' : 'p-4'} ${effectiveWidth} relative transition-all duration-200 cursor-pointer
@@ -112,7 +111,7 @@ export default function ClaimCard({ data, showHandles = true, width = 'w-96', op
         </div>
       )}
       <div 
-        className={`text-black mb-4 break-words rich-text-display ${showCondensed ? 'line-clamp-2 mb-1!' : 'mb-4'}`}
+        className={`text-black mb-4 break-words rich-text-display ${showCondensed ? 'line-clamp-3 mb-1!' : 'mb-4'}`}
         style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}
         dangerouslySetInnerHTML={{ __html: data.claimFormatted || data.claim }}
       />

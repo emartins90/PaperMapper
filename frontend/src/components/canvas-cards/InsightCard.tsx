@@ -111,7 +111,7 @@ export default function InsightCard({ data, showHandles = true, width = 'w-96', 
         </div>
       )}
       <div 
-        className={`text-black mb-4 break-words rich-text-display ${showCondensed ? 'line-clamp-2 mb-1!' : 'mb-4'}`}
+        className={`text-black mb-4 break-words rich-text-display ${showCondensed ? 'line-clamp-3 mb-1!' : 'mb-4'}`}
         style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}
         dangerouslySetInnerHTML={{ __html: data.insightFormatted || data.insight }}
       />

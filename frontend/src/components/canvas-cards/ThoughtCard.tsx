@@ -109,7 +109,7 @@ export default function ThoughtCard({ data, showHandles = true, width = 'w-96', 
         </div>
       )}
       <div 
-        className={`rich-text-display text-black mb-4 break-words ${showCondensed ? 'line-clamp-2 mb-1!' : 'mb-4'}`}
+        className={`rich-text-display text-black mb-4 break-words ${showCondensed ? 'line-clamp-3 mb-1!' : 'mb-4'}`}
         style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}
         dangerouslySetInnerHTML={{ __html: data.thoughtFormatted || data.thought }}
       />
