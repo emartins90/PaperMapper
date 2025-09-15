@@ -45,6 +45,10 @@ class ResetPasswordRequest(BaseModel):
     token: str
     password: str
 
+# Add this after the ResetPasswordRequest class (around line 46)
+class ExportImagesRequest(BaseModel):
+    image_urls: List[str]
+
 SECRET = settings.JWT_SECRET
 
 # Create sync engine for sync operations
@@ -1179,7 +1183,7 @@ async def logout():
         secure=settings.ENV == "production",
         httponly=True,
         samesite=get_cookie_samesite(),  # Match the login cookie settings
-        domain=".paperthread-app.com" if settings.ENV == "production" else None  # Match the login cookie settings
+        domain=".paperthread-app.com" if settings.ENV == "production" else None,  # Match the login cookie settings
     )
     return response
 
@@ -2537,6 +2541,117 @@ async def debug_outline_test(project_id: int, db: AsyncSession = Depends(get_db(
         return {"count": len(sections), "sections": [{"id": s.id, "title": s.title} for s in sections]}
     except Exception as e:
         return {"error": str(e), "type": type(e).__name__}
+
+# Add this after the existing outline endpoints (around line 2526)
+@app.post("/outline/export-images/")
+async def export_outline_images(
+    request: ExportImagesRequest,
+    current_user: models.User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db())
+):
+    """Download images for outline export - server-side to handle authentication"""
+    import os
+    import tempfile
+    import zipfile
+    
+    print(f"[EXPORT] Received request with {len(request.image_urls)} images")
+    
+    # Create a temporary directory for images
+    temp_dir = tempfile.mkdtemp(prefix="outline_images_")
+    downloaded_files = []
+    
+    try:
+        # Verify ownership of all files first
+        for url in request.image_urls:
+            filename = url.split('/')[-1]
+            folder = url.split('/')[-2]
+            print(f"[EXPORT] Checking ownership for {filename} in {folder}")
+            
+            # Check if user owns this file by searching through their projects
+            file_found = False
+            
+            # Check all card types for this file
+            card_type_mapping = {
+                'questions': 'Question',
+                'insights': 'Insight', 
+                'thoughts': 'Thought',
+                'claims': 'Claim',
+                'source_materials': 'SourceMaterial'
+            }
+
+            for card_type, model_name in card_type_mapping.items():
+                model = getattr(models, model_name)
+                result = await db.execute(
+                    select(model).where(
+                        and_(
+                            model.project.has(user_id=current_user.id),
+                            model.files.contains(filename)
+                        )
+                    )
+                )
+                if result.scalar_one_or_none():
+                    file_found = True
+                    print(f"[EXPORT] Found {filename} in {card_type}")
+                    break
+            
+            if not file_found:
+                print(f"[EXPORT] Access denied for {filename}")
+                raise HTTPException(status_code=403, detail=f"Access denied - file {filename} not found in user's projects")
+        
+        # Download files from R2
+        for i, url in enumerate(request.image_urls):
+            try:
+                filename = url.split('/')[-1] or f"image_{i}.jpg"
+                folder = url.split('/')[-2]
+                key = f"{folder}/{filename}"
+                print(f"[EXPORT] Downloading {key} from R2")
+                
+                # Download directly from R2
+                file_obj = r2_storage.s3_client.get_object(Bucket=r2_storage.bucket_name, Key=key)
+                
+                # Save to temp directory
+                file_path = os.path.join(temp_dir, filename)
+                with open(file_path, 'wb') as f:
+                    f.write(file_obj['Body'].read())
+                
+                downloaded_files.append({
+                    "filename": filename,
+                    "file_path": file_path,
+                    "original_url": url
+                })
+                print(f"[EXPORT] Successfully downloaded {filename}")
+                
+            except Exception as e:
+                print(f"[EXPORT] Error downloading {url}: {str(e)}")
+        
+        # Create ZIP file
+        zip_path = os.path.join(temp_dir, "outline_images.zip")
+        with zipfile.ZipFile(zip_path, 'w') as zipf:
+            for file_info in downloaded_files:
+                zipf.write(file_info["file_path"], file_info["filename"])
+        
+        # Read ZIP file and return as response
+        with open(zip_path, 'rb') as f:
+            zip_content = f.read()
+        
+        # Clean up temp directory
+        import shutil
+        shutil.rmtree(temp_dir)
+        
+        print(f"[EXPORT] Successfully created ZIP with {len(downloaded_files)} files")
+        return Response(
+            content=zip_content,
+            media_type="application/zip",
+            headers={"Content-Disposition": "attachment; filename=outline_images.zip"}
+        )
+    
+    except Exception as e:
+        # Clean up temp directory on error
+        import shutil
+        if os.path.exists(temp_dir):
+            shutil.rmtree(temp_dir)
+        print(f"[EXPORT] Error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to download images: {str(e)}")
 
 if __name__ == "__main__":
     import uvicorn
