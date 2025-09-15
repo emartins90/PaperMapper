@@ -2086,7 +2086,9 @@ async def get_outline_sections(project_id: int, db: AsyncSession = Depends(get_d
                             "content_formatted": source_card.content_formatted or source_card.content,
                             "summary": source_card.summary or "",
                             "summary_formatted": source_card.summary_formatted or source_card.summary or "",
-                            "citation": citation_text
+                            "citation": citation_text,
+                            "files": source_card.files or "",
+                            "file_filenames": source_card.file_filenames or ""
                         }
                 
                 elif card.type == "question":
@@ -2101,7 +2103,9 @@ async def get_outline_sections(project_id: int, db: AsyncSession = Depends(get_d
                             "title": question_card.question_text[:50] + "..." if len(question_card.question_text) > 50 else question_card.question_text,
                             "question": question_card.question_text,
                             "question_text_formatted": question_card.question_text_formatted or question_card.question_text,
-                            "category": question_card.category or ""
+                            "category": question_card.category or "",
+                            "files": question_card.files or "",
+                            "file_filenames": question_card.file_filenames or ""
                         }
                 
                 elif card.type == "insight":
@@ -2115,7 +2119,9 @@ async def get_outline_sections(project_id: int, db: AsyncSession = Depends(get_d
                             "type": "insight",
                             "title": insight_card.insight_text[:50] + "..." if len(insight_card.insight_text) > 50 else insight_card.insight_text,
                             "insight": insight_card.insight_text,
-                            "insight_text_formatted": insight_card.insight_text_formatted or insight_card.insight_text
+                            "insight_text_formatted": insight_card.insight_text_formatted or insight_card.insight_text,
+                            "files": insight_card.files or "",
+                            "file_filenames": insight_card.file_filenames or ""
                         }
                 
                 elif card.type == "thought":
@@ -2129,7 +2135,9 @@ async def get_outline_sections(project_id: int, db: AsyncSession = Depends(get_d
                             "type": "thought",
                             "title": thought_card.thought_text[:50] + "..." if len(thought_card.thought_text) > 50 else thought_card.thought_text,
                             "thought": thought_card.thought_text,
-                            "thought_text_formatted": thought_card.thought_text_formatted or thought_card.thought_text
+                            "thought_text_formatted": thought_card.thought_text_formatted or thought_card.thought_text,
+                            "files": thought_card.files or "",
+                            "file_filenames": thought_card.file_filenames or ""
                         }
                 
                 elif card.type == "claim":
@@ -2143,7 +2151,9 @@ async def get_outline_sections(project_id: int, db: AsyncSession = Depends(get_d
                             "type": "claim",
                             "title": claim_card.claim_text[:50] + "..." if len(claim_card.claim_text) > 50 else claim_card.claim_text,
                             "claim": claim_card.claim_text,
-                            "claim_text_formatted": claim_card.claim_text_formatted or claim_card.claim_text
+                            "claim_text_formatted": claim_card.claim_text_formatted or claim_card.claim_text,
+                            "files": claim_card.files or "",
+                            "file_filenames": claim_card.file_filenames or ""
                         }
             
             # Add placement with card data

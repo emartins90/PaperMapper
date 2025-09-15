@@ -357,6 +357,20 @@ export default function OutlineSection({
                   fileEntries: [],
                 };
 
+                // Create fileEntries with original filenames (same logic as OutlineCardList)
+                const fileUrls = placement.card.files ? placement.card.files.split(',').filter((url: string) => url.trim()) : [];
+                const fileFilenames = placement.card.file_filenames ? placement.card.file_filenames.split(',').filter((name: string) => name.trim()) : [];
+                
+                const fileEntries = fileUrls.map((url: string, index: number) => ({
+                  url,
+                  filename: fileFilenames[index] || "file",
+                  type: ""
+                }));
+
+                // Update cardData with proper files and fileEntries
+                cardData.files = fileUrls;
+                cardData.fileEntries = fileEntries;
+
                 // Map card data based on card type (same logic as OutlineCardList)
                 const cardType = placement.card_type || placement.card?.type;
                 

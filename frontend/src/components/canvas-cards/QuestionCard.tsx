@@ -191,6 +191,32 @@ export default function QuestionCard({ data, showHandles = true, width = 'w-96',
       {!showCondensed && data.files && data.files.length > 0 && (
         <FileListDisplay files={data.files} fileEntries={data.fileEntries} onFileClick={data.onFileClick} showFilesLabel={true} cardType="question" />
       )}
+
+      {/* In condensed mode: show files if no main text, or always show image files */}
+      {showCondensed && data.files && data.files.length > 0 && (
+        (() => {
+          const hasMainText = data.question && data.question.trim() !== '';
+          const imageFiles = data.fileEntries?.filter(file => file.type === 'image') || [];
+          const shouldShowAllFiles = !hasMainText;
+          const shouldShowImageFiles = imageFiles.length > 0;
+          
+          if (shouldShowAllFiles || shouldShowImageFiles) {
+            const filesToShow = shouldShowAllFiles ? data.files : imageFiles.map(img => img.url);
+            const fileEntriesToShow = shouldShowAllFiles ? data.fileEntries : imageFiles;
+            
+            return (
+              <FileListDisplay 
+                files={filesToShow} 
+                fileEntries={fileEntriesToShow} 
+                onFileClick={data.onFileClick} 
+                showFilesLabel={true} 
+                cardType="question" 
+              />
+            );
+          }
+          return null;
+        })()
+      )}
       
       {/* Status - only show in full view */}
       {!showCondensed && data.status && (

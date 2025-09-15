@@ -237,11 +237,21 @@ export default function OutlineCardList({ projectId, isCondensed = true, activeC
                     };
                   }
                   
+                  // Create fileEntries with original filenames (same logic as Canvas component)
+                  const fileUrls = cardContent.files ? cardContent.files.split(',').filter((url: string) => url.trim()) : [];
+                  const fileFilenames = cardContent.file_filenames ? cardContent.file_filenames.split(',').filter((name: string) => name.trim()) : [];
+                  
+                  const fileEntries = fileUrls.map((url: string, index: number) => ({
+                    url,
+                    filename: fileFilenames[index] || "file",
+                    type: ""
+                  }));
+                  
                   cardData = {
                     ...mappedData,
                     tags: cardContent.tags || [],
-                    files: Array.isArray(cardContent.files) ? cardContent.files : (cardContent.files ? [cardContent.files] : []),
-                    fileEntries: cardContent.file_entries || [],
+                    files: fileUrls,
+                    fileEntries: fileEntries,
                   };
                 }
               }
