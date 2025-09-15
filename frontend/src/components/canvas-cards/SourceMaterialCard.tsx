@@ -140,13 +140,13 @@ export default function SourceMaterialCard({ data, showHandles = true, width = '
       {/* Show summary if available, otherwise fall back to full content - truncated in condensed view */}
               {(data.summary && typeof data.summary === 'string' && data.summary.trim() !== '' && data.summary !== '(skipped)') ? (
         <div 
-          className={`rich-text-display text-black mb-4 break-words ${showCondensed ? 'line-clamp-2 mb-1!' : 'mb-4'}`}
+          className={`rich-text-display text-black mb-4 break-words ${showCondensed ? 'line-clamp-3 mb-1!' : 'mb-4'}`}
           style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}
           dangerouslySetInnerHTML={{ __html: data.summaryFormatted || data.summary }}
         />
               ) : (data.text && typeof data.text === 'string' && data.text.trim() !== '' && data.text !== '(skipped)') ? (
         <div 
-          className={`rich-text-display text-black mb-4 break-words ${showCondensed ? 'line-clamp-2 mb-1!' : 'mb-4'}`}
+          className={`rich-text-display text-black mb-4 break-words ${showCondensed ? 'line-clamp-3 mb-1!' : 'mb-4'}`}
           style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}
           dangerouslySetInnerHTML={{ __html: data.contentFormatted || data.text }}
         />
@@ -156,7 +156,34 @@ export default function SourceMaterialCard({ data, showHandles = true, width = '
       {!showCondensed && Array.isArray((data as any).files) && (data as any).files.length > 0 && (
         <FileListDisplay files={data.files ?? []} fileEntries={data.fileEntries} onFileClick={onFileClick} showFilesLabel={true} cardType="source" />
       )}
-
+      
+      {/* In condensed mode: show files if no main text, or always show image files */}
+      {showCondensed && data.files && data.files.length > 0 && (
+        (() => {
+          const hasMainText = (data.summary && data.summary.trim() !== '' && data.summary !== '(skipped)') || 
+                             (data.text && data.text.trim() !== '' && data.text !== '(skipped)');
+          const imageFiles = data.fileEntries?.filter(file => file.type === 'image') || [];
+          const shouldShowAllFiles = !hasMainText;
+          const shouldShowImageFiles = imageFiles.length > 0;
+          
+          if (shouldShowAllFiles || shouldShowImageFiles) {
+            const filesToShow = shouldShowAllFiles ? data.files : imageFiles.map(img => img.url);
+            const fileEntriesToShow = shouldShowAllFiles ? data.fileEntries : imageFiles;
+            
+            return (
+              <FileListDisplay 
+                files={filesToShow} 
+                fileEntries={fileEntriesToShow} 
+                onFileClick={data.onFileClick} 
+                showFilesLabel={true} 
+                cardType="source" 
+              />
+            );
+          }
+          return null;
+        })()
+      )}
+      
       {/* Only show argument type chip if one is selected and not '(skipped)' - and only in full view */}
       {!showCondensed && data.thesisSupport && typeof data.thesisSupport === 'string' && data.thesisSupport.trim() !== '' && data.thesisSupport !== '(skipped)' && (
         <Tag color={getArgumentTypeColor(data.thesisSupport)} className="mb-2 inline-block">

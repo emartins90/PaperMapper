@@ -18,6 +18,9 @@ export interface OutlineCard {
   claim?: string;
   claim_text_formatted?: string;
   category?: string;
+  files?: string[];
+  file_entries?: Array<{ url: string; filename: string; type: string }>;
+  
 }
 
 export interface OutlineSection {
@@ -56,6 +59,22 @@ function getCardContent(card: OutlineCard): string {
     default:
       return '';
   }
+}
+
+// Helper function to get file information for a card
+function getCardFiles(card: OutlineCard): string {
+  if (!card.file_entries || card.file_entries.length === 0) {
+    return '';
+  }
+  
+  const fileList = card.file_entries.map(file => {
+    const fileType = file.type === 'image' ? '[Image]' : 
+                    file.type === 'pdf' ? '[PDF]' : 
+                    file.type === 'audio' ? '[Audio]' : '[File]';
+    return `${fileType} ${file.filename}`;
+  }).join(', ');
+  
+  return ` (Files: ${fileList})`;
 }
 
 // Helper function to truncate text to 5 lines
@@ -124,6 +143,7 @@ export function formatOutlineAsHtml(sections: OutlineSection[]): string {
   function formatSection(section: OutlineSection, indentLevel: number = 0) {
     const isSubsection = indentLevel > 0;
     const headingTag = isSubsection ? 'h3' : 'h2';
+    const indent = '   '.repeat(indentLevel);
     
     // Section title
     output += `<${headingTag}>${section.section_number}. ${section.title}</${headingTag}>`;
@@ -136,11 +156,16 @@ export function formatOutlineAsHtml(sections: OutlineSection[]): string {
         .forEach(placement => {
           const card = placement.card;
           const content = getCardContent(card);
+          const files = getCardFiles(card);
           
           if (content) {
             const cardType = card.type.charAt(0).toUpperCase() + card.type.slice(1);
             const truncatedContent = card.type === 'source' ? truncateToLines(content) : content;
-            output += `<li><strong>${cardType}:</strong> ${truncatedContent.replace(/\n/g, '<br>')}</li>`;
+            output += `${indent}   ${cardType}: ${truncatedContent}${files}\n`;
+          } else if (files) {
+            // Show files even if no content
+            const cardType = card.type.charAt(0).toUpperCase() + card.type.slice(1);
+            output += `${indent}   ${cardType}: ${files}\n`;
           }
         });
       output += '</ul>';
@@ -161,7 +186,7 @@ export function formatOutlineAsHtml(sections: OutlineSection[]): string {
     });
   
   output += '</body></html>';
-  return output;
+  return output.trim();
 }
 
 // Format outline as Word document

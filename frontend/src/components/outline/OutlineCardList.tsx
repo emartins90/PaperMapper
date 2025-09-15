@@ -85,7 +85,33 @@ export default function OutlineCardList({ projectId, isCondensed = true, activeC
   const [selectedTypes, setSelectedTypes] = useState<string[]>(cardTypeOptions.map(opt => opt.value));
   const [deletingTags, setDeletingTags] = useState<Set<string>>(new Set());
 
-  // Load cards from backend when projectId changes
+  // Create a stable reference for card placements that only changes when placements actually change
+  const cardPlacementsHash = useMemo(() => {
+    if (!sections) return null;
+    
+    // Extract all card placements from sections and subsections
+    const allPlacements = new Map();
+    sections.forEach((section: any) => {
+      section.card_placements?.forEach((placement: any) => {
+        allPlacements.set(placement.card_id, placement);
+      });
+      // Also check subsections
+      section.subsections?.forEach((subsection: any) => {
+        subsection.card_placements?.forEach((placement: any) => {
+          allPlacements.set(placement.card_id, placement);
+        });
+      });
+    });
+    
+    // Create a hash of all placement IDs and their section IDs for comparison
+    // This only changes when card placements are added, removed, or moved between sections
+    return Array.from(allPlacements.entries())
+      .map(([cardId, placement]) => `${cardId}:${placement.section_id}`)
+      .sort()
+      .join('|');
+  }, [sections]);
+
+  // Load cards from backend when projectId changes or when card placements change
   useEffect(() => {
     if (!projectId) return;
     
@@ -211,11 +237,21 @@ export default function OutlineCardList({ projectId, isCondensed = true, activeC
                     };
                   }
                   
+                  // Create fileEntries with original filenames (same logic as Canvas component)
+                  const fileUrls = cardContent.files ? cardContent.files.split(',').filter((url: string) => url.trim()) : [];
+                  const fileFilenames = cardContent.file_filenames ? cardContent.file_filenames.split(',').filter((name: string) => name.trim()) : [];
+                  
+                  const fileEntries = fileUrls.map((url: string, index: number) => ({
+                    url,
+                    filename: fileFilenames[index] || "file",
+                    type: ""
+                  }));
+                  
                   cardData = {
                     ...mappedData,
                     tags: cardContent.tags || [],
-                    files: Array.isArray(cardContent.files) ? cardContent.files : (cardContent.files ? [cardContent.files] : []),
-                    fileEntries: cardContent.file_entries || [],
+                    files: fileUrls,
+                    fileEntries: fileEntries,
                   };
                 }
               }
@@ -257,7 +293,7 @@ export default function OutlineCardList({ projectId, isCondensed = true, activeC
     };
 
     loadCards();
-  }, [projectId, sections]);
+  }, [projectId, cardPlacementsHash]); // Only depend on the hash of card placements
 
   // Gather all unique tags from all cards
   const allTags = useMemo(() => {

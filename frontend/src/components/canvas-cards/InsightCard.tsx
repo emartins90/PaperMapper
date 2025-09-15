@@ -111,7 +111,7 @@ export default function InsightCard({ data, showHandles = true, width = 'w-96', 
         </div>
       )}
       <div 
-        className={`text-black mb-4 break-words rich-text-display ${showCondensed ? 'line-clamp-2 mb-1!' : 'mb-4'}`}
+        className={`text-black mb-4 break-words rich-text-display ${showCondensed ? 'line-clamp-3 mb-1!' : 'mb-4'}`}
         style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}
         dangerouslySetInnerHTML={{ __html: data.insightFormatted || data.insight }}
       />
@@ -120,7 +120,33 @@ export default function InsightCard({ data, showHandles = true, width = 'w-96', 
       {!showCondensed && data.files && data.files.length > 0 && (
         <FileListDisplay files={data.files} fileEntries={data.fileEntries} onFileClick={data.onFileClick} showFilesLabel={true} cardType="insight" />
       )}
+        {/* In condensed mode: show files if no main text, or always show image files */}
+        {showCondensed && data.files && data.files.length > 0 && (
+        (() => {
+          const hasMainText = data.insight && data.insight.trim() !== '';
+          const imageFiles = data.fileEntries?.filter(file => file.type === 'image') || [];
+          const shouldShowAllFiles = !hasMainText;
+          const shouldShowImageFiles = imageFiles.length > 0;
+          
+          if (shouldShowAllFiles || shouldShowImageFiles) {
+            const filesToShow = shouldShowAllFiles ? data.files : imageFiles.map(img => img.url);
+            const fileEntriesToShow = shouldShowAllFiles ? data.fileEntries : imageFiles;
+            
+            return (
+              <FileListDisplay 
+                files={filesToShow} 
+                fileEntries={fileEntriesToShow} 
+                onFileClick={data.onFileClick} 
+                showFilesLabel={true} 
+                cardType="insight" 
+              />
+            );
+          }
+          return null;
+        })()
+      )}
       
+
       {/* Action button - only in full view */}
       {!showCondensed && data.actionButton && (
         <div className="mt-1 flex justify-end">
