@@ -99,25 +99,68 @@ export interface OutlineSection {
   }>;
 }
 
-// Helper function to strip HTML tags and get plain text
-function stripHtml(html: string | undefined): string {
+// Replace the htmlToPlainText function with this debugging version:
+function htmlToPlainText(html: string | undefined): string {
   if (!html) return '';
-  return html.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim();
+  
+  console.log('🔍 Original HTML:', html);
+  
+  // Convert HTML to plain text while preserving line breaks and bullet points
+  let text = html
+    // Convert <br> and <br/> to line breaks
+    .replace(/<br\s*\/?>/gi, '\n')
+    // Convert </p> to line breaks (paragraphs)
+    .replace(/<\/p>/gi, '\n')
+    // Convert </div> to line breaks
+    .replace(/<\/div>/gi, '\n')
+    // Convert </li> to line breaks (list items)
+    .replace(/<\/li>/gi, '\n')
+    // Convert <li> to bullet points
+    .replace(/<li[^>]*>/gi, '• ')
+    // Convert <ul> and <ol> to empty (we handle bullets with <li>)
+    .replace(/<\/?(ul|ol)[^>]*>/gi, '')
+    // Remove bold/strong tags without markers
+    .replace(/<\/?(strong|b)[^>]*>/gi, '')
+    // Remove italic/em tags without markers
+    .replace(/<\/?(em|i)[^>]*>/gi, '')
+    // Remove all other HTML tags
+    .replace(/<[^>]*>/g, '')
+    // Convert HTML entities
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    // Convert multiple spaces to single spaces (but preserve line breaks)
+    .replace(/[ \t]+/g, ' ')
+    // Clean up multiple line breaks (but keep single line breaks)
+    .replace(/\n\s*\n\s*\n+/g, '\n\n')
+    // Clean up extra whitespace around line breaks
+    .replace(/\n\s+/g, '\n')
+    .replace(/\s+\n/g, '\n')
+    // Trim whitespace
+    .trim();
+  
+  console.log(' Converted text:', text);
+  console.log('🔍 Text with visible line breaks:', text.replace(/\n/g, '\\n'));
+  
+  return text;
 }
 
-// Helper function to get card content based on type
+// Update the getCardContent function to use the new function and prioritize formatted text
 function getCardContent(card: OutlineCard): string {
   switch (card.type) {
     case 'question':
-      return stripHtml(card.question_text_formatted) || stripHtml(card.question) || '';
+      return htmlToPlainText(card.question_text_formatted) || htmlToPlainText(card.question) || '';
     case 'source':
-      return stripHtml(card.summary_formatted) || stripHtml(card.summary) || stripHtml(card.content_formatted) || stripHtml(card.content) || '';
+      return htmlToPlainText(card.summary_formatted) || htmlToPlainText(card.summary) || htmlToPlainText(card.content_formatted) || htmlToPlainText(card.content) || '';
     case 'insight':
-      return stripHtml(card.insight_text_formatted) || stripHtml(card.insight) || '';
+      return htmlToPlainText(card.insight_text_formatted) || htmlToPlainText(card.insight) || '';
     case 'thought':
-      return stripHtml(card.thought_text_formatted) || stripHtml(card.thought) || '';
+      return htmlToPlainText(card.thought_text_formatted) || htmlToPlainText(card.thought) || '';
     case 'claim':
-      return stripHtml(card.claim_text_formatted) || stripHtml(card.claim) || '';
+      return htmlToPlainText(card.claim_text_formatted) || htmlToPlainText(card.claim) || '';
     default:
       return '';
   }
@@ -269,8 +312,7 @@ export function formatOutlineAsText(sections: OutlineSection[], imageFolderPath?
         
         if (content) {
           const cardType = card.type.charAt(0).toUpperCase() + card.type.slice(1);
-          const truncatedContent = card.type === 'source' ? truncateToLines(content) : content;
-          output += `${cardIndent}${cardType}: ${truncatedContent}${files}\n`;
+          output += `${cardIndent}${cardType}: ${content}${files}\n`;
         } else if (files) {
           // Show files even if no content
           const cardType = card.type.charAt(0).toUpperCase() + card.type.slice(1);
@@ -360,25 +402,33 @@ export async function formatOutlineAsWord(sections: OutlineSection[], imageFolde
         
         if (content || (files && files.trim())) {
           const cardType = card.type.charAt(0).toUpperCase() + card.type.slice(1);
-          const truncatedContent = card.type === 'source' ? truncateToLines(content) : content;
           
           // Main card content
-          children.push(
-            new Paragraph({
-              children: [
-                new TextRun({
-                  text: `${cardType}: `,
-                  bold: true,
-                }),
-                new TextRun({
-                  text: truncatedContent || '',
-                }),
-              ],
-              indent: {
-                left: (indentLevel + 1) * 720, // Cards are indented one level more than sections
-              },
-            })
-          );
+          const contentLines = (content || '').split('\n');
+          contentLines.forEach((line, index) => {
+            if (line.trim() || index === 0) { // Include first line even if empty, skip empty lines after that
+              const isBulletPoint = line.trim().startsWith('•');
+              const extraIndent = isBulletPoint ? 360 : 0; // Add extra indent for bullet points (360 twips = 0.25 inches)
+              
+              children.push(
+                new Paragraph({
+                  children: [
+                    new TextRun({
+                      text: index === 0 ? `${cardType}: ` : '', // Add card type only to first line
+                      bold: true, // Card type is always bold
+                    }),
+                    new TextRun({
+                      text: line, // Content is never bold
+                      bold: false,
+                    }),
+                  ],
+                  indent: {
+                    left: (indentLevel + 1) * 720 + extraIndent, // Base indent + extra for bullets
+                  },
+                })
+              );
+            }
+          });
           
           // Add file information if available
           if (files && files.trim()) {
