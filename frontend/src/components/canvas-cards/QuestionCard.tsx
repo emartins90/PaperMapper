@@ -182,7 +182,7 @@ export default function QuestionCard({ data, showHandles = true, width = 'w-96',
         </div>
       )}
       <div 
-        className={`text-black break-words rich-text-display ${showCondensed ? 'line-clamp-2 mb-1' : 'mb-4'}`}
+        className={`text-black break-words rich-text-display ${showCondensed ? 'line-clamp-3 mb-1' : 'mb-4'}`}
         style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}
         dangerouslySetInnerHTML={{ __html: data.questionFormatted || data.question }}
       />
@@ -190,6 +190,32 @@ export default function QuestionCard({ data, showHandles = true, width = 'w-96',
       {/* Render uploaded files (images as thumbnails, others as file names) - only in full view */}
       {!showCondensed && data.files && data.files.length > 0 && (
         <FileListDisplay files={data.files} fileEntries={data.fileEntries} onFileClick={data.onFileClick} showFilesLabel={true} cardType="question" />
+      )}
+
+      {/* In condensed mode: show files if no main text, or always show image files */}
+      {showCondensed && data.files && data.files.length > 0 && (
+        (() => {
+          const hasMainText = data.question && data.question.trim() !== '';
+          const imageFiles = data.fileEntries?.filter(file => file.type === 'image') || [];
+          const shouldShowAllFiles = !hasMainText;
+          const shouldShowImageFiles = imageFiles.length > 0;
+          
+          if (shouldShowAllFiles || shouldShowImageFiles) {
+            const filesToShow = shouldShowAllFiles ? data.files : imageFiles.map(img => img.url);
+            const fileEntriesToShow = shouldShowAllFiles ? data.fileEntries : imageFiles;
+            
+            return (
+              <FileListDisplay 
+                files={filesToShow} 
+                fileEntries={fileEntriesToShow} 
+                onFileClick={data.onFileClick} 
+                showFilesLabel={true} 
+                cardType="question" 
+              />
+            );
+          }
+          return null;
+        })()
       )}
       
       {/* Status - only show in full view */}

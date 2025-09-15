@@ -57,7 +57,6 @@ export default function ClaimCard({ data, showHandles = true, width = 'w-96', op
   const effectiveWidth = isInStructure ? 'w-full' : width;
   const effectiveShadow = isInStructure ? false : showShadow;
 
-  const onFileClick = data.onFileClick;
   return (
     <div 
       className={`rounded-xl border-2 bg-white ${showCondensed ? 'p-2.75' : 'p-4'} ${effectiveWidth} relative transition-all duration-200 cursor-pointer
@@ -112,7 +111,7 @@ export default function ClaimCard({ data, showHandles = true, width = 'w-96', op
         </div>
       )}
       <div 
-        className={`text-black mb-4 break-words rich-text-display ${showCondensed ? 'line-clamp-2 mb-1!' : 'mb-4'}`}
+        className={`text-black mb-4 break-words rich-text-display ${showCondensed ? 'line-clamp-3 mb-1!' : 'mb-4'}`}
         style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}
         dangerouslySetInnerHTML={{ __html: data.claimFormatted || data.claim }}
       />
@@ -121,6 +120,33 @@ export default function ClaimCard({ data, showHandles = true, width = 'w-96', op
       {!showCondensed && data.files && data.files.length > 0 && (
         <FileListDisplay files={data.files} fileEntries={data.fileEntries} onFileClick={data.onFileClick} showFilesLabel={true} cardType="claim" />
       )}
+
+        {/* In condensed mode: show files if no main text, or always show image files */}
+      {showCondensed && data.files && data.files.length > 0 && (
+        (() => {
+          const hasMainText = data.claim && data.claim.trim() !== '';
+          const imageFiles = data.fileEntries?.filter(file => file.type === 'image') || [];
+          const shouldShowAllFiles = !hasMainText;
+          const shouldShowImageFiles = imageFiles.length > 0;
+          
+          if (shouldShowAllFiles || shouldShowImageFiles) {
+            const filesToShow = shouldShowAllFiles ? data.files : imageFiles.map(img => img.url);
+            const fileEntriesToShow = shouldShowAllFiles ? data.fileEntries : imageFiles;
+            
+            return (
+              <FileListDisplay 
+                files={filesToShow} 
+                fileEntries={fileEntriesToShow} 
+                onFileClick={data.onFileClick} 
+                showFilesLabel={true} 
+                cardType="claim" 
+              />
+            );
+          }
+          return null;
+        })()
+      )}
+      
       
       {/* Action button - only in full view */}
       {!showCondensed && data.actionButton && (
