@@ -166,7 +166,7 @@ function getCardContent(card: OutlineCard): string {
   }
 }
 
-// Helper function to check if there are any images (without downloading)
+// Fix the hasImages function:
 function hasImages(sections: OutlineSection[]): boolean {
   let hasAnyImages = false;
   
@@ -179,8 +179,11 @@ function hasImages(sections: OutlineSection[]): boolean {
         let fileUrls: string[] = [];
         if (Array.isArray(card.files)) {
           fileUrls = card.files;
-        } else if (typeof card.files === 'string' && card.files.trim() !== '') {
-          fileUrls = card.files.split(',').map((url: string) => url.trim()).filter((url: string) => url.length > 0);
+        } else if (typeof card.files === 'string') {
+          const trimmed = (card.files as string).trim();
+          if (trimmed !== '') {
+            fileUrls = trimmed.split(',').map((url: string) => url.trim()).filter((url: string) => url.length > 0);
+          }
         }
         
         fileUrls.forEach(url => {
@@ -222,7 +225,7 @@ function getCardFiles(card: OutlineCard, indent: string = ''): string {
     if (Array.isArray(card.file_filenames)) {
       fileNames = card.file_filenames;
     } else if (typeof card.file_filenames === 'string') {
-      const trimmed = card.file_filenames.trim();
+      const trimmed = (card.file_filenames as string).trim();
       if (trimmed !== '') {
         fileNames = trimmed.split(',').map((name: string) => name.trim()).filter((name: string) => name.length > 0);
       }
@@ -251,7 +254,7 @@ function getCardFiles(card: OutlineCard, indent: string = ''): string {
     if (Array.isArray(card.files)) {
       fileUrls = card.files;
     } else if (typeof card.files === 'string') {
-      const trimmed = card.files.trim();
+      const trimmed = (card.files as string).trim();
       if (trimmed !== '') {
         fileUrls = trimmed.split(',').map((url: string) => url.trim()).filter((url: string) => url.length > 0);
       }
@@ -310,13 +313,44 @@ export function formatOutlineAsText(sections: OutlineSection[], imageFolderPath?
         const cardIndent = indent + '   '; // Card indent = section indent + 3 spaces
         const files = getCardFiles(card, cardIndent); // Pass hasImages flag
         
+        // Fix the text export card content section:
         if (content) {
           const cardType = card.type.charAt(0).toUpperCase() + card.type.slice(1);
-          output += `${cardIndent}${cardType}: ${content}${files}\n`;
+          const contentLines = content.split('\n');
+          
+          contentLines.forEach((line, index) => {
+            if (line.trim() || index === 0) { // Include first line even if empty, skip empty lines after that
+              if (index === 0) {
+                // First line with card type (no files yet)
+                output += `${cardIndent}${cardType}: ${line}\n`;
+              } else {
+                // Subsequent lines - check if it's a bullet point or continuation
+                const isBulletPoint = line.trim().startsWith('•');
+                if (isBulletPoint) {
+                  // Bullet point: indent to align with bullet
+                  output += `${cardIndent}   ${line}\n`; // cardIndent + 3 spaces
+                } else {
+                  // Continuation line: indent to align with text after bullet (6 spaces)
+                  output += `${cardIndent}      ${line}\n`; // cardIndent + 6 spaces
+                }
+              }
+            }
+          });
+          
+          // Add files after all content lines
+          if (files) {
+            output += files;
+          }
+          
+          // Add newline after each card to separate them
+          output += '\n';
         } else if (files) {
           // Show files even if no content
           const cardType = card.type.charAt(0).toUpperCase() + card.type.slice(1);
           output += `${cardIndent}${cardType}: ${files}\n`;
+          
+          // Add newline after each card to separate them
+          output += '\n';
         }
       });
     
@@ -398,7 +432,7 @@ export async function formatOutlineAsWord(sections: OutlineSection[], imageFolde
       .forEach(placement => {
         const card = placement.card;
         const content = getCardContent(card);
-        const files = getCardFiles(card, '', !!imageFolderPath); // Pass empty string for Word
+        const files = getCardFiles(card, ''); // Remove the third argument
         
         if (content || (files && files.trim())) {
           const cardType = card.type.charAt(0).toUpperCase() + card.type.slice(1);
@@ -564,7 +598,7 @@ function getAllImageUrls(sections: OutlineSection[]): string[] {
         if (Array.isArray(card.files)) {
           fileUrls = card.files;
         } else if (typeof card.files === 'string') {
-          const trimmed = card.files.trim();
+          const trimmed = (card.files as string).trim();
           if (trimmed !== '') {
             fileUrls = trimmed.split(',').map((url: string) => url.trim()).filter((url: string) => url.length > 0);
           }
