@@ -994,7 +994,7 @@ export default function OutlineCardList({ projectId, isCondensed = true, activeC
                  <HierarchyExpansionPanel
                    key={rootCard.id}
                    rootNode={expandedRootCard}
-                   children={childrenCards}
+                   children={childrenCards} // eslint-disable-line react/no-children-prop
                    onToggleExpansion={handleToggleExpansion}
                    activeCardId={activeCardId}
                    isCondensed={isCondensed}
