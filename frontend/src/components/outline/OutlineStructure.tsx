@@ -104,7 +104,7 @@ export default function OutlineStructure({
   const handleAddSection = async (insertAfterIndex?: number) => {
     try {
       setError(null);
-      console.log('Creating new section for project:', projectId);
+  
       
       // Calculate the order_index based on where to insert
       let orderIndex;
@@ -136,7 +136,7 @@ export default function OutlineStructure({
         section_number: sectionNumber
       };
 
-      console.log('Sending section data:', newSection);
+      
 
       const res = await fetch(`${API_URL}/outline_sections/`, {
         method: "POST",
@@ -148,8 +148,7 @@ export default function OutlineStructure({
         body: JSON.stringify(newSection)
       });
 
-      console.log('Create section response status:', res.status);
-      console.log('Create section response ok:', res.ok);
+      
 
       if (!res.ok) {
         const errorText = await res.text();
@@ -158,7 +157,7 @@ export default function OutlineStructure({
       }
       
       const createdSection = await res.json();
-      console.log('Created section:', createdSection);
+      
       
       // Insert the new section at the correct position
       if (insertAfterIndex !== undefined) {
@@ -232,15 +231,14 @@ export default function OutlineStructure({
   const handleDeleteSection = async (sectionId: number) => {
     try {
       setError(null);
-      console.log('Attempting to delete section:', sectionId);
+
       
       const res = await fetch(`${API_URL}/outline_sections/${sectionId}`, {
         method: "DELETE",
         credentials: "include"
       });
 
-      console.log('Delete section response status:', res.status);
-      console.log('Delete section response ok:', res.ok);
+      
 
       if (!res.ok) {
         if (res.status === 404) {
@@ -280,7 +278,7 @@ export default function OutlineStructure({
         // Don't revert the deletion, just log the numbering update error
       }
       
-      console.log('Section deleted successfully');
+      
     } catch (error) {
       console.error("Error deleting section:", error);
       setError(error instanceof Error ? error.message : 'Failed to delete section');

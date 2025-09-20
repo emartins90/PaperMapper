@@ -217,13 +217,13 @@ export default function Outline({ projectId }: OutlineProps) {
     const { active } = event;
     const activeIdStr = active.id.toString();
     
-    console.log('Drag start:', activeIdStr);
+    
     
     // Card drag start (from list or structure)
     if (activeIdStr.startsWith('card-') || activeIdStr.startsWith('structure-card-')) {
       setActiveCardId(activeIdStr);
       setActiveCardData(active.data.current);
-      console.log('Started dragging card:', active.id, active.data.current);
+      
       return;
     }
     
@@ -244,7 +244,7 @@ export default function Outline({ projectId }: OutlineProps) {
     if (foundSubsection && parentSection) {
       setActiveSubsectionId(activeIdStr);
       setActiveSubsectionData(foundSubsection);
-      console.log('Started dragging subsection:', foundSubsection);
+      
       return;
     }
     
@@ -268,17 +268,17 @@ export default function Outline({ projectId }: OutlineProps) {
   const handleDragOver = (event: DragOverEvent) => {
     // Keep existing drag over logic
     if (event.over) {
-      console.log('Dragging over:', event.over.id);
+
       // Debug: Check if it's a card drop zone
       if (event.over.id.toString().startsWith('card-drop-')) {
-        console.log('Detected card drop zone:', event.over.id);
+        
       }
     }
   };
 
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
-    console.log('Drag ended:', { active: active.id, over: over?.id });
+    
     
     // Reset all drag state
     setActiveCardId(null);
@@ -293,12 +293,12 @@ export default function Outline({ projectId }: OutlineProps) {
     const overIdStr = over?.id.toString();
 
     if (!over) {
-      console.log('No drop target - checking if card should be removed from structure');
+      
       
       // If dragging a card from the structure and dropping outside valid zones, remove it
       if (activeIdStr.startsWith('structure-card-')) {
         const cardId = parseInt(activeIdStr.replace('structure-card-', ''));
-        console.log('Removing card from structure:', cardId);
+        
         
         try {
           const response = await fetch(`${API_URL}/outline_card_placements/card/${cardId}`, {
@@ -307,7 +307,7 @@ export default function Outline({ projectId }: OutlineProps) {
           });
           
           if (response.ok) {
-            console.log("Card removed from structure successfully");
+
             // Small delay to ensure backend processing is complete
             await new Promise(resolve => setTimeout(resolve, 100));
             
@@ -317,7 +317,7 @@ export default function Outline({ projectId }: OutlineProps) {
             });
             if (sectionsResponse.ok) {
               const data = await sectionsResponse.json();
-              console.log("Reloaded sections after card removal:", data);
+
               setSections(data);
             }
           } else {
@@ -344,21 +344,14 @@ export default function Outline({ projectId }: OutlineProps) {
         cardId = parseInt(activeIdStr.replace('card-', ''));
       }
       
-      console.log('Dropping card into section:', { 
-        sectionId, 
-        position, 
-        cardId, 
-        from: activeIdStr.startsWith('structure-card-') ? 'structure' : 'list',
-        overIdStr,
-        dropInfo 
-      });
+
       
       try {
         let response;
         
         if (activeIdStr.startsWith('structure-card-')) {
           // Moving card within/between sections - use upsert endpoint
-          console.log('Moving card within/between sections');
+
           response = await fetch(`${API_URL}/outline_card_placements/upsert`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -372,7 +365,7 @@ export default function Outline({ projectId }: OutlineProps) {
           });
         } else {
           // Adding new card from list - use regular create
-          console.log('Adding card from list to structure');
+          
           response = await fetch(`${API_URL}/outline_card_placements/`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -387,7 +380,7 @@ export default function Outline({ projectId }: OutlineProps) {
         }
         
         if (response.ok) {
-          console.log("Card placement updated successfully");
+
           // Small delay to ensure backend processing is complete
           await new Promise(resolve => setTimeout(resolve, 100));
           
@@ -397,7 +390,7 @@ export default function Outline({ projectId }: OutlineProps) {
           });
           if (sectionsResponse.ok) {
             const data = await sectionsResponse.json();
-            console.log("Reloaded sections data:", data);
+
             setSections(data);
           } else {
             console.error("Failed to reload sections:", sectionsResponse.status);
