@@ -349,8 +349,8 @@ export default function OutlineSection({
                   isCondensed: isCondensed, // Use the prop from parent
                   isDisabled: false,
                   isInStructure: true,
-                  onOpen: () => console.log("Opening card:", placement.card_id, placement.card_type),
-                  onSelect: () => console.log("Selecting card:", placement.card_id, placement.card_type),
+                              onOpen: () => {},
+            onSelect: () => {},
                   onFileClick: undefined,
                   tags: [],
                   files: [],
@@ -442,7 +442,7 @@ export default function OutlineSection({
                 }
 
                 // Fallback - this shouldn't be reached
-                console.log('FALLBACK: cardType =', cardType, 'placement.card_type =', placement.card_type, 'placement.card?.type =', placement.card?.type);
+        
                 return (
                   <div className="bg-gray-50 rounded p-3 text-sm border w-full mb-2">
                     <div className="text-red-500 font-bold">DEBUG: Fallback reached</div>
